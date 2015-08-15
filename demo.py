@@ -3,11 +3,14 @@
 # Standard library imports
 import sys
 import array
+import logging
+log = logging.getLogger(__name__)
 
 # Constants
 IP_START = 0
 SP_START = 0x100
 SIXTY_FOUR_KB = 0x10000
+WORD, LOW, HIGH = range(3)
 
 FLAGS_BLANK = 0x0000
 FLAGS_CARRY = 0x0001
@@ -56,11 +59,14 @@ WORD_REG = {
 # Classes
 class Component(object):
     def __init__(self):
-        self.mlb = None
+        self.bus = None
         
-class REG(object):
-    def __init__(self, initial = 0):
-        self._value = initial & 0xFFFF
+class Register(object):
+    def __init__(self, initial = 0, byte_addressable = False):
+        self._value = 0
+        
+        self.x = initial
+        self.byte_addressable = byte_addressable
         
     @property
     def x(self):
@@ -85,14 +91,40 @@ class REG(object):
     @l.setter
     def l(self, value):
         self._value = (self._value & 0xFF00) | (value & 0xFF)
-        
+
 class REGS(object):
-    def __init__(self, regs):
-        self._regs = regs
+    def __init__(self):
+        self._regs = {}
+        self._aliases = {}
         
+    def add(self, name, reg):
+        self._regs[name] = reg
+        
+        if reg.byte_addressable:
+            self._aliases[name + "X"] = (reg, WORD)
+            self._aliases[name + "L"] = (reg, LOW)
+            self._aliases[name + "H"] = (reg, HIGH)
+        else:
+            self._aliases[name] = (reg, WORD)
+            
+    def __getitem__(self, key):
+        reg, access = self._aliases[key]
+        if access == LOW:
+            return reg.l
+        elif access == HIGH:
+            return reg.h
+        else:
+            return reg.x
+            
     def __setitem__(self, key, value):
-        
-        
+        reg, access = self._aliases[key]
+        if access == LOW:
+            reg.l = value
+        elif access == HIGH:
+            reg.h = value
+        else:
+            reg.x = value
+            
 class FLAGS(object):
     def __init__(self):
         self.cf = False
@@ -102,59 +134,69 @@ class FLAGS(object):
     @property
     def value(self):
         value = FLAGS_BLANK
-        if self.cf: value |= FLAGS_CARRY
-        if self.zf: value |= FLAGS_ZERO
-        if self.sf: value |= FLAGS_SIGN
+        if self.cf:
+            value |= FLAGS_CARRY
+        if self.zf:
+            value |= FLAGS_ZERO
+        if self.sf:
+            value |= FLAGS_SIGN
         return value
         
-class CPU(object):
+    def set_from_value(self, value, include_cf = True):
+        self.zf = value == 0
+        self.sf = value < 0
+        if include_cf:
+            self.cf = value > 0xFFFF
+            
+class CPU(Component):
     def __init__(self):
         super(CPU, self).__init__()
-        # self.ip = IP_START
-        # self.sp = SP_START
-        self.flags = FLAGS()
         self.hlt = False
-        self.regs = {
-            "IP" : REG(IP_START),
-            "SP" : REG(SP_START),
-            "A" : REG(0),
-            "B" : REG(0),
-            "C" : REG(0),
-            "D" : REG(0),
-        }
+        self.flags = FLAGS()
+        self.regs = REGS()
+        self.regs.add("IP", Register(IP_START))
+        self.regs.add("SP", Register(SP_START))
+        self.regs.add("A", Register(0, byte_addressable = True))
+        self.regs.add("B", Register(0, byte_addressable = True))
+        self.regs.add("C", Register(0, byte_addressable = True))
+        self.regs.add("D", Register(0, byte_addressable = True))
         
     def read_byte(self):
-        byte = self.mlb.ram.contents[self.regs["IP"].x]
-        self.regs["IP"].x += 1
+        byte = self.mlb.ram.contents[self.regs["IP"]]
+        self.regs["IP"] += 1
         return byte
         
     def fetch(self):
         opcode = self.read_byte()
-        print "opcode = 0x%02X" % opcode
+        log.debug("Fetched opcode: 0x%02X", opcode)
         if opcode == 0xF4:
             self._hlt()
         elif opcode & OP_MASK == 0x80:
             self._8x(opcode)
+        elif opcode & 0xF8 == 0x40:
+            self._inc(opcode)
+        elif opcode & 0xF8 == 0x48:
+            self._dec(opcode)
         elif opcode == 0x74:
             self._jz()
         elif opcode & 0xF0 == 0xB0:
             self._mov_imm_to_reg(opcode)
         else:
-            print "INVALID OPCODE"
+            log.error("Invalid opcode: 0x%02X", opcode)
             self._hlt()
             
     def get_modrm(self, d, word):
         modrm = self.read_byte()
-        print "modrm = 0x%02X" % modrm
+        # print "modrm = 0x%02X" % modrm
         
         mod = (modrm & MOD_MASK) >> MOD_SHIFT
-        print "mod = 0x%02X" % mod
+        # print "mod = 0x%02X" % mod
         
         reg = (modrm & REG_MASK) >> REG_SHIFT
-        print "reg = 0x%02X" % reg
+        # print "reg = 0x%02X" % reg
         
         rm = modrm & RM_MASK
-        print "rm =  0x%02X" % rm
+        # print "rm =  0x%02X" % rm
         
         op1 = ""
         op2 = ""
@@ -169,17 +211,17 @@ class CPU(object):
             else:
                 op2 = WORD_REG[rm]
             
-        print "op1 = %r" % op1
-        print "op2 = %r" % op2
+        # print "op1 = %r" % op1
+        # print "op2 = %r" % op2
         return op1, op2
         
     def get_imm(self, word):
         value = self.read_byte()
         if word:
             value |= (self.read_byte() << 8)
-            print "value = 0x%04X" % value
-        else:
-            print "value = 0x%02X" % value
+            # print "value = 0x%04X" % value
+        # else:
+            # print "value = 0x%02X" % value
             
         return value
         
@@ -189,40 +231,44 @@ class CPU(object):
         _, op2 = self.get_modrm(d, word)
         val1 = 0
         imm = self.get_imm(word)
-        if word:
-            val1 = self.regs[op2].x
-        else:
-            val1 = self.regs[op2].l
-            
+        val1 = self.regs[op2]
+        
         result = val1 - imm
-        self.flags.zf = result == 0
-        self.flags.sf = result < 0
-        self.flags.cf = result > 0xFFFF
+        self.flags.set_from_value(result)
         
     def _mov_imm_to_reg(self, opcode):
-        print "MOV"
         word = opcode & 0x08
         if word:
             dest = WORD_REG[opcode & 0x07]
-            value = self.get_imm(word)
-            self.regs[dest].x = value
         else:
             dest = BYTE_REG[opcode & 0x07]
-            value = self.get_imm(word)
-            if dest[0] in self.regs:
-                if dest[1] == "H":
-                    self.regs[dest[0]].h = value
-                else:
-                    self.regs[dest[0]].l = value
-            else:
-                print "WTF"
-                self._hlt()
-                
+            
+        value = self.get_imm(word)
+        self.regs[dest] = value
+        log.debug("MOV'd 0x%04x into %s", value, dest)
+        
+    def _inc(self, opcode):
+        dest = WORD_REG[opcode & 0x07]
+        self.regs[dest] += 1
+        self.flags.set_from_value(self.regs[dest], include_cf = False)
+        log.debug("INC'd %s to 0x%04x", dest, self.regs[dest])
+        
+    def _dec(self, opcode):
+        dest = WORD_REG[opcode & 0x07]
+        self.regs[dest] -= 1
+        self.flags.set_from_value(self.regs[dest], include_cf = False)
+        log.debug("DEC'd %s to 0x%04x", dest, self.regs[dest])
+        
     def _jz(self):
         distance = self.get_imm(False)
-        self.regs["IP"].x += distance
-        
+        if self.flags.zf:
+            self.regs["IP"] += distance
+            log.debug("JZ incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        else:
+            log.debug("JZ was skipped.")
+            
     def _hlt(self):
+        log.critical("HLT encountered!")
         self.hlt = True
         
 class RAM(object):
@@ -237,29 +283,40 @@ class RAM(object):
         for index, char in enumerate(data, start = address):
             self.contents[index] = ord(char)
             
+class Bus(object):
+    def __init__(self):
+        self.items = {}
+        
+        
+class BusComponent(object):
+    def __init__(self, address, length):
+        self.address = address
+        self.length = length
+        self.bus = None
+        
 class MainLogicBoard(object):
     def __init__(self, cpu, ram):
         self.cpu = cpu
         self.cpu.mlb = self
         
         self.ram = ram
-        self.ram.mlb = self
         
     def run(self):
         while not self.cpu.hlt:
             self.cpu.fetch()
             
-        print "hlt"
-        
 # Main application
 def main():
-    print "PyXT oh hai"
+    logging.basicConfig(format = "%(asctime)s %(message)s", level = logging.DEBUG)
+    log.info("PyXT oh hai")
     
     cpu = CPU()
     ram = RAM(SIXTY_FOUR_KB)
     ram.load_from_file(sys.argv[1], 0)
     mlb = MainLogicBoard(cpu, ram)
     mlb.run()
+    
+    log.info("PyXT kthxbai")
     
 if __name__ == "__main__":
     main()
