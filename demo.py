@@ -3,6 +3,7 @@
 # Standard library imports
 import sys
 import array
+import struct
 import logging
 log = logging.getLogger(__name__)
 
@@ -29,8 +30,6 @@ REG_SHIFT = 3
 RM_MASK = 0x07
 
 OP_MASK = 0xFC
-D_MASK =  0x02
-W_MASK =  0x01
 
 BYTE_REG = {
     0x00 : "AL",
@@ -55,7 +54,20 @@ WORD_REG = {
 }
 
 # Functions
-
+def sign_extend_byte_to_word(value):
+    value = value & 0x00FF
+    if value & 0x80:
+        value |= 0xFF00
+    return value
+    
+def word_to_bytes_le(word):
+    assert word >= 0 and word <= 0xFFFF
+    return (word & 0x00FF), ((word & 0xFF00) >> 8)
+    
+def bytes_to_word_le(data):
+    assert len(data) == 2
+    return ((data[1] & 0xFF) << 8) | (data[0] & 0xFF)
+    
 # Classes
 class Component(object):
     def __init__(self):
@@ -160,15 +172,18 @@ class CPU(Component):
         self.regs.add("B", Register(0, byte_addressable = True))
         self.regs.add("C", Register(0, byte_addressable = True))
         self.regs.add("D", Register(0, byte_addressable = True))
+        self.regs.add("DI", Register(0))
         
     def read_byte(self):
+        location = self.regs["IP"]
         byte = self.mlb.ram.contents[self.regs["IP"]]
         self.regs["IP"] += 1
+        log.debug("Read: 0x%02x from 0x%04x", byte, location)
         return byte
         
     def fetch(self):
         opcode = self.read_byte()
-        log.debug("Fetched opcode: 0x%02X", opcode)
+        log.debug("Fetched opcode: 0x%02x", opcode)
         if opcode == 0xF4:
             self._hlt()
         elif opcode & OP_MASK == 0x80:
@@ -177,26 +192,32 @@ class CPU(Component):
             self._inc(opcode)
         elif opcode & 0xF8 == 0x48:
             self._dec(opcode)
+        elif opcode & 0xF8 == 0x50:
+            self._push(opcode)
+        elif opcode & 0xF8 == 0x58:
+            self._pop(opcode)
         elif opcode == 0x74:
             self._jz()
+        elif opcode == 0x75:
+            self._jnz()
+        elif opcode == 0xE8:
+            self._call()
+        elif opcode == 0xC3:
+            self._ret()
         elif opcode & 0xF0 == 0xB0:
             self._mov_imm_to_reg(opcode)
+        elif opcode == 0x8B:
+            self._mov_ram_to_reg_16()
+        elif opcode == 0x88:
+            self._mov_reg_to_ram_8()
+        elif opcode == 0x89:
+            self._mov_reg_to_ram_16()
         else:
-            log.error("Invalid opcode: 0x%02X", opcode)
+            log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
             
-    def get_modrm(self, d, word):
-        modrm = self.read_byte()
-        # print "modrm = 0x%02X" % modrm
-        
-        mod = (modrm & MOD_MASK) >> MOD_SHIFT
-        # print "mod = 0x%02X" % mod
-        
-        reg = (modrm & REG_MASK) >> REG_SHIFT
-        # print "reg = 0x%02X" % reg
-        
-        rm = modrm & RM_MASK
-        # print "rm =  0x%02X" % rm
+    def get_modrm(self, word):
+        mod, reg, rm = self.get_modrm_ex()
         
         op1 = ""
         op2 = ""
@@ -215,6 +236,15 @@ class CPU(Component):
         # print "op2 = %r" % op2
         return op1, op2
         
+    def get_modrm_ex(self):
+        modrm = self.read_byte()
+        mod = (modrm & MOD_MASK) >> MOD_SHIFT
+        reg = (modrm & REG_MASK) >> REG_SHIFT
+        rm = modrm & RM_MASK
+        
+        log.debug("mod = 0x%02X, reg = 0x%02X, rm = 0x%02X", mod, reg, rm)
+        return mod, reg, rm
+        
     def get_imm(self, word):
         value = self.read_byte()
         if word:
@@ -226,14 +256,26 @@ class CPU(Component):
         return value
         
     def _8x(self, opcode):
-        d = 1
-        word = opcode & W_MASK
-        _, op2 = self.get_modrm(d, word)
-        val1 = 0
-        imm = self.get_imm(word)
-        val1 = self.regs[op2]
+        if opcode == 0x82:
+            opcode = 0x80
+            
+        word_reg = opcode & 0x01
+        word_imm = opcode == 0x81
+        sign_extend = opcode & 0x02
         
+        _, op2 = self.get_modrm(word_reg)
+        val1 = 0
+        imm = self.get_imm(word_imm)
+        val1 = self.regs[op2]
+        if sign_extend and not word_imm:
+            new_imm = sign_extend_byte_to_word(imm)
+            log.debug("Sign extending 0x%02x to 0x%04x", imm, new_imm)
+            imm = new_imm
+            
+        # print "val1 = 0x%04X" % val1
+        # print "imm = 0x%04X" % imm
         result = val1 - imm
+        
         self.flags.set_from_value(result)
         
     def _mov_imm_to_reg(self, opcode):
@@ -247,6 +289,30 @@ class CPU(Component):
         self.regs[dest] = value
         log.debug("MOV'd 0x%04x into %s", value, dest)
         
+    def _mov_ram_to_reg_16(self):
+        mod, reg, rm = self.get_modrm_ex()
+        assert mod == 0x00 and rm == 0x06
+        addr = self.get_imm(True)
+        dest = WORD_REG[reg]
+        self.regs[dest] = self._read_word_from_ram(addr)
+        log.debug("MOV'd 0x%04x from 0x%04x into %s", self.regs[dest], addr, dest)
+        
+    def _mov_reg_to_ram_8(self):
+        mod, reg, rm = self.get_modrm_ex()
+        src = BYTE_REG[reg]
+        assert mod == 0x00 and rm == 0x01
+        addr = self.regs["BX"] + self.regs["DI"]
+        self.mlb.ram.contents[addr] = self.regs[src]
+        log.debug("MOV'd 0x%02x from %s into 0x%04x", self.regs[src], src, addr)
+        
+    def _mov_reg_to_ram_16(self):
+        mod, reg, rm = self.get_modrm_ex()
+        src = WORD_REG[reg]
+        assert mod == 0x00 and rm == 0x06
+        addr = self.get_imm(True)
+        self._write_word_to_ram(addr, self.regs[src])
+        log.debug("MOV'd 0x%04x from %s into 0x%04x", self.regs[src], src, addr)
+        
     def _inc(self, opcode):
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] += 1
@@ -259,17 +325,61 @@ class CPU(Component):
         self.flags.set_from_value(self.regs[dest], include_cf = False)
         log.debug("DEC'd %s to 0x%04x", dest, self.regs[dest])
         
+    def _push(self, opcode):
+        src = WORD_REG[opcode & 0x07]
+        value = self.regs[src]
+        self.__push(value)
+        log.debug("PUSH'd 0x%04x from %s", value, src)
+        
+    def _pop(self, opcode):
+        dest = WORD_REG[opcode & 0x07]
+        self.regs[dest] = self.__pop()
+        log.debug("POP'd 0x%04x into %s", self.regs[dest], dest)
+        
+    def __push(self, value):
+        self.regs["SP"] -= 2
+        self._write_word_to_ram(self.regs["SP"], value)
+        
+    def __pop(self):
+        value = self._read_word_from_ram(self.regs["SP"])
+        self.regs["SP"] += 2
+        return value
+        
     def _jz(self):
-        distance = self.get_imm(False)
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
         if self.flags.zf:
             self.regs["IP"] += distance
             log.debug("JZ incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
         else:
             log.debug("JZ was skipped.")
             
+    def _jnz(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.zf:
+            log.debug("JNZ was skipped.")
+        else:
+            self.regs["IP"] += distance
+            log.debug("JNZ incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            
+    def _call(self):
+        offset = self.get_imm(True)
+        self.__push(self.regs["IP"])
+        self.regs["IP"] += offset
+        log.debug("CALL incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
+        
+    def _ret(self):
+        self.regs["IP"] = self.__pop()
+        log.debug("RET back to 0x%04x", self.regs["IP"])
+        
     def _hlt(self):
         log.critical("HLT encountered!")
         self.hlt = True
+        
+    def _write_word_to_ram(self, address, value):
+        self.mlb.ram.contents[address], self.mlb.ram.contents[address + 1] = word_to_bytes_le(value)
+        
+    def _read_word_from_ram(self, address):
+        return bytes_to_word_le((self.mlb.ram.contents[address], self.mlb.ram.contents[address + 1]))
         
 class RAM(object):
     def __init__(self, size):
