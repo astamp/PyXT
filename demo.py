@@ -29,7 +29,9 @@ REG_MASK = 0x38
 REG_SHIFT = 3
 RM_MASK = 0x07
 
-OP_MASK = 0xFC
+UNKNOWN = 0
+ADDRESS = 1
+REGISTER = 2
 
 BYTE_REG = {
     0x00 : "AL",
@@ -155,11 +157,17 @@ class FLAGS(object):
         return value
         
     def set_from_value(self, value, include_cf = True):
+        if value < 0:
+            value = struct.unpack("<H", struct.pack("<h", value))[0]
+            
         self.zf = value == 0
-        self.sf = value < 0
+        self.sf = value & 0x8000
         if include_cf:
             self.cf = value > 0xFFFF
             
+    def dump_flags(self):
+        log.debug("CF=%d  ZF=%d  SF=%d", self.cf, self.zf, self.sf)
+        
 class CPU(Component):
     def __init__(self):
         super(CPU, self).__init__()
@@ -182,11 +190,14 @@ class CPU(Component):
         return byte
         
     def fetch(self):
+        self.dump_regs()
+        self.flags.dump_flags()
+        
         opcode = self.read_byte()
         log.debug("Fetched opcode: 0x%02x", opcode)
         if opcode == 0xF4:
             self._hlt()
-        elif opcode & OP_MASK == 0x80:
+        elif opcode & 0xFC == 0x80:
             self._8x(opcode)
         elif opcode & 0xF8 == 0x40:
             self._inc(opcode)
@@ -212,6 +223,16 @@ class CPU(Component):
             self._mov_reg_to_ram_8()
         elif opcode == 0x89:
             self._mov_reg_to_ram_16()
+        elif opcode == 0x31:
+            self._xor_rm16_r16()
+        elif opcode == 0x09:
+            self._or_rm16_r16()
+        elif opcode == 0x72:
+            self._jc()
+        elif opcode == 0x39:
+            self._cmp_rm16_r16()
+        elif opcode == 0x76:
+            self._jna()
         else:
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
@@ -244,6 +265,42 @@ class CPU(Component):
         
         log.debug("mod = 0x%02X, reg = 0x%02X, rm = 0x%02X", mod, reg, rm)
         return mod, reg, rm
+        
+    def get_modrm_operands(self, size):
+        """ Returns register, rm_type, rm_value from a MODRM byte. """
+        register = None
+        rm_type = UNKNOWN
+        rm_value = None
+        
+        mod, reg, rm = self.get_modrm_ex()
+        
+        if size == 8:
+            register = BYTE_REG[reg]
+        elif size == 16:
+            register = WORD_REG[reg]
+            
+        if mod == 0x03:
+            rm_type = REGISTER
+            if size == 8:
+                rm_value = BYTE_REG[rm]
+            elif size == 16:
+                rm_value = WORD_REG[rm]
+                
+        # Sanity checks.
+        assert register is not None
+        assert rm_type != UNKNOWN
+        assert rm_value is not None
+        
+        log_line = "reg = %s" % register
+        if rm_type == REGISTER:
+            log_line += ", r/m = %s" % rm_value
+        elif rm_type == ADDRESS:
+            log_line += "r/m = 0x%04x" % rm_value
+        log.debug(log_line)
+            
+        return register, rm_type, rm_value
+        
+    
         
     def get_imm(self, word):
         value = self.read_byte()
@@ -345,6 +402,14 @@ class CPU(Component):
         self.regs["SP"] += 2
         return value
         
+    def _jc(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.cf:
+            self.regs["IP"] += distance
+            log.debug("JC incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        else:
+            log.debug("JC was skipped.")
+            
     def _jz(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
         if self.flags.zf:
@@ -361,6 +426,14 @@ class CPU(Component):
             self.regs["IP"] += distance
             log.debug("JNZ incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
             
+    def _jna(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.zf and self.flags.cf:
+            log.debug("JNA was skipped.")
+        else:
+            self.regs["IP"] += distance
+            log.debug("JNA incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            
     def _call(self):
         offset = self.get_imm(True)
         self.__push(self.regs["IP"])
@@ -371,6 +444,30 @@ class CPU(Component):
         self.regs["IP"] = self.__pop()
         log.debug("RET back to 0x%04x", self.regs["IP"])
         
+    def _xor_rm16_r16(self):
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        op1 = self._get_rm16(rm_type, rm_value)
+        op2 = self.regs[register]
+        op1 = op1 ^ op2
+        self.flags.set_from_value(op1, include_cf = True)
+        self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
+        
+    def _or_rm16_r16(self):
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        op1 = self._get_rm16(rm_type, rm_value)
+        op2 = self.regs[register]
+        op1 = op1 | op2
+        self.flags.set_from_value(op1, include_cf = True)
+        self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
+        
+    def _cmp_rm16_r16(self):
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        op1 = self._get_rm16(rm_type, rm_value)
+        op2 = self.regs[register]
+        value = op1 - op2
+        print value
+        self.flags.set_from_value(value, include_cf = True)
+        
     def _hlt(self):
         log.critical("HLT encountered!")
         self.hlt = True
@@ -380,6 +477,22 @@ class CPU(Component):
         
     def _read_word_from_ram(self, address):
         return bytes_to_word_le((self.mlb.ram.contents[address], self.mlb.ram.contents[address + 1]))
+        
+    def _get_rm16(self, rm_type, rm_value):
+        if rm_type == REGISTER:
+            return self.regs[rm_value]
+        elif rm_type == ADDRESS:
+            return self._read_word_from_ram(rm_value)
+            
+    def _set_rm16(self, rm_type, rm_value, value):
+        if rm_type == REGISTER:
+            self.regs[rm_value] = value
+        elif rm_type == ADDRESS:
+            self._write_word_to_ram(rm_value, value)
+            
+    def dump_regs(self):
+        regs = ("AX", "BX", "CX", "DX")
+        log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
         
 class RAM(object):
     def __init__(self, size):
@@ -413,8 +526,21 @@ class MainLogicBoard(object):
         
     def run(self):
         while not self.cpu.hlt:
+            self.dump_screen()
+            import time
+            time.sleep(0.1)
             self.cpu.fetch()
             
+    def dump_screen(self):
+        screen = "\r\n+" + "-" * 80 + "+\r\n"
+        for row in xrange(25):
+            screen += "|"
+            for col in xrange(80):
+                screen += chr(self.ram.contents[0x8000 + (row * 80) + col])
+            screen += "|\r\n"
+        screen += "+" + "-" * 80 + "+\r\n"
+        log.debug(screen)
+        
 # Main application
 def main():
     logging.basicConfig(format = "%(asctime)s %(message)s", level = logging.DEBUG)
