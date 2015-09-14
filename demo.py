@@ -157,8 +157,10 @@ class FLAGS(object):
         return value
         
     def set_from_value(self, value, include_cf = True):
+        log.debug("Setting FLAGS from 0x%04x", value)
         if value < 0:
             value = struct.unpack("<H", struct.pack("<h", value))[0]
+            log.debug("Setting FLAGS from 0x%04x", value)
             
         self.zf = value == 0
         self.sf = value & 0x8000
@@ -222,7 +224,9 @@ class CPU(Component):
         elif opcode == 0x88:
             self._mov_reg_to_ram_8()
         elif opcode == 0x89:
-            self._mov_reg_to_ram_16()
+            self._mov_reg16_to_rm16()
+        elif opcode == 0x8A:
+            self._mov_rm8_to_reg8()
         elif opcode == 0x31:
             self._xor_rm16_r16()
         elif opcode == 0x09:
@@ -233,6 +237,22 @@ class CPU(Component):
             self._cmp_rm16_r16()
         elif opcode == 0x76:
             self._jna()
+        elif opcode == 0x79:
+            self._jns()
+        elif opcode == 0x01:
+            self._add_rm16_r16()
+        elif opcode == 0x19:
+            self._sbb_rm16_r16()
+        elif opcode == 0xF9:
+            self._stc()
+        elif opcode == 0x90:
+            self._nop()
+        elif opcode == 0xE9:
+            self._jmp_rel16()
+        elif opcode == 0xEB:
+            self._jmp_rel8()
+        elif opcode == 0x29:
+            self._sub_rm16_r16()
         else:
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
@@ -279,7 +299,11 @@ class CPU(Component):
         elif size == 16:
             register = WORD_REG[reg]
             
-        if mod == 0x03:
+        if mod == 0x00:
+            rm_type = ADDRESS
+            if rm == 0x06:
+                rm_value = self.get_imm(True)
+        elif mod == 0x03:
             rm_type = REGISTER
             if size == 8:
                 rm_value = BYTE_REG[rm]
@@ -362,13 +386,13 @@ class CPU(Component):
         self.mlb.ram.contents[addr] = self.regs[src]
         log.debug("MOV'd 0x%02x from %s into 0x%04x", self.regs[src], src, addr)
         
-    def _mov_reg_to_ram_16(self):
-        mod, reg, rm = self.get_modrm_ex()
-        src = WORD_REG[reg]
-        assert mod == 0x00 and rm == 0x06
-        addr = self.get_imm(True)
-        self._write_word_to_ram(addr, self.regs[src])
-        log.debug("MOV'd 0x%04x from %s into 0x%04x", self.regs[src], src, addr)
+    def _mov_rm8_to_reg8(self):
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        self.regs[register] = self._get_rm16(rm_type, rm_value)
+        
+    def _mov_reg16_to_rm16(self):
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        self._set_rm16(rm_type, rm_value, self.regs[register])
         
     def _inc(self, opcode):
         dest = WORD_REG[opcode & 0x07]
@@ -421,18 +445,27 @@ class CPU(Component):
     def _jnz(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
         if self.flags.zf:
-            log.debug("JNZ was skipped.")
+            log.debug("JNZ/JNE was skipped.")
         else:
             self.regs["IP"] += distance
-            log.debug("JNZ incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            log.debug("JNZ/JNE incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
             
     def _jna(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.zf and self.flags.cf:
-            log.debug("JNA was skipped.")
+        # HACK
+        # if self.flags.zf or self.flags.cf:
+            # log.debug("JNA was skipped.")
+        # else:
+            # self.regs["IP"] += distance
+            # log.debug("JNA incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            
+    def _jns(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.sf:
+            log.debug("JNS was skipped.")
         else:
             self.regs["IP"] += distance
-            log.debug("JNA incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            log.debug("JNS incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
             
     def _call(self):
         offset = self.get_imm(True)
@@ -460,17 +493,62 @@ class CPU(Component):
         self.flags.set_from_value(op1, include_cf = True)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
+    def _add_rm16_r16(self):
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        op1 = self._get_rm16(rm_type, rm_value)
+        op2 = self.regs[register]
+        op1 = op1 + op2
+        self.flags.set_from_value(op1, include_cf = True)
+        self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
+        
+    def _sbb_rm16_r16(self):
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        op1 = self._get_rm16(rm_type, rm_value)
+        op2 = self.regs[register]
+        op1 = op1 - op2
+        # HACK
+        # if self.flags.cf:
+            # op1 -= 1
+        self.flags.set_from_value(op1, include_cf = True)
+        self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
+        
+    def _sub_rm16_r16(self):
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        op1 = self._get_rm16(rm_type, rm_value)
+        op2 = self.regs[register]
+        op1 = op1 - op2
+        self.flags.set_from_value(op1, include_cf = True)
+        self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
+        
     def _cmp_rm16_r16(self):
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
+        print op1
+        print op2
         value = op1 - op2
         print value
         self.flags.set_from_value(value, include_cf = True)
         
+    def _stc(self):
+        self.flags.cf = True
+        
+    def _nop(self):
+        log.critical("NOP")
+        
     def _hlt(self):
         log.critical("HLT encountered!")
         self.hlt = True
+        
+    def _jmp_rel16(self):
+        offset = self.get_imm(True)
+        self.regs["IP"] += offset
+        log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
+        
+    def _jmp_rel8(self):
+        offset = self.get_imm(False)
+        self.regs["IP"] += offset
+        log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
         
     def _write_word_to_ram(self, address, value):
         self.mlb.ram.contents[address], self.mlb.ram.contents[address + 1] = word_to_bytes_le(value)
@@ -526,9 +604,10 @@ class MainLogicBoard(object):
         
     def run(self):
         while not self.cpu.hlt:
+            log.debug("")
             self.dump_screen()
-            import time
-            time.sleep(0.1)
+            # import time
+            # time.sleep(0.05)
             self.cpu.fetch()
             
     def dump_screen(self):
