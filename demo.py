@@ -163,7 +163,7 @@ class FLAGS(object):
             log.debug("Setting FLAGS from 0x%04x", value)
             
         self.zf = value == 0
-        self.sf = value & 0x8000
+        self.sf = 0x8000 == (value & 0x8000)
         if include_cf:
             self.cf = value > 0xFFFF
             
@@ -253,6 +253,10 @@ class CPU(Component):
             self._jmp_rel8()
         elif opcode == 0x29:
             self._sub_rm16_r16()
+        elif opcode == 0x86:
+            self._xchg_r8_rm8()
+        elif opcode == 0x20:
+            self._and_rm8_r8()
         else:
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
@@ -303,6 +307,9 @@ class CPU(Component):
             rm_type = ADDRESS
             if rm == 0x06:
                 rm_value = self.get_imm(True)
+            elif rm == 0x07:
+                rm_value = self.regs["BX"]
+                
         elif mod == 0x03:
             rm_type = REGISTER
             if size == 8:
@@ -315,9 +322,9 @@ class CPU(Component):
         assert rm_type != UNKNOWN
         assert rm_value is not None
         
-        log_line = "reg = %s" % register
+        log_line = "reg = %s, " % register
         if rm_type == REGISTER:
-            log_line += ", r/m = %s" % rm_value
+            log_line += "r/m = %s" % rm_value
         elif rm_type == ADDRESS:
             log_line += "r/m = 0x%04x" % rm_value
         log.debug(log_line)
@@ -493,6 +500,14 @@ class CPU(Component):
         self.flags.set_from_value(op1, include_cf = True)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
+    def _and_rm8_r8(self):
+        register, rm_type, rm_value = self.get_modrm_operands(8)
+        op1 = self._get_rm8(rm_type, rm_value)
+        op2 = self.regs[register]
+        op1 = op1 & op2
+        self.flags.set_from_value(op1, include_cf = True)
+        self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
+        
     def _add_rm16_r16(self):
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
@@ -529,6 +544,13 @@ class CPU(Component):
         value = op1 - op2
         print value
         self.flags.set_from_value(value, include_cf = True)
+        
+    def _xchg_r8_rm8(self):
+        log.debug("XCHG r8 r/m8")
+        register, rm_type, rm_value = self.get_modrm_operands(8)
+        temp = self._get_rm8(rm_type, rm_value)
+        self._set_rm8(rm_type, rm_value, self.regs[register])
+        self.regs[register] = temp
         
     def _stc(self):
         self.flags.cf = True
@@ -568,6 +590,20 @@ class CPU(Component):
         elif rm_type == ADDRESS:
             self._write_word_to_ram(rm_value, value)
             
+    def _get_rm8(self, rm_type, rm_value):
+        if rm_type == REGISTER:
+            assert rm_value[1] in "HL"
+            return self.regs[rm_value]
+        elif rm_type == ADDRESS:
+            return self.mlb.ram.contents[rm_value]
+            
+    def _set_rm8(self, rm_type, rm_value, value):
+        if rm_type == REGISTER:
+            assert rm_value[1] in "HL"
+            self.regs[rm_value] = value
+        elif rm_type == ADDRESS:
+            self.mlb.ram.contents[rm_value] = value
+            
     def dump_regs(self):
         regs = ("AX", "BX", "CX", "DX")
         log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
@@ -605,7 +641,7 @@ class MainLogicBoard(object):
     def run(self):
         while not self.cpu.hlt:
             log.debug("")
-            self.dump_screen()
+            # self.dump_screen()
             # import time
             # time.sleep(0.05)
             self.cpu.fetch()
