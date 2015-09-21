@@ -343,6 +343,29 @@ class CPU(Component):
             
         return value
         
+    # def _8x_not(self, opcode):
+        # if opcode == 0x82:
+            # opcode = 0x80
+            
+        # word_reg = opcode & 0x01
+        # word_imm = opcode == 0x81
+        # sign_extend = opcode & 0x02
+        
+        # _, op2 = self.get_modrm(word_reg)
+        # val1 = 0
+        # imm = self.get_imm(word_imm)
+        # val1 = self.regs[op2]
+        # if sign_extend and not word_imm:
+            # new_imm = sign_extend_byte_to_word(imm)
+            # log.debug("Sign extending 0x%02x to 0x%04x", imm, new_imm)
+            # imm = new_imm
+            
+        # # print "val1 = 0x%04X" % val1
+        # # print "imm = 0x%04X" % imm
+        # result = val1 - imm
+        
+        # self.flags.set_from_value(result)
+        
     def _8x(self, opcode):
         if opcode == 0x82:
             opcode = 0x80
@@ -351,21 +374,35 @@ class CPU(Component):
         word_imm = opcode == 0x81
         sign_extend = opcode & 0x02
         
-        _, op2 = self.get_modrm(word_reg)
-        val1 = 0
-        imm = self.get_imm(word_imm)
-        val1 = self.regs[op2]
-        if sign_extend and not word_imm:
-            new_imm = sign_extend_byte_to_word(imm)
-            log.debug("Sign extending 0x%02x to 0x%04x", imm, new_imm)
-            imm = new_imm
+        register, rm_type, rm_value = self.get_modrm_operands(16 if word_reg else 8)
+        if word_reg:
+            value = self._get_rm16(rm_type, rm_value)
+        else:
+            value = self._get_rm8(rm_type, rm_value)
             
-        # print "val1 = 0x%04X" % val1
-        # print "imm = 0x%04X" % imm
-        result = val1 - imm
-        
-        self.flags.set_from_value(result)
-        
+        # Process the immediate.
+        immediate = self.get_imm(word_imm)
+        if sign_extend and not word_imm:
+            extended_imm = sign_extend_byte_to_word(immediate)
+            log.debug("Sign extending 0x%02x to 0x%04x", immediate, extended_imm)
+            immediate = extended_imm
+            
+        set_value = True
+        if register in ("DI", "BH"):
+            result = value - immediate
+            set_value = False
+        elif register in ("DX", "DL"):
+            result = value + immediate + (1 if self.flags.cf else 0)
+        else:
+            assert 0
+            
+        self.flags.set_from_value(result, include_cf = True)
+        if set_value:
+            if word_reg:
+                self._set_rm16(rm_type, rm_value, result)
+            else:
+                self._set_rm8(rm_type, rm_value, result)
+                
     def _mov_imm_to_reg(self, opcode):
         word = opcode & 0x08
         if word:
@@ -394,10 +431,12 @@ class CPU(Component):
         log.debug("MOV'd 0x%02x from %s into 0x%04x", self.regs[src], src, addr)
         
     def _mov_rm8_to_reg8(self):
+        log.info("MOV 8-bit r/m to reg (mov r8, r/m8)")
         register, rm_type, rm_value = self.get_modrm_operands(16)
         self.regs[register] = self._get_rm16(rm_type, rm_value)
         
     def _mov_reg16_to_rm16(self):
+        log.info("MOV 16-bit reg to r/m (mov r/m16/32, r16/32)")
         register, rm_type, rm_value = self.get_modrm_operands(16)
         self._set_rm16(rm_type, rm_value, self.regs[register])
         
@@ -641,9 +680,9 @@ class MainLogicBoard(object):
     def run(self):
         while not self.cpu.hlt:
             log.debug("")
-            # self.dump_screen()
-            # import time
-            # time.sleep(0.05)
+            self.dump_screen()
+            import time
+            time.sleep(0.05)
             self.cpu.fetch()
             
     def dump_screen(self):
