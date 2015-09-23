@@ -477,7 +477,6 @@ class CPU(Component):
         addr = self.regs["BX"] + self.regs["DI"]
         # HACK: Should this be masked to 16 bits?
         # addr = addr & 0xFFFF
-        print addr, hex(addr)
         self.mlb.ram.contents[addr] = self.regs[src]
         log.debug("MOV'd 0x%02x from %s into 0x%04x", self.regs[src], src, addr)
         
@@ -620,16 +619,8 @@ class CPU(Component):
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
-        print op1
-        print op2
         op1 = op1 - op2
-        print op1
-        op1 = abs(~op1) + 1
-        print op1
-        raw_input()
-        
-        # op1 = abs(op1)
-        # TODO: HOW TO NEGATIVE NUMBERS?!
+        # TODO: HOW TO HANDLE NEGATIVE NUMBERS?!
         self.flags.set_from_value(op1, include_cf = True)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
@@ -638,7 +629,6 @@ class CPU(Component):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         value = op1 - op2
-        print value
         self.flags.set_from_value(value, include_cf = True)
         
     def _xchg_r8_rm8(self):
