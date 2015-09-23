@@ -345,6 +345,10 @@ class CPU(Component):
             self._inc_dec_rm16()
         elif opcode == 0x3C:
             self._cmp_al_imm8()
+        elif opcode == 0xC6:
+            self._mov_rm8_imm8()
+        elif opcode == 0xC7:
+            self._mov_rm16_imm16()
         else:
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
@@ -676,6 +680,18 @@ class CPU(Component):
             assert 0
         self._set_rm16(rm_type, rm_value, value)
         self.flags.set_from_value(value, include_cf = False)
+        
+    def _mov_rm8_imm8(self):
+        log.debug("MOV r/m8 imm8")
+        sub_opcode, rm_type, rm_value = self.get_modrm_operands(8, decode_register = False)
+        assert sub_opcode == 0
+        self._set_rm8(rm_type, rm_value, self.get_imm(False))
+        
+    def _mov_rm16_imm16(self):
+        log.debug("MOV r/m16 imm16")
+        sub_opcode, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
+        assert sub_opcode == 0
+        self._set_rm16(rm_type, rm_value, self.get_imm(True))
         
     def _stc(self):
         self.flags.cf = True
