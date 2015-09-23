@@ -73,6 +73,12 @@ def bytes_to_word_le(data):
     assert len(data) == 2
     return ((data[1] & 0xFF) << 8) | (data[0] & 0xFF)
     
+def signed_word(value):
+    return struct.unpack("<h", struct.pack("<H", value))[0]
+    
+def signed_byte(value):
+    return struct.unpack("<b", struct.pack("<B", value))[0]
+    
 # Classes
 class Component(object):
     def __init__(self):
@@ -187,6 +193,7 @@ class CPU(Component):
         self.regs.add("B", Register(0, byte_addressable = True))
         self.regs.add("C", Register(0, byte_addressable = True))
         self.regs.add("D", Register(0, byte_addressable = True))
+        self.regs.add("SI", Register(0))
         self.regs.add("DI", Register(0))
         self.debugger_shortcut = []
         
@@ -321,6 +328,8 @@ class CPU(Component):
             self._jna()
         elif opcode == 0x79:
             self._jns()
+        elif opcode == 0x00:
+            self._add_rm8_r8()
         elif opcode == 0x01:
             self._add_rm16_r16()
         elif opcode == 0x19:
@@ -380,7 +389,9 @@ class CPU(Component):
             
         if mod == 0x00:
             rm_type = ADDRESS
-            if rm == 0x06:
+            if rm == 0x00:
+                rm_value = self.regs["BX"] + self.regs["SI"]
+            elif rm == 0x06:
                 rm_value = self.get_imm(True)
             elif rm == 0x07:
                 rm_value = self.regs["BX"]
@@ -607,6 +618,14 @@ class CPU(Component):
         self.flags.set_from_value(op1, include_cf = True)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
+    def _add_rm8_r8(self):
+        register, rm_type, rm_value = self.get_modrm_operands(8)
+        op1 = self._get_rm8(rm_type, rm_value)
+        op2 = self.regs[register]
+        op1 = op1 + op2
+        self.flags.set_from_value(op1, include_cf = True)
+        self._set_rm8(rm_type, rm_value, op1 & 0xFF)
+        
     def _add_rm16_r16(self):
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
@@ -704,12 +723,12 @@ class CPU(Component):
         self.hlt = True
         
     def _jmp_rel16(self):
-        offset = self.get_imm(True)
+        offset = signed_word(self.get_imm(True))
         self.regs["IP"] += offset
         log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
         
     def _jmp_rel8(self):
-        offset = self.get_imm(False)
+        offset = signed_byte(self.get_imm(False))
         self.regs["IP"] += offset
         log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
         
@@ -748,7 +767,7 @@ class CPU(Component):
     def dump_regs(self):
         regs = ("AX", "BX", "CX", "DX")
         log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
-        regs = ("IP", "SP", "DI")
+        regs = ("IP", "SP", "SI", "DI")
         log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
         
 class RAM(object):
@@ -785,8 +804,6 @@ class MainLogicBoard(object):
         while not self.cpu.hlt:
             log.debug("")
             self.dump_screen()
-            import time
-            time.sleep(0.02)
             self.cpu.fetch()
             
     def dump_screen(self):
@@ -797,7 +814,7 @@ class MainLogicBoard(object):
                 screen += chr(self.ram.contents[0x8000 + (row * 80) + col])
             screen += "|\r\n"
         screen += "+" + "-" * 80 + "+\r\n"
-        log.debug(screen)
+        log.info(screen)
         
 # Main application
 def main():
