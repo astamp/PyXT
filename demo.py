@@ -162,7 +162,7 @@ class FLAGS(object):
     def set_from_value(self, value, include_cf = True):
         log.debug("Setting FLAGS from 0x%04x", value)
         if value < 0:
-            value = struct.unpack("<H", struct.pack("<h", value))[0]
+            value = value & 0xFFFF
             log.debug("Setting FLAGS from 0x%04x", value)
             
         self.zf = value == 0
@@ -620,7 +620,6 @@ class CPU(Component):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 - op2
-        # TODO: HOW TO HANDLE NEGATIVE NUMBERS?!
         self.flags.set_from_value(op1, include_cf = True)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
@@ -692,6 +691,8 @@ class CPU(Component):
             
     def dump_regs(self):
         regs = ("AX", "BX", "CX", "DX")
+        log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
+        regs = ("IP", "SP", "DI")
         log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
         
 class RAM(object):
