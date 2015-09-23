@@ -343,26 +343,6 @@ class CPU(Component):
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
             
-    def get_modrm(self, word):
-        mod, reg, rm = self.get_modrm_ex()
-        
-        op1 = ""
-        op2 = ""
-        if word == 0:
-            op1 = BYTE_REG[reg]
-        else:
-            op1 = WORD_REG[reg]
-            
-        if mod == MOD_RM_IS_REG:
-            if word == 0:
-                op2 = BYTE_REG[rm]
-            else:
-                op2 = WORD_REG[rm]
-            
-        # print "op1 = %r" % op1
-        # print "op2 = %r" % op2
-        return op1, op2
-        
     def get_modrm_ex(self):
         modrm = self.read_byte()
         mod = (modrm & MOD_MASK) >> MOD_SHIFT
@@ -427,29 +407,6 @@ class CPU(Component):
             # print "value = 0x%02X" % value
             
         return value
-        
-    # def _8x_not(self, opcode):
-        # if opcode == 0x82:
-            # opcode = 0x80
-            
-        # word_reg = opcode & 0x01
-        # word_imm = opcode == 0x81
-        # sign_extend = opcode & 0x02
-        
-        # _, op2 = self.get_modrm(word_reg)
-        # val1 = 0
-        # imm = self.get_imm(word_imm)
-        # val1 = self.regs[op2]
-        # if sign_extend and not word_imm:
-            # new_imm = sign_extend_byte_to_word(imm)
-            # log.debug("Sign extending 0x%02x to 0x%04x", imm, new_imm)
-            # imm = new_imm
-            
-        # # print "val1 = 0x%04X" % val1
-        # # print "imm = 0x%04X" % imm
-        # result = val1 - imm
-        
-        # self.flags.set_from_value(result)
         
     def _8x(self, opcode):
         if opcode == 0x82:
