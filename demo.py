@@ -339,6 +339,12 @@ class CPU(Component):
             self._xchg_r8_rm8()
         elif opcode == 0x20:
             self._and_rm8_r8()
+        elif opcode == 0xFE:
+            self._inc_dec_rm8()
+        elif opcode == 0xFF:
+            self._inc_dec_rm16()
+        elif opcode == 0x3C:
+            self._cmp_al_imm8()
         else:
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
@@ -606,6 +612,7 @@ class CPU(Component):
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _sbb_rm16_r16(self):
+        log.debug("SBB r/m16 r16")
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
@@ -616,6 +623,7 @@ class CPU(Component):
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _sub_rm16_r16(self):
+        log.debug("SUB r/m16 r16")
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
@@ -624,10 +632,16 @@ class CPU(Component):
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _cmp_rm16_r16(self):
+        log.debug("CMP r/m16 r16")
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         value = op1 - op2
+        self.flags.set_from_value(value, include_cf = True)
+        
+    def _cmp_al_imm8(self):
+        log.debug("CMP al imm8")
+        value = self.regs["AL"] - self.get_imm(False)
         self.flags.set_from_value(value, include_cf = True)
         
     def _xchg_r8_rm8(self):
@@ -636,6 +650,32 @@ class CPU(Component):
         temp = self._get_rm8(rm_type, rm_value)
         self._set_rm8(rm_type, rm_value, self.regs[register])
         self.regs[register] = temp
+        
+    def _inc_dec_rm8(self):
+        log.debug("INC/DEC r/m8")
+        sub_opcode, rm_type, rm_value = self.get_modrm_operands(8, decode_register = False)
+        value = self._get_rm8(rm_type, rm_value)
+        if sub_opcode == 0:
+            value += 1
+        elif sub_opcode == 1:
+            value -= 1
+        else:
+            assert 0
+        self._set_rm8(rm_type, rm_value, value)
+        self.flags.set_from_value(value, include_cf = False)
+        
+    def _inc_dec_rm16(self):
+        log.debug("INC/DEC r/m16")
+        sub_opcode, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
+        value = self._get_rm16(rm_type, rm_value)
+        if sub_opcode == 0:
+            value += 1
+        elif sub_opcode == 1:
+            value -= 1
+        else:
+            assert 0
+        self._set_rm16(rm_type, rm_value, value)
+        self.flags.set_from_value(value, include_cf = False)
         
     def _stc(self):
         self.flags.cf = True
