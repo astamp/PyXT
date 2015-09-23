@@ -174,6 +174,8 @@ class CPU(Component):
     def __init__(self):
         super(CPU, self).__init__()
         self.hlt = False
+        self.breakpoints = []
+        self.single_step = False
         self.flags = FLAGS()
         self.regs = REGS()
         self.regs.add("IP", Register(IP_START))
@@ -191,10 +193,27 @@ class CPU(Component):
         log.debug("Read: 0x%02x from 0x%04x", byte, location)
         return byte
         
+    def should_break(self):
+        return self.single_step or self.regs["IP"] in self.breakpoints
+        
+    def enter_debugger(self):
+        while True:
+            print ">",
+            cmd = raw_input().lower().split()
+            if len(cmd) >= 1 and cmd[0] == "go":
+                self.single_step = False
+                break
+            elif len(cmd) >= 1 and cmd[0] == "mem":
+                addr = int(cmd[1], 0)
+                print hex(self._get_rm16(ADDRESS, addr))
+                
     def fetch(self):
         self.dump_regs()
         self.flags.dump_flags()
         
+        if self.should_break():
+            self.enter_debugger()
+            
         opcode = self.read_byte()
         log.debug("Fetched opcode: 0x%02x", opcode)
         if opcode == 0xF4:
@@ -290,7 +309,7 @@ class CPU(Component):
         log.debug("mod = 0x%02X, reg = 0x%02X, rm = 0x%02X", mod, reg, rm)
         return mod, reg, rm
         
-    def get_modrm_operands(self, size):
+    def get_modrm_operands(self, size, decode_register = True):
         """ Returns register, rm_type, rm_value from a MODRM byte. """
         register = None
         rm_type = UNKNOWN
@@ -298,10 +317,13 @@ class CPU(Component):
         
         mod, reg, rm = self.get_modrm_ex()
         
-        if size == 8:
-            register = BYTE_REG[reg]
-        elif size == 16:
-            register = WORD_REG[reg]
+        if decode_register:
+            if size == 8:
+                register = BYTE_REG[reg]
+            elif size == 16:
+                register = WORD_REG[reg]
+        else:
+            register = reg
             
         if mod == 0x00:
             rm_type = ADDRESS
@@ -374,7 +396,7 @@ class CPU(Component):
         word_imm = opcode == 0x81
         sign_extend = opcode & 0x02
         
-        register, rm_type, rm_value = self.get_modrm_operands(16 if word_reg else 8)
+        sub_opcode, rm_type, rm_value = self.get_modrm_operands(16 if word_reg else 8, decode_register = False)
         if word_reg:
             value = self._get_rm16(rm_type, rm_value)
         else:
@@ -388,11 +410,17 @@ class CPU(Component):
             immediate = extended_imm
             
         set_value = True
-        if register in ("DI", "BH"):
+        if sub_opcode == 0x00:
+            assert 0
+        elif sub_opcode == 0x02:
+            result = value + immediate + (1 if self.flags.cf else 0)
+        elif sub_opcode == 0x04:
+            result = value & immediate
+        elif sub_opcode == 0x05:
+            result = value - immediate
+        elif sub_opcode == 0x07:
             result = value - immediate
             set_value = False
-        elif register in ("DX", "DL"):
-            result = value + immediate + (1 if self.flags.cf else 0)
         else:
             assert 0
             
@@ -427,6 +455,9 @@ class CPU(Component):
         src = BYTE_REG[reg]
         assert mod == 0x00 and rm == 0x01
         addr = self.regs["BX"] + self.regs["DI"]
+        # HACK: Should this be masked to 16 bits?
+        # addr = addr & 0xFFFF
+        print addr, hex(addr)
         self.mlb.ram.contents[addr] = self.regs[src]
         log.debug("MOV'd 0x%02x from %s into 0x%04x", self.regs[src], src, addr)
         
@@ -560,9 +591,8 @@ class CPU(Component):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 - op2
-        # HACK
-        # if self.flags.cf:
-            # op1 -= 1
+        if self.flags.cf:
+            op1 -= 1
         self.flags.set_from_value(op1, include_cf = True)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
@@ -570,7 +600,16 @@ class CPU(Component):
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
+        print op1
+        print op2
         op1 = op1 - op2
+        print op1
+        op1 = abs(~op1) + 1
+        print op1
+        raw_input()
+        
+        # op1 = abs(op1)
+        # TODO: HOW TO NEGATIVE NUMBERS?!
         self.flags.set_from_value(op1, include_cf = True)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
@@ -578,8 +617,6 @@ class CPU(Component):
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
-        print op1
-        print op2
         value = op1 - op2
         print value
         self.flags.set_from_value(value, include_cf = True)
@@ -682,7 +719,7 @@ class MainLogicBoard(object):
             log.debug("")
             self.dump_screen()
             import time
-            time.sleep(0.05)
+            time.sleep(0.02)
             self.cpu.fetch()
             
     def dump_screen(self):
@@ -704,6 +741,11 @@ def main():
     ram = RAM(SIXTY_FOUR_KB)
     ram.load_from_file(sys.argv[1], 0)
     mlb = MainLogicBoard(cpu, ram)
+    
+    # Read in initial breakpoints from the command line.
+    for arg in sys.argv[2:]:
+        cpu.breakpoints.append(int(arg, 0))
+        
     mlb.run()
     
     log.info("PyXT kthxbai")
