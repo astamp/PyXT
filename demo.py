@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Standard library imports
+import re
 import sys
 import array
 import struct
@@ -12,6 +13,8 @@ IP_START = 0
 SP_START = 0x100
 SIXTY_FOUR_KB = 0x10000
 WORD, LOW, HIGH = range(3)
+
+GDB_EXAMINE_REGEX = re.compile("^x\/(\\d+)([xduotacfs])([bwd])$")
 
 FLAGS_BLANK = 0x0000
 FLAGS_CARRY = 0x0001
@@ -185,6 +188,7 @@ class CPU(Component):
         self.regs.add("C", Register(0, byte_addressable = True))
         self.regs.add("D", Register(0, byte_addressable = True))
         self.regs.add("DI", Register(0))
+        self.debugger_shortcut = []
         
     def read_byte(self):
         location = self.regs["IP"]
@@ -200,12 +204,71 @@ class CPU(Component):
         while True:
             print ">",
             cmd = raw_input().lower().split()
-            if len(cmd) >= 1 and cmd[0] == "go":
+            
+            if len(cmd) == 0 and len(self.debugger_shortcut) != 0:
+                cmd = self.debugger_shortcut
+                print "Using: %s" % " ".join(cmd)
+            else:
+                self.debugger_shortcut = cmd
+                
+            if len(cmd) == 0:
+                continue
+                
+            if len(cmd) == 1 and cmd[0] in ("continue", "c"):
                 self.single_step = False
                 break
-            elif len(cmd) >= 1 and cmd[0] == "mem":
-                addr = int(cmd[1], 0)
-                print hex(self._get_rm16(ADDRESS, addr))
+                
+            elif len(cmd) == 1 and cmd[0] in ("step", "s"):
+                self.single_step = True
+                break
+                
+            elif len(cmd) == 1 and cmd[0] in ("quit", "q"):
+                sys.exit(0)
+                
+            elif len(cmd) >= 1 and cmd[0][0] == "x":
+                if len(cmd[0]) > 1:
+                    match = GDB_EXAMINE_REGEX.match(cmd[0])
+                    if match is not None:
+                        count = int(match.group(1))
+                        format = match.group(2)
+                        unit = match.group(3)
+                else:
+                    count = 1
+                    format = "x"
+                    unit = "w"
+                    
+                if len(cmd) >= 2:
+                    address = int(cmd[1], 0)
+                else:
+                    print "you need an address"
+                    continue
+                    
+                readable = ""
+                unit_size_hex = 8
+                if unit == "b":
+                    unit_size_hex = 2
+                    ending_address = address + count
+                    data = [self.mlb.ram.contents[x] for x in xrange(address, ending_address)]
+                    readable = "".join([chr(x) if x > 0x20 and x < 0x7F else "." for x in data])
+                elif unit == "w":
+                    unit_size_hex = 4
+                    ending_address = address + (count * 2)
+                    data = [self._read_word_from_ram(x) for x in xrange(address, ending_address, 2)]
+                else:
+                    print "invalid unit: %r" % unit
+                    
+                self.debugger_shortcut[1] = "0x%08x" % ending_address
+                
+                if format == "x":
+                    format = "%0*x"
+                else:
+                    print "invalid format: %r" % format
+                    continue
+                    
+                print "0x%08x:" % address, " ".join([(format % (unit_size_hex, item)) for item in data]), readable
+                
+            else:
+                print "i don't know what %r is." % " ".join(cmd)
                 
     def fetch(self):
         self.dump_regs()
