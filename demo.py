@@ -452,7 +452,7 @@ class CPU(Component):
             
         set_value = True
         if sub_opcode == 0x00:
-            assert 0
+            result = value + immediate
         elif sub_opcode == 0x02:
             result = value + immediate + (1 if self.flags.cf else 0)
         elif sub_opcode == 0x04:
