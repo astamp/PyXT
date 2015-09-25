@@ -5,6 +5,7 @@ import re
 import sys
 import array
 import struct
+import signal
 import logging
 log = logging.getLogger(__name__)
 
@@ -167,14 +168,10 @@ class FLAGS(object):
         
     def set_from_value(self, value, include_cf = True):
         log.debug("Setting FLAGS from 0x%04x", value)
-        if value < 0:
-            value = value & 0xFFFF
-            log.debug("Setting FLAGS from 0x%04x", value)
-            
         self.zf = value == 0
         self.sf = 0x8000 == (value & 0x8000)
         if include_cf:
-            self.cf = value > 0xFFFF
+            self.cf = value & 0x10000
             
     def dump_flags(self):
         log.debug("CF=%d  ZF=%d  SF=%d", self.cf, self.zf, self.sf)
@@ -298,6 +295,8 @@ class CPU(Component):
             self._push(opcode)
         elif opcode & 0xF8 == 0x58:
             self._pop(opcode)
+        elif opcode & 0xF8 == 0x90:
+            self._xchg_r16_ax(opcode)
         elif opcode == 0x74:
             self._jz()
         elif opcode == 0x75:
@@ -311,11 +310,11 @@ class CPU(Component):
         elif opcode == 0x8B:
             self._mov_ram_to_reg_16()
         elif opcode == 0x88:
-            self._mov_reg_to_ram_8()
+            self._mov_rm8_r8()
         elif opcode == 0x89:
             self._mov_reg16_to_rm16()
         elif opcode == 0x8A:
-            self._mov_rm8_to_reg8()
+            self._mov_rm8_to_reg8() # BAD NAME
         elif opcode == 0x31:
             self._xor_rm16_r16()
         elif opcode == 0x09:
@@ -326,12 +325,16 @@ class CPU(Component):
             self._cmp_rm16_r16()
         elif opcode == 0x76:
             self._jna()
+        elif opcode == 0x77:
+            self._ja()
         elif opcode == 0x79:
             self._jns()
         elif opcode == 0x00:
             self._add_rm8_r8()
         elif opcode == 0x01:
             self._add_rm16_r16()
+        elif opcode == 0x04:
+            self._add_r8_imm8()
         elif opcode == 0x19:
             self._sbb_rm16_r16()
         elif opcode == 0xF9:
@@ -387,15 +390,31 @@ class CPU(Component):
         else:
             register = reg
             
-        if mod == 0x00:
+        if mod in (0x00, 0x01, 0x02):
             rm_type = ADDRESS
             if rm == 0x00:
                 rm_value = self.regs["BX"] + self.regs["SI"]
+            elif rm == 0x01:
+                rm_value = self.regs["BX"] + self.regs["DI"]
+            elif rm == 0x05:
+                rm_value = self.regs["DI"]
             elif rm == 0x06:
-                rm_value = self.get_imm(True)
+                if mod == 0x00:
+                    rm_value = self.get_imm(True)
+                else:
+                    assert 0
             elif rm == 0x07:
                 rm_value = self.regs["BX"]
                 
+            displacement = 0
+            if not (mod == 0x00 and rm == 0x06):
+                if mod == 0x01:
+                    displacement = sign_extend_byte_to_word(self.get_imm(False))
+                elif mod == 0x02:
+                    displacement = self.get_imm(True)
+                
+            rm_value += displacement
+            
         elif mod == 0x03:
             rm_type = REGISTER
             if size == 8:
@@ -423,9 +442,6 @@ class CPU(Component):
         value = self.read_byte()
         if word:
             value |= (self.read_byte() << 8)
-            # print "value = 0x%04X" % value
-        # else:
-            # print "value = 0x%02X" % value
             
         return value
         
@@ -453,6 +469,8 @@ class CPU(Component):
         set_value = True
         if sub_opcode == 0x00:
             result = value + immediate
+        elif sub_opcode == 0x01:
+            result = value | immediate
         elif sub_opcode == 0x02:
             result = value + immediate + (1 if self.flags.cf else 0)
         elif sub_opcode == 0x04:
@@ -491,15 +509,10 @@ class CPU(Component):
         self.regs[dest] = self._read_word_from_ram(addr)
         log.debug("MOV'd 0x%04x from 0x%04x into %s", self.regs[dest], addr, dest)
         
-    def _mov_reg_to_ram_8(self):
-        mod, reg, rm = self.get_modrm_ex()
-        src = BYTE_REG[reg]
-        assert mod == 0x00 and rm == 0x01
-        addr = self.regs["BX"] + self.regs["DI"]
-        # HACK: Should this be masked to 16 bits?
-        # addr = addr & 0xFFFF
-        self.mlb.ram.contents[addr] = self.regs[src]
-        log.debug("MOV'd 0x%02x from %s into 0x%04x", self.regs[src], src, addr)
+    def _mov_rm8_r8(self):
+        log.info("MOV r/m8 r8")
+        register, rm_type, rm_value = self.get_modrm_operands(8)
+        self._set_rm8(rm_type, rm_value, self.regs[register])
         
     def _mov_rm8_to_reg8(self):
         log.info("MOV 8-bit r/m to reg (mov r8, r/m8)")
@@ -569,12 +582,19 @@ class CPU(Component):
             
     def _jna(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        # HACK
-        # if self.flags.zf or self.flags.cf:
-            # log.debug("JNA was skipped.")
-        # else:
-            # self.regs["IP"] += distance
-            # log.debug("JNA incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        if self.flags.zf or self.flags.cf:
+            self.regs["IP"] += distance
+            log.debug("JNA/JBE incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        else:
+            log.debug("JNA/JBE was skipped.")
+            
+    def _ja(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.zf == False and self.flags.cf == False:
+            self.regs["IP"] += distance
+            log.debug("JA incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        else:
+            log.debug("JA was skipped.")
             
     def _jns(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
@@ -634,6 +654,12 @@ class CPU(Component):
         self.flags.set_from_value(op1, include_cf = True)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
+    def _add_r8_imm8(self):
+        log.debug("ADD al imm8")
+        value = self.regs["AL"] + self.get_imm(False)
+        self.flags.set_from_value(value, include_cf = True)
+        self.regs["AL"] = value & 0xFF
+        
     def _sbb_rm16_r16(self):
         log.debug("SBB r/m16 r16")
         register, rm_type, rm_value = self.get_modrm_operands(16)
@@ -673,6 +699,13 @@ class CPU(Component):
         temp = self._get_rm8(rm_type, rm_value)
         self._set_rm8(rm_type, rm_value, self.regs[register])
         self.regs[register] = temp
+        
+    def _xchg_r16_ax(self, opcode):
+        log.debug("XCHG r16 AX")
+        dest = WORD_REG[opcode & 0x07]
+        temp = self.regs[dest]
+        self.regs[dest] = self.regs["AX"]
+        self.regs["AX"] = temp
         
     def _inc_dec_rm8(self):
         log.debug("INC/DEC r/m8")
@@ -799,11 +832,13 @@ class MainLogicBoard(object):
         self.cpu.mlb = self
         
         self.ram = ram
+        self.show_screen = True
         
     def run(self):
         while not self.cpu.hlt:
             log.debug("")
-            self.dump_screen()
+            if self.show_screen:
+                self.dump_screen()
             self.cpu.fetch()
             
     def dump_screen(self):
@@ -826,8 +861,21 @@ def main():
     ram.load_from_file(sys.argv[1], 0)
     mlb = MainLogicBoard(cpu, ram)
     
+    # Allow us to break at any point.
+    def set_single_step(signum, frame):
+        if cpu.single_step:
+            sys.exit(1)
+        else:
+            log.critical("!!!!!!!!!! CONTROL-C !!!!!!!!!!")
+            cpu.single_step = True
+            
+    signal.signal(signal.SIGINT, set_single_step)
+    
     # Read in initial breakpoints from the command line.
     for arg in sys.argv[2:]:
+        if arg.upper() == "NOSCREEN":
+            mlb.show_screen = False
+            continue
         cpu.breakpoints.append(int(arg, 0))
         
     mlb.run()
