@@ -19,28 +19,6 @@ WORD, LOW, HIGH = range(3)
 
 GDB_EXAMINE_REGEX = re.compile("^x\/(\\d+)([xduotacfs])([bwd])$")
 
-FLAGS_BLANK =   0x0000
-
-FLAGS_CARRY =       0x0001
-FLAGS_RESERVED_1 =  0x0002
-FLAGS_PARITY =      0x0004
-FLAGS_RESERVED_2 =  0x0008
-
-FLAGS_ADJUST =      0x0010
-FLAGS_RESERVED_3 =  0x0020
-FLAGS_ZERO =        0x0040
-FLAGS_SIGN =        0x0080
-
-FLAGS_TRAP =        0x0100
-FLAGS_INT_ENABLE =  0x0200
-FLAGS_DIRECTION =   0x0400
-FLAGS_OVERFLOW =    0x0800
-
-FLAGS_IOPL_1 =      0x1000
-FLAGS_IOPL_2 =      0x2000
-FLAGS_NESTED =      0x4000
-FLAGS_RESERVED_4 =  0x8000
-
 MOD_MASK = 0xC0
 MOD_SHIFT = 6
 MOD_SPECIAL = 0x00
@@ -165,42 +143,39 @@ class REGS(object):
             reg.x = value
             
 class FLAGS(object):
+    """ 8086/8088 FLAGS register. """
+    BLANK =       0x0000
+    
+    CARRY =       0x0001
+    RESERVED_1 =  0x0002
+    PARITY =      0x0004
+    RESERVED_2 =  0x0008
+    
+    ADJUST =      0x0010
+    RESERVED_3 =  0x0020
+    ZERO =        0x0040
+    SIGN =        0x0080
+    
+    TRAP =        0x0100
+    INT_ENABLE =  0x0200
+    DIRECTION =   0x0400
+    OVERFLOW =    0x0800
+    
+    IOPL_1 =      0x1000
+    IOPL_2 =      0x2000
+    NESTED =      0x4000
+    RESERVED_4 =  0x8000
+    
     def __init__(self):
-        self.value = FLAGS_BLANK
+        self.value = FLAGS.BLANK
         
-    # CARRY FLAG
-    @property
-    def cf(self):
-        return self.value & FLAGS_CARRY == FLAGS_CARRY
-    @cf.setter
-    def cf(self, value):
-        if value:
-            self.value |= FLAGS_CARRY
-        else:
-            self.value &= ~(FLAGS_CARRY)
-            
-    # ZERO FLAG
-    @property
-    def zf(self):
-        return self.value & FLAGS_ZERO == FLAGS_ZERO
-    @zf.setter
-    def zf(self, value):
-        if value:
-            self.value |= FLAGS_ZERO
-        else:
-            self.value &= ~(FLAGS_ZERO)
-            
-    # SIGN FLAG
-    @property
-    def sf(self):
-        return self.value & FLAGS_SIGN == FLAGS_SIGN
-    @sf.setter
-    def sf(self, value):
-        if value:
-            self.value |= FLAGS_SIGN
-        else:
-            self.value &= ~(FLAGS_SIGN)
-        
+    # Property helpers.
+    cf = property(lambda self: self.read(FLAGS.CARRY), lambda self, value: self.assign(FLAGS.CARRY, value))
+    pf = property(lambda self: self.read(FLAGS.PARITY), lambda self, value: self.assign(FLAGS.PARITY, value))
+    af = property(lambda self: self.read(FLAGS.ADJUST), lambda self, value: self.assign(FLAGS.ADJUST, value))
+    zf = property(lambda self: self.read(FLAGS.ZERO), lambda self, value: self.assign(FLAGS.ZERO, value))
+    sf = property(lambda self: self.read(FLAGS.SIGN), lambda self, value: self.assign(FLAGS.SIGN, value))
+    
     def set(self, mask):
         """ Set a bit in the FLAGS register. """
         self.value |= mask
@@ -223,12 +198,12 @@ class FLAGS(object):
     def set_from_value(self, value, include_cf = True, include_pf = True):
         """ Set ZF, SF, and CF based the result of an ALU operation. """
         log.debug("Setting FLAGS from 0x%04x", value)
-        self.zf = value == 0
-        self.sf = 0x8000 == (value & 0x8000)
+        self.assign(FLAGS.ZERO, value == 0)
+        self.assign(FLAGS.SIGN, 0x8000 == (value & 0x8000))
         if include_cf:
-            self.cf = value & 0x10000
+            self.assign(FLAGS.CARRY, 0x10000 == (value & 0x10000))
         if include_pf:
-            self.assign(FLAGS_PARITY, (count_bits(value & 0x00FF) % 2) == 0)
+            self.assign(FLAGS.PARITY, (count_bits(value & 0x00FF) % 2) == 0)
             
     def dump_flags(self):
         log.debug("CF=%d  ZF=%d  SF=%d", self.cf, self.zf, self.sf)
@@ -579,7 +554,7 @@ class CPU(object):
     def _jae_jnb_jnc(self):
         """ Jump short if the carry flag is clear. """
         distance = signed_byte(self.get_imm(False))
-        if self.flags.read(FLAGS_CARRY) == False:
+        if self.flags.cf == False:
             self.regs["IP"] += distance
             log.debug("JAE/JNB/JNC incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
         else:
@@ -588,7 +563,7 @@ class CPU(object):
     def _jnp_jpo(self):
         """ Jump short if the parity flag is clear. """
         distance = signed_byte(self.get_imm(False))
-        if self.flags.read(FLAGS_PARITY) == False:
+        if self.flags.pf == False:
             self.regs["IP"] += distance
             log.debug("JNP/JPO incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
         else:
@@ -790,10 +765,10 @@ class CPU(object):
         
     # ********** FLAGS opcodes. **********
     def _stc(self):
-        self.flags.cf = True
+        self.flags.set(FLAGS.CARRY)
         
     def _cli(self):
-        self.flags.clear(FLAGS_INT_ENABLE)
+        self.flags.clear(FLAGS.INT_ENABLE)
         
     def _sahf(self):
         self.flags.value = (self.flags.value & 0xFF00) | self.regs["AH"]
