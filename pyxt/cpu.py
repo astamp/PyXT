@@ -7,14 +7,14 @@ import re
 import sys
 import struct
 
+# PyXT imports
+from pyxt.helpers import *
+
 # Logging setup
 import logging
 log = logging.getLogger(__name__)
 
 # Constants
-IP_START = 0
-SP_START = 0x100
-SIXTY_FOUR_KB = 0x10000
 WORD, LOW, HIGH = range(3)
 
 GDB_EXAMINE_REGEX = re.compile("^x\/(\\d+)([xduotacfs])([bwd])$")
@@ -176,26 +176,40 @@ class FLAGS(object):
         
 class CPU(object):
     def __init__(self):
+        # System bus for memory accesses.
         self.bus = None
         
-        self.hlt = False
+        # Internal debugging system. (TODO: Move this elsewhere)
         self.breakpoints = []
         self.single_step = False
+        self.debugger_shortcut = []
+        
+        # CPU halt flag.
+        self.hlt = False
+        
+        # Flags register.
         self.flags = FLAGS()
+        
+        # Normal registers.
         self.regs = REGS()
-        self.regs.add("IP", Register(IP_START))
-        self.regs.add("SP", Register(SP_START))
+        self.regs.add("IP", Register(0))
+        self.regs.add("SP", Register(0))
         self.regs.add("A", Register(0, byte_addressable = True))
         self.regs.add("B", Register(0, byte_addressable = True))
         self.regs.add("C", Register(0, byte_addressable = True))
         self.regs.add("D", Register(0, byte_addressable = True))
         self.regs.add("SI", Register(0))
         self.regs.add("DI", Register(0))
-        self.debugger_shortcut = []
+        
+        # Segment registers.
+        self.regs.add("CS", Register(0xFFFF))
+        self.regs.add("DS", Register(0))
+        self.regs.add("SS", Register(0))
+        self.regs.add("ES", Register(0))
         
     def read_byte(self):
         location = self.regs["IP"]
-        byte = self.bus.read_byte(self.regs["IP"])
+        byte = self.bus.read_byte(segment_offset_to_address(self.regs["CS"], self.regs["IP"]))
         self.regs["IP"] += 1
         log.debug("Read: 0x%02x from 0x%04x", byte, location)
         return byte
@@ -798,5 +812,7 @@ class CPU(object):
         regs = ("AX", "BX", "CX", "DX")
         log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
         regs = ("IP", "SP", "SI", "DI")
+        log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
+        regs = ("CS", "SS", "DS", "ES")
         log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
         
