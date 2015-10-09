@@ -18,3 +18,14 @@ def bytes_to_word(data):
         raise ValueError("data must be a sequence of 2 bytes!")
     return ((data[1] & 0xFF) << 8) | (data[0] & 0xFF)
     
+def count_bits(value):
+    """ Count the number of set bits in a value. """
+    if value < 0:
+        raise ValueError("value must be non-negative!")
+        
+    count = 0
+    while value:
+        if value & 0x1:
+            count += 1
+        value = value >> 1
+    return count

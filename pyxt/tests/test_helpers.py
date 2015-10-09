@@ -52,3 +52,17 @@ class WordToBytesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             word_to_bytes(0x10000)
             
+class CountBitsTests(unittest.TestCase):
+    def test_zero(self):
+        self.assertEqual(count_bits(0x00), 0)
+        
+    def test_simple(self):
+        self.assertEqual(count_bits(0x08), 1)
+        
+    def test_word(self):
+        self.assertEqual(count_bits(0xF00D), 7)
+        
+    def test_negative(self):
+        with self.assertRaises(ValueError):
+            count_bits(-1)
+        
