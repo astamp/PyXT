@@ -201,7 +201,20 @@ class FLAGS(object):
         else:
             self.value &= ~(FLAGS_SIGN)
             
+    def set_flag(self, mask):
+        """ Set a bit in the FLAGS register. """
+        self.value |= mask
+        
+    def clear_flag(self, mask):
+        """ Clear a bit in the FLAGS register. """
+        self.value &= ~(mask)
+        
+    def read_flag(self, mask):
+        """ Return the boolean state of a bit in the FLAGS register. """
+        return self.value & mask == mask
+        
     def set_from_value(self, value, include_cf = True):
+        """ Set ZF, SF, and CF based the result of an ALU operation. """
         log.debug("Setting FLAGS from 0x%04x", value)
         self.zf = value == 0
         self.sf = 0x8000 == (value & 0x8000)
@@ -413,6 +426,8 @@ class CPU(object):
             self._mov_rm16_imm16()
         elif opcode == 0xEA:
             self._jmpf()
+        elif opcode == 0xFA:
+            self._cli()
         else:
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
@@ -805,6 +820,9 @@ class CPU(object):
         
     def _stc(self):
         self.flags.cf = True
+        
+    def _cli(self):
+        self.flags.clear_flag(FLAGS_INT_ENABLE)
         
     def _nop(self):
         log.critical("NOP")
