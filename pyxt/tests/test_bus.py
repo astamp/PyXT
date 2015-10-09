@@ -20,8 +20,8 @@ class RandomAccessMemoryTests(unittest.TestCase):
         self.assertEqual(self.obj.contents[57], 0x12)
         
     def test_read_byte(self):
-        self.obj.contents[1234], 76
-        self.obj.contents[1235], 77
-        self.obj.contents[1236], 78
+        self.obj.contents[1234] = 76
+        self.obj.contents[1235] = 77
+        self.obj.contents[1236] = 78
         self.assertEqual(self.obj.read_byte(1235), 77)
         
