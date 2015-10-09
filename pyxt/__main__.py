@@ -10,9 +10,12 @@ from optparse import OptionParser
 
 # PyXT imports
 from pyxt.constants import *
+from pyxt.cpu import CPU
 from pyxt.bus import SystemBus, RAM, ROM
 
-# Constants
+# Logging setup
+import logging
+log = logging.getLogger(__name__)
 
 # Functions
 def parse_cmdline():
@@ -21,6 +24,9 @@ def parse_cmdline():
     return parser.parse_args()
     
 def main():
+    logging.basicConfig(format = "%(asctime)s %(message)s", level = logging.DEBUG)
+    log.info("PyXT oh hai")
+    
     options, args = parse_cmdline()
     
     bus = SystemBus()
@@ -34,6 +40,13 @@ def main():
         bus.install_device(BIOS_LOCATION, ROM(SIXTY_FOUR_KB, init_file = options.bios))
         
     pprint(bus.devices)
+    
+    cpu = CPU()
+    cpu.bus = bus
+    
+    while not cpu.hlt:
+        log.debug("")
+        cpu.fetch()
 
 if __name__ == "__main__":
     main()

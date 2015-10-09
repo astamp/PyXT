@@ -6,6 +6,8 @@ pyxt.cpu - 8088-ish CPU module for PyXT.
 import re
 import sys
 import struct
+
+# Logging setup
 import logging
 log = logging.getLogger(__name__)
 
@@ -172,9 +174,10 @@ class FLAGS(object):
     def dump_flags(self):
         log.debug("CF=%d  ZF=%d  SF=%d", self.cf, self.zf, self.sf)
         
-class CPU(Component):
+class CPU(object):
     def __init__(self):
-        super(CPU, self).__init__()
+        self.bus = None
+        
         self.hlt = False
         self.breakpoints = []
         self.single_step = False
@@ -192,7 +195,7 @@ class CPU(Component):
         
     def read_byte(self):
         location = self.regs["IP"]
-        byte = self.mlb.ram.contents[self.regs["IP"]]
+        byte = self.bus.read_byte(self.regs["IP"])
         self.regs["IP"] += 1
         log.debug("Read: 0x%02x from 0x%04x", byte, location)
         return byte
@@ -248,7 +251,7 @@ class CPU(Component):
                 if unit == "b":
                     unit_size_hex = 2
                     ending_address = address + count
-                    data = [self.mlb.ram.contents[x] for x in xrange(address, ending_address)]
+                    data = [self.bus.read_byte(x) for x in xrange(address, ending_address)]
                     readable = "".join([chr(x) if x > 0x20 and x < 0x7F else "." for x in data])
                 elif unit == "w":
                     unit_size_hex = 4
@@ -760,10 +763,10 @@ class CPU(Component):
         log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
         
     def _write_word_to_ram(self, address, value):
-        self.mlb.ram.contents[address], self.mlb.ram.contents[address + 1] = word_to_bytes_le(value)
+        self.bus.write_word(address, value)
         
     def _read_word_from_ram(self, address):
-        return bytes_to_word_le((self.mlb.ram.contents[address], self.mlb.ram.contents[address + 1]))
+        return self.bus.read_word(address)
         
     def _get_rm16(self, rm_type, rm_value):
         if rm_type == REGISTER:
@@ -782,14 +785,14 @@ class CPU(Component):
             assert rm_value[1] in "HL"
             return self.regs[rm_value]
         elif rm_type == ADDRESS:
-            return self.mlb.ram.contents[rm_value]
+            return self.bus.read_byte(rm_value)
             
     def _set_rm8(self, rm_type, rm_value, value):
         if rm_type == REGISTER:
             assert rm_value[1] in "HL"
             self.regs[rm_value] = value
         elif rm_type == ADDRESS:
-            self.mlb.ram.contents[rm_value] = value
+            self.bus.write_byte(rm_value, value)
             
     def dump_regs(self):
         regs = ("AX", "BX", "CX", "DX")
