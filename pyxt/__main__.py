@@ -6,32 +6,33 @@ pyxt - Main application for running a demo PyXT system.
 
 # Standard library imports
 from pprint import pprint
-from argparse import ArgumentParser
+from optparse import OptionParser
 
 # PyXT imports
+from pyxt.constants import *
 from pyxt.bus import SystemBus, RAM, ROM
 
 # Constants
 
 # Functions
 def parse_cmdline():
-    parser = ArgumentParser()
-    parser.add_argument("--rom", nargs=2, action="append", dest="roms")
+    parser = OptionParser()
+    parser.add_option("--bios", action = "store", dest = "bios", help = "ROM BIOS image to load at 0xF0000.")
     return parser.parse_args()
-
+    
 def main():
-    args = parse_cmdline()
+    options, args = parse_cmdline()
     
     bus = SystemBus()
     
-    for x in xrange(20):
-        bus.add_device(x * 0x8000, RAM, 0x8000)
-    
-    if args.roms:
-        for address, filepath in args.roms:
-            print address, filepath
-            bus.add_device(int(address, 0), ROM, 0x8000, init_file=filepath)
-    
+    # 640KB OK
+    for x in xrange(10):
+        bus.install_device(x * SIXTY_FOUR_KB, RAM(SIXTY_FOUR_KB))
+        
+    # ROM BIOS
+    if options.bios:
+        bus.install_device(BIOS_LOCATION, ROM(SIXTY_FOUR_KB, init_file = options.bios))
+        
     pprint(bus.devices)
 
 if __name__ == "__main__":

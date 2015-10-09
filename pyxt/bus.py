@@ -7,14 +7,12 @@ import array
 
 # PyXT imports
 from pyxt.helpers import *
-
-# Constants
-DEVICE_PREFIX = 0xF8000
+from pyxt.constants import *
 
 # Classes
 class BusComponent(object):
-    def __init__(self, bus = None):
-        self.bus = bus
+    def __init__(self):
+        self.bus = None
         
     def read_byte(self, offset):
         """ Read a byte from the device at offset. """
@@ -37,6 +35,9 @@ class RAM(BusComponent):
     def __init__(self, size, **kwargs):
         super(RAM, self).__init__(**kwargs)
         self.contents = array.array("B", (0,) * size)
+        
+    def __repr__(self):
+        return "<%s(size=0x%x)>" % (self.__class__.__name__, len(self.contents))
         
     def read_byte(self, offset):
         return self.contents[offset]
@@ -72,22 +73,34 @@ class ROM(RAM):
         
 class SystemBus(object):
     def __init__(self):
-        # Array of devices by 5 bit prefix.
-        self.devices = [None] * 32
-        print self.devices
+        # Array of memory blocks indexed by 4 bit prefix.
+        self.devices = [None] * 16
         
-    def add_device(self, prefix, device_cls, *args, **kwargs):
-        device = device_cls(bus = self, *args, **kwargs)
-        print prefix >> 15
-        self.devices[prefix >> 15] = device
-        print self.devices
-        return device
+    def install_device(self, prefix, device):
+        device.bus = self
+        self.devices[prefix >> BLOCK_PREFIX_SHIFT] = device
         
     def read_byte(self, address):
-        device = self.devices[address >> 15]
+        device = self.devices[address >> BLOCK_PREFIX_SHIFT]
         if device is not None:
-            return device.read_byte(address)
+            return device.read_byte(address & BLOCK_OFFSET_MASK)
         else:
             return 0
             
-        
+    def read_word(self, address):
+        device = self.devices[address >> BLOCK_PREFIX_SHIFT]
+        if device is not None:
+            return device.read_word(address & BLOCK_OFFSET_MASK)
+        else:
+            return 0
+            
+    def write_byte(self, address, value):
+        device = self.devices[address >> BLOCK_PREFIX_SHIFT]
+        if device is not None:
+            device.write_byte(address & BLOCK_OFFSET_MASK, value)
+            
+    def write_word(self, address, value):
+        device = self.devices[address >> BLOCK_PREFIX_SHIFT]
+        if device is not None:
+            device.write_word(address & BLOCK_OFFSET_MASK, value)
+            
