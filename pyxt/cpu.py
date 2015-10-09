@@ -201,15 +201,15 @@ class FLAGS(object):
         else:
             self.value &= ~(FLAGS_SIGN)
             
-    def set_flag(self, mask):
+    def set(self, mask):
         """ Set a bit in the FLAGS register. """
         self.value |= mask
         
-    def clear_flag(self, mask):
+    def clear(self, mask):
         """ Clear a bit in the FLAGS register. """
         self.value &= ~(mask)
         
-    def read_flag(self, mask):
+    def read(self, mask):
         """ Return the boolean state of a bit in the FLAGS register. """
         return self.value & mask == mask
         
@@ -264,79 +264,6 @@ class CPU(object):
         log.debug("Read: 0x%02x from 0x%04x", byte, location)
         return byte
         
-    def should_break(self):
-        return self.single_step or self.regs["IP"] in self.breakpoints
-        
-    def enter_debugger(self):
-        while True:
-            print ">",
-            cmd = raw_input().lower().split()
-            
-            if len(cmd) == 0 and len(self.debugger_shortcut) != 0:
-                cmd = self.debugger_shortcut
-                print "Using: %s" % " ".join(cmd)
-            else:
-                self.debugger_shortcut = cmd
-                
-            if len(cmd) == 0:
-                continue
-                
-            if len(cmd) == 1 and cmd[0] in ("continue", "c"):
-                self.single_step = False
-                break
-                
-            elif len(cmd) == 1 and cmd[0] in ("step", "s"):
-                self.single_step = True
-                break
-                
-            elif len(cmd) == 1 and cmd[0] in ("quit", "q"):
-                sys.exit(0)
-                
-            elif len(cmd) >= 1 and cmd[0][0] == "x":
-                if len(cmd[0]) > 1:
-                    match = GDB_EXAMINE_REGEX.match(cmd[0])
-                    if match is not None:
-                        count = int(match.group(1))
-                        format = match.group(2)
-                        unit = match.group(3)
-                else:
-                    count = 1
-                    format = "x"
-                    unit = "w"
-                    
-                if len(cmd) >= 2:
-                    address = int(cmd[1], 0)
-                else:
-                    print "you need an address"
-                    continue
-                    
-                readable = ""
-                unit_size_hex = 8
-                if unit == "b":
-                    unit_size_hex = 2
-                    ending_address = address + count
-                    data = [self.bus.read_byte(x) for x in xrange(address, ending_address)]
-                    readable = "".join([chr(x) if x > 0x20 and x < 0x7F else "." for x in data])
-                elif unit == "w":
-                    unit_size_hex = 4
-                    ending_address = address + (count * 2)
-                    data = [self._read_word_from_ram(x) for x in xrange(address, ending_address, 2)]
-                else:
-                    print "invalid unit: %r" % unit
-                    
-                self.debugger_shortcut[1] = "0x%08x" % ending_address
-                
-                if format == "x":
-                    format = "%0*x"
-                else:
-                    print "invalid format: %r" % format
-                    continue
-                    
-                print "0x%08x:" % address, " ".join([(format % (unit_size_hex, item)) for item in data]), readable
-                
-            else:
-                print "i don't know what %r is." % " ".join(cmd)
-                
     def fetch(self):
         self.dump_regs()
         self.flags.dump_flags()
@@ -428,10 +355,15 @@ class CPU(object):
             self._jmpf()
         elif opcode == 0xFA:
             self._cli()
+        elif opcode == 0x9E:
+            self._sahf()
+        elif opcode == 0x73:
+            self._jae_jnb_jnc()
         else:
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
             
+    # ********** Opcode parameter helpers. **********
     def get_modrm_ex(self):
         modrm = self.read_byte()
         mod = (modrm & MOD_MASK) >> MOD_SHIFT
@@ -510,6 +442,167 @@ class CPU(object):
             
         return value
         
+    # ********** Data movement opcodes. **********
+    def _mov_imm_to_reg(self, opcode):
+        word = opcode & 0x08
+        if word:
+            dest = WORD_REG[opcode & 0x07]
+        else:
+            dest = BYTE_REG[opcode & 0x07]
+            
+        value = self.get_imm(word)
+        self.regs[dest] = value
+        log.debug("MOV'd 0x%04x into %s", value, dest)
+        
+    def _mov_ram_to_reg_16(self):
+        mod, reg, rm = self.get_modrm_ex()
+        assert mod == 0x00 and rm == 0x06
+        addr = self.get_imm(True)
+        dest = WORD_REG[reg]
+        self.regs[dest] = self._read_word_from_ram(addr)
+        log.debug("MOV'd 0x%04x from 0x%04x into %s", self.regs[dest], addr, dest)
+        
+    def _mov_rm8_r8(self):
+        log.info("MOV r/m8 r8")
+        register, rm_type, rm_value = self.get_modrm_operands(8)
+        self._set_rm8(rm_type, rm_value, self.regs[register])
+        
+    def _mov_rm8_to_reg8(self):
+        log.info("MOV 8-bit r/m to reg (mov r8, r/m8)")
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        self.regs[register] = self._get_rm16(rm_type, rm_value)
+        
+    def _mov_reg16_to_rm16(self):
+        log.info("MOV 16-bit reg to r/m (mov r/m16/32, r16/32)")
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        self._set_rm16(rm_type, rm_value, self.regs[register])
+        
+    def _mov_rm8_imm8(self):
+        log.debug("MOV r/m8 imm8")
+        sub_opcode, rm_type, rm_value = self.get_modrm_operands(8, decode_register = False)
+        assert sub_opcode == 0
+        self._set_rm8(rm_type, rm_value, self.get_imm(False))
+        
+    def _mov_rm16_imm16(self):
+        log.debug("MOV r/m16 imm16")
+        sub_opcode, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
+        assert sub_opcode == 0
+        self._set_rm16(rm_type, rm_value, self.get_imm(True))
+        
+    def _xchg_r8_rm8(self):
+        log.debug("XCHG r8 r/m8")
+        register, rm_type, rm_value = self.get_modrm_operands(8)
+        temp = self._get_rm8(rm_type, rm_value)
+        self._set_rm8(rm_type, rm_value, self.regs[register])
+        self.regs[register] = temp
+        
+    def _xchg_r16_ax(self, opcode):
+        log.debug("XCHG r16 AX")
+        dest = WORD_REG[opcode & 0x07]
+        temp = self.regs[dest]
+        self.regs[dest] = self.regs["AX"]
+        self.regs["AX"] = temp
+        
+    # ********** Stack opcodes. **********
+    def _push(self, opcode):
+        src = WORD_REG[opcode & 0x07]
+        value = self.regs[src]
+        self.__push(value)
+        log.debug("PUSH'd 0x%04x from %s", value, src)
+        
+    def _pop(self, opcode):
+        dest = WORD_REG[opcode & 0x07]
+        self.regs[dest] = self.__pop()
+        log.debug("POP'd 0x%04x into %s", self.regs[dest], dest)
+        
+    def __push(self, value):
+        self.regs["SP"] -= 2
+        self._write_word_to_ram(self.regs["SP"], value)
+        
+    def __pop(self):
+        value = self._read_word_from_ram(self.regs["SP"])
+        self.regs["SP"] += 2
+        return value
+        
+    # ********** Conditional jump opcodes. **********
+    def _jc(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.cf:
+            self.regs["IP"] += distance
+            log.debug("JC incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        else:
+            log.debug("JC was skipped.")
+            
+    def _jz(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.zf:
+            self.regs["IP"] += distance
+            log.debug("JZ incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        else:
+            log.debug("JZ was skipped.")
+            
+    def _jnz(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.zf:
+            log.debug("JNZ/JNE was skipped.")
+        else:
+            self.regs["IP"] += distance
+            log.debug("JNZ/JNE incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            
+    def _jna(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.zf or self.flags.cf:
+            self.regs["IP"] += distance
+            log.debug("JNA/JBE incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        else:
+            log.debug("JNA/JBE was skipped.")
+            
+    def _ja(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.zf == False and self.flags.cf == False:
+            self.regs["IP"] += distance
+            log.debug("JA incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        else:
+            log.debug("JA was skipped.")
+            
+    def _jae_jnb_jnc(self):
+        """ Jump short if the carry flag is clear. """
+        distance = signed_byte(self.get_imm(False))
+        if self.flags.read(FLAGS_CARRY) == False:
+            self.regs["IP"] += distance
+            log.debug("JAE/JNB/JNC incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        else:
+            log.debug("JAE/JNB/JNC was skipped.")
+            
+    def _jns(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.sf:
+            log.debug("JNS was skipped.")
+        else:
+            self.regs["IP"] += distance
+            log.debug("JNS incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            
+    # ********** Fancy jump opcodes. **********
+    def _jmpf(self):
+        # This may look silly, but you can't modify IP or CS while reading the JUMP FAR parameters.
+        new_ip = self.get_imm(True)
+        new_cs = self.get_imm(True)
+        self.regs["IP"] = new_ip
+        self.regs["CS"] = new_cs
+        log.debug("JMP FAR to CS: 0x%04x  IP:0x%04x", self.regs["CS"], self.regs["IP"])
+        
+    def _call(self):
+        offset = self.get_imm(True)
+        self.__push(self.regs["IP"])
+        self.regs["IP"] += offset
+        log.debug("CALL incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
+        
+    def _ret(self):
+        self.regs["IP"] = self.__pop()
+        log.debug("RET back to 0x%04x", self.regs["IP"])
+        
+    
+    # ********** Arithmetic opcodes. **********
     def _8x(self, opcode):
         if opcode == 0x82:
             opcode = 0x80
@@ -555,138 +648,7 @@ class CPU(object):
             else:
                 self._set_rm8(rm_type, rm_value, result)
                 
-    def _mov_imm_to_reg(self, opcode):
-        word = opcode & 0x08
-        if word:
-            dest = WORD_REG[opcode & 0x07]
-        else:
-            dest = BYTE_REG[opcode & 0x07]
-            
-        value = self.get_imm(word)
-        self.regs[dest] = value
-        log.debug("MOV'd 0x%04x into %s", value, dest)
-        
-    def _mov_ram_to_reg_16(self):
-        mod, reg, rm = self.get_modrm_ex()
-        assert mod == 0x00 and rm == 0x06
-        addr = self.get_imm(True)
-        dest = WORD_REG[reg]
-        self.regs[dest] = self._read_word_from_ram(addr)
-        log.debug("MOV'd 0x%04x from 0x%04x into %s", self.regs[dest], addr, dest)
-        
-    def _mov_rm8_r8(self):
-        log.info("MOV r/m8 r8")
-        register, rm_type, rm_value = self.get_modrm_operands(8)
-        self._set_rm8(rm_type, rm_value, self.regs[register])
-        
-    def _mov_rm8_to_reg8(self):
-        log.info("MOV 8-bit r/m to reg (mov r8, r/m8)")
-        register, rm_type, rm_value = self.get_modrm_operands(16)
-        self.regs[register] = self._get_rm16(rm_type, rm_value)
-        
-    def _mov_reg16_to_rm16(self):
-        log.info("MOV 16-bit reg to r/m (mov r/m16/32, r16/32)")
-        register, rm_type, rm_value = self.get_modrm_operands(16)
-        self._set_rm16(rm_type, rm_value, self.regs[register])
-        
-    def _inc(self, opcode):
-        dest = WORD_REG[opcode & 0x07]
-        self.regs[dest] += 1
-        self.flags.set_from_value(self.regs[dest], include_cf = False)
-        log.debug("INC'd %s to 0x%04x", dest, self.regs[dest])
-        
-    def _dec(self, opcode):
-        dest = WORD_REG[opcode & 0x07]
-        self.regs[dest] -= 1
-        self.flags.set_from_value(self.regs[dest], include_cf = False)
-        log.debug("DEC'd %s to 0x%04x", dest, self.regs[dest])
-        
-    def _push(self, opcode):
-        src = WORD_REG[opcode & 0x07]
-        value = self.regs[src]
-        self.__push(value)
-        log.debug("PUSH'd 0x%04x from %s", value, src)
-        
-    def _pop(self, opcode):
-        dest = WORD_REG[opcode & 0x07]
-        self.regs[dest] = self.__pop()
-        log.debug("POP'd 0x%04x into %s", self.regs[dest], dest)
-        
-    def __push(self, value):
-        self.regs["SP"] -= 2
-        self._write_word_to_ram(self.regs["SP"], value)
-        
-    def __pop(self):
-        value = self._read_word_from_ram(self.regs["SP"])
-        self.regs["SP"] += 2
-        return value
-        
-    def _jc(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.cf:
-            self.regs["IP"] += distance
-            log.debug("JC incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
-        else:
-            log.debug("JC was skipped.")
-            
-    def _jz(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.zf:
-            self.regs["IP"] += distance
-            log.debug("JZ incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
-        else:
-            log.debug("JZ was skipped.")
-            
-    def _jnz(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.zf:
-            log.debug("JNZ/JNE was skipped.")
-        else:
-            self.regs["IP"] += distance
-            log.debug("JNZ/JNE incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
-            
-    def _jna(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.zf or self.flags.cf:
-            self.regs["IP"] += distance
-            log.debug("JNA/JBE incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
-        else:
-            log.debug("JNA/JBE was skipped.")
-            
-    def _ja(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.zf == False and self.flags.cf == False:
-            self.regs["IP"] += distance
-            log.debug("JA incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
-        else:
-            log.debug("JA was skipped.")
-            
-    def _jns(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.sf:
-            log.debug("JNS was skipped.")
-        else:
-            self.regs["IP"] += distance
-            log.debug("JNS incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
-            
-    def _jmpf(self):
-        # This may look silly, but you can't modify IP or CS while reading the JUMP FAR parameters.
-        new_ip = self.get_imm(True)
-        new_cs = self.get_imm(True)
-        self.regs["IP"] = new_ip
-        self.regs["CS"] = new_cs
-        log.debug("JMP FAR to CS: 0x%04x  IP:0x%04x", self.regs["CS"], self.regs["IP"])
-        
-    def _call(self):
-        offset = self.get_imm(True)
-        self.__push(self.regs["IP"])
-        self.regs["IP"] += offset
-        log.debug("CALL incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
-        
-    def _ret(self):
-        self.regs["IP"] = self.__pop()
-        log.debug("RET back to 0x%04x", self.regs["IP"])
-        
+    # Bitwise opcodes.
     def _xor_rm16_r16(self):
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
@@ -711,6 +673,7 @@ class CPU(object):
         self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
+    # Math opcodes.
     def _add_rm8_r8(self):
         register, rm_type, rm_value = self.get_modrm_operands(8)
         op1 = self._get_rm8(rm_type, rm_value)
@@ -766,19 +729,18 @@ class CPU(object):
         value = self.regs["AL"] - self.get_imm(False)
         self.flags.set_from_value(value)
         
-    def _xchg_r8_rm8(self):
-        log.debug("XCHG r8 r/m8")
-        register, rm_type, rm_value = self.get_modrm_operands(8)
-        temp = self._get_rm8(rm_type, rm_value)
-        self._set_rm8(rm_type, rm_value, self.regs[register])
-        self.regs[register] = temp
-        
-    def _xchg_r16_ax(self, opcode):
-        log.debug("XCHG r16 AX")
+    # Inc/dec opcodes.
+    def _inc(self, opcode):
         dest = WORD_REG[opcode & 0x07]
-        temp = self.regs[dest]
-        self.regs[dest] = self.regs["AX"]
-        self.regs["AX"] = temp
+        self.regs[dest] += 1
+        self.flags.set_from_value(self.regs[dest], include_cf = False)
+        log.debug("INC'd %s to 0x%04x", dest, self.regs[dest])
+        
+    def _dec(self, opcode):
+        dest = WORD_REG[opcode & 0x07]
+        self.regs[dest] -= 1
+        self.flags.set_from_value(self.regs[dest], include_cf = False)
+        log.debug("DEC'd %s to 0x%04x", dest, self.regs[dest])
         
     def _inc_dec_rm8(self):
         log.debug("INC/DEC r/m8")
@@ -806,24 +768,17 @@ class CPU(object):
         self._set_rm16(rm_type, rm_value, value)
         self.flags.set_from_value(value, include_cf = False)
         
-    def _mov_rm8_imm8(self):
-        log.debug("MOV r/m8 imm8")
-        sub_opcode, rm_type, rm_value = self.get_modrm_operands(8, decode_register = False)
-        assert sub_opcode == 0
-        self._set_rm8(rm_type, rm_value, self.get_imm(False))
-        
-    def _mov_rm16_imm16(self):
-        log.debug("MOV r/m16 imm16")
-        sub_opcode, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
-        assert sub_opcode == 0
-        self._set_rm16(rm_type, rm_value, self.get_imm(True))
-        
+    # ********** FLAGS opcodes. **********
     def _stc(self):
         self.flags.cf = True
         
     def _cli(self):
-        self.flags.clear_flag(FLAGS_INT_ENABLE)
+        self.flags.clear(FLAGS_INT_ENABLE)
         
+    def _sahf(self):
+        self.flags.value = (self.flags.value & 0xFF00) | self.regs["AH"]
+        
+    # ********** Miscellaneous opcodes. **********
     def _nop(self):
         log.critical("NOP")
         
@@ -841,6 +796,7 @@ class CPU(object):
         self.regs["IP"] += offset
         log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
         
+    # ********** Memory access helpers. **********
     def _write_word_to_ram(self, address, value):
         self.bus.write_word(address, value)
         
@@ -873,6 +829,7 @@ class CPU(object):
         elif rm_type == ADDRESS:
             self.bus.write_byte(rm_value, value)
             
+    # ********** Debugger functions. **********
     def dump_regs(self):
         regs = ("AX", "BX", "CX", "DX")
         log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
@@ -881,3 +838,76 @@ class CPU(object):
         regs = ("CS", "SS", "DS", "ES")
         log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
         
+    def should_break(self):
+        return self.single_step or self.regs["IP"] in self.breakpoints
+        
+    def enter_debugger(self):
+        while True:
+            print ">",
+            cmd = raw_input().lower().split()
+            
+            if len(cmd) == 0 and len(self.debugger_shortcut) != 0:
+                cmd = self.debugger_shortcut
+                print "Using: %s" % " ".join(cmd)
+            else:
+                self.debugger_shortcut = cmd
+                
+            if len(cmd) == 0:
+                continue
+                
+            if len(cmd) == 1 and cmd[0] in ("continue", "c"):
+                self.single_step = False
+                break
+                
+            elif len(cmd) == 1 and cmd[0] in ("step", "s"):
+                self.single_step = True
+                break
+                
+            elif len(cmd) == 1 and cmd[0] in ("quit", "q"):
+                sys.exit(0)
+                
+            elif len(cmd) >= 1 and cmd[0][0] == "x":
+                if len(cmd[0]) > 1:
+                    match = GDB_EXAMINE_REGEX.match(cmd[0])
+                    if match is not None:
+                        count = int(match.group(1))
+                        format = match.group(2)
+                        unit = match.group(3)
+                else:
+                    count = 1
+                    format = "x"
+                    unit = "w"
+                    
+                if len(cmd) >= 2:
+                    address = int(cmd[1], 0)
+                else:
+                    print "you need an address"
+                    continue
+                    
+                readable = ""
+                unit_size_hex = 8
+                if unit == "b":
+                    unit_size_hex = 2
+                    ending_address = address + count
+                    data = [self.bus.read_byte(x) for x in xrange(address, ending_address)]
+                    readable = "".join([chr(x) if x > 0x20 and x < 0x7F else "." for x in data])
+                elif unit == "w":
+                    unit_size_hex = 4
+                    ending_address = address + (count * 2)
+                    data = [self._read_word_from_ram(x) for x in xrange(address, ending_address, 2)]
+                else:
+                    print "invalid unit: %r" % unit
+                    
+                self.debugger_shortcut[1] = "0x%08x" % ending_address
+                
+                if format == "x":
+                    format = "%0*x"
+                else:
+                    print "invalid format: %r" % format
+                    continue
+                    
+                print "0x%08x:" % address, " ".join([(format % (unit_size_hex, item)) for item in data]), readable
+                
+            else:
+                print "i don't know what %r is." % " ".join(cmd)
+                
