@@ -200,7 +200,7 @@ class FLAGS(object):
             self.value |= FLAGS_SIGN
         else:
             self.value &= ~(FLAGS_SIGN)
-            
+        
     def set(self, mask):
         """ Set a bit in the FLAGS register. """
         self.value |= mask
@@ -212,14 +212,23 @@ class FLAGS(object):
     def read(self, mask):
         """ Return the boolean state of a bit in the FLAGS register. """
         return self.value & mask == mask
-        
-    def set_from_value(self, value, include_cf = True):
+            
+    def assign(self, mask, value):
+        """ Set a bit in the FLAGS register. """
+        if value:
+            self.set(mask)
+        else:
+            self.clear(mask)
+            
+    def set_from_value(self, value, include_cf = True, include_pf = True):
         """ Set ZF, SF, and CF based the result of an ALU operation. """
         log.debug("Setting FLAGS from 0x%04x", value)
         self.zf = value == 0
         self.sf = 0x8000 == (value & 0x8000)
         if include_cf:
             self.cf = value & 0x10000
+        if include_pf:
+            self.assign(FLAGS_PARITY, (count_bits(value & 0x00FF) % 2) == 0)
             
     def dump_flags(self):
         log.debug("CF=%d  ZF=%d  SF=%d", self.cf, self.zf, self.sf)
@@ -359,6 +368,8 @@ class CPU(object):
             self._sahf()
         elif opcode == 0x73:
             self._jae_jnb_jnc()
+        elif opcode == 0x7b:
+            self._jnp_jpo()
         else:
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
@@ -573,6 +584,15 @@ class CPU(object):
             log.debug("JAE/JNB/JNC incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
         else:
             log.debug("JAE/JNB/JNC was skipped.")
+            
+    def _jnp_jpo(self):
+        """ Jump short if the parity flag is clear. """
+        distance = signed_byte(self.get_imm(False))
+        if self.flags.read(FLAGS_PARITY) == False:
+            self.regs["IP"] += distance
+            log.debug("JNP/JPO incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        else:
+            log.debug("JNP/JPO was skipped.")
             
     def _jns(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
