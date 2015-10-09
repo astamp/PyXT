@@ -374,6 +374,8 @@ class CPU(object):
             self._mov_rm8_imm8()
         elif opcode == 0xC7:
             self._mov_rm16_imm16()
+        elif opcode == 0xEA:
+            self._jmpf()
         else:
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
@@ -615,6 +617,14 @@ class CPU(object):
             self.regs["IP"] += distance
             log.debug("JNS incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
             
+    def _jmpf(self):
+        # This may look silly, but you can't modify IP or CS while reading the JUMP FAR parameters.
+        new_ip = self.get_imm(True)
+        new_cs = self.get_imm(True)
+        self.regs["IP"] = new_ip
+        self.regs["CS"] = new_cs
+        log.debug("JMP FAR to CS: 0x%04x  IP:0x%04x", self.regs["CS"], self.regs["IP"])
+        
     def _call(self):
         offset = self.get_imm(True)
         self.__push(self.regs["IP"])
