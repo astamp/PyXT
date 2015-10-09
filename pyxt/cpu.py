@@ -19,10 +19,27 @@ WORD, LOW, HIGH = range(3)
 
 GDB_EXAMINE_REGEX = re.compile("^x\/(\\d+)([xduotacfs])([bwd])$")
 
-FLAGS_BLANK = 0x0000
-FLAGS_CARRY = 0x0001
-FLAGS_ZERO =  0x0040
-FLAGS_SIGN =  0x0080
+FLAGS_BLANK =   0x0000
+
+FLAGS_CARRY =       0x0001
+FLAGS_RESERVED_1 =  0x0002
+FLAGS_PARITY =      0x0004
+FLAGS_RESERVED_2 =  0x0008
+
+FLAGS_ADJUST =      0x0010
+FLAGS_RESERVED_3 =  0x0020
+FLAGS_ZERO =        0x0040
+FLAGS_SIGN =        0x0080
+
+FLAGS_TRAP =        0x0100
+FLAGS_INT_ENABLE =  0x0200
+FLAGS_DIRECTION =   0x0400
+FLAGS_OVERFLOW =    0x0800
+
+FLAGS_IOPL_1 =      0x1000
+FLAGS_IOPL_2 =      0x2000
+FLAGS_NESTED =      0x4000
+FLAGS_RESERVED_4 =  0x8000
 
 MOD_MASK = 0xC0
 MOD_SHIFT = 6
@@ -149,21 +166,41 @@ class REGS(object):
             
 class FLAGS(object):
     def __init__(self):
-        self.cf = False
-        self.zf = False
-        self.sf = False
+        self.value = FLAGS_BLANK
         
+    # CARRY FLAG
     @property
-    def value(self):
-        value = FLAGS_BLANK
-        if self.cf:
-            value |= FLAGS_CARRY
-        if self.zf:
-            value |= FLAGS_ZERO
-        if self.sf:
-            value |= FLAGS_SIGN
-        return value
-        
+    def cf(self):
+        return self.value & FLAGS_CARRY == FLAGS_CARRY
+    @cf.setter
+    def cf(self, value):
+        if value:
+            self.value |= FLAGS_CARRY
+        else:
+            self.value &= ~(FLAGS_CARRY)
+            
+    # ZERO FLAG
+    @property
+    def zf(self):
+        return self.value & FLAGS_ZERO == FLAGS_ZERO
+    @zf.setter
+    def zf(self, value):
+        if value:
+            self.value |= FLAGS_ZERO
+        else:
+            self.value &= ~(FLAGS_ZERO)
+            
+    # SIGN FLAG
+    @property
+    def sf(self):
+        return self.value & FLAGS_SIGN == FLAGS_SIGN
+    @sf.setter
+    def sf(self, value):
+        if value:
+            self.value |= FLAGS_SIGN
+        else:
+            self.value &= ~(FLAGS_SIGN)
+            
     def set_from_value(self, value, include_cf = True):
         log.debug("Setting FLAGS from 0x%04x", value)
         self.zf = value == 0
@@ -496,7 +533,7 @@ class CPU(object):
         else:
             assert 0
             
-        self.flags.set_from_value(result, include_cf = True)
+        self.flags.set_from_value(result)
         if set_value:
             if word_reg:
                 self._set_rm16(rm_type, rm_value, result)
@@ -640,7 +677,7 @@ class CPU(object):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 ^ op2
-        self.flags.set_from_value(op1, include_cf = True)
+        self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _or_rm16_r16(self):
@@ -648,7 +685,7 @@ class CPU(object):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 | op2
-        self.flags.set_from_value(op1, include_cf = True)
+        self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _and_rm8_r8(self):
@@ -656,7 +693,7 @@ class CPU(object):
         op1 = self._get_rm8(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 & op2
-        self.flags.set_from_value(op1, include_cf = True)
+        self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _add_rm8_r8(self):
@@ -664,7 +701,7 @@ class CPU(object):
         op1 = self._get_rm8(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 + op2
-        self.flags.set_from_value(op1, include_cf = True)
+        self.flags.set_from_value(op1)
         self._set_rm8(rm_type, rm_value, op1 & 0xFF)
         
     def _add_rm16_r16(self):
@@ -672,13 +709,13 @@ class CPU(object):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 + op2
-        self.flags.set_from_value(op1, include_cf = True)
+        self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _add_r8_imm8(self):
         log.debug("ADD al imm8")
         value = self.regs["AL"] + self.get_imm(False)
-        self.flags.set_from_value(value, include_cf = True)
+        self.flags.set_from_value(value)
         self.regs["AL"] = value & 0xFF
         
     def _sbb_rm16_r16(self):
@@ -689,7 +726,7 @@ class CPU(object):
         op1 = op1 - op2
         if self.flags.cf:
             op1 -= 1
-        self.flags.set_from_value(op1, include_cf = True)
+        self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _sub_rm16_r16(self):
@@ -698,7 +735,7 @@ class CPU(object):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 - op2
-        self.flags.set_from_value(op1, include_cf = True)
+        self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _cmp_rm16_r16(self):
@@ -707,12 +744,12 @@ class CPU(object):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         value = op1 - op2
-        self.flags.set_from_value(value, include_cf = True)
+        self.flags.set_from_value(value)
         
     def _cmp_al_imm8(self):
         log.debug("CMP al imm8")
         value = self.regs["AL"] - self.get_imm(False)
-        self.flags.set_from_value(value, include_cf = True)
+        self.flags.set_from_value(value)
         
     def _xchg_r8_rm8(self):
         log.debug("XCHG r8 r/m8")
