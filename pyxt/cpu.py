@@ -175,6 +175,7 @@ class FLAGS(object):
     af = property(lambda self: self.read(FLAGS.ADJUST), lambda self, value: self.assign(FLAGS.ADJUST, value))
     zf = property(lambda self: self.read(FLAGS.ZERO), lambda self, value: self.assign(FLAGS.ZERO, value))
     sf = property(lambda self: self.read(FLAGS.SIGN), lambda self, value: self.assign(FLAGS.SIGN, value))
+    of = property(lambda self: self.read(FLAGS.OVERFLOW), lambda self, value: self.assign(FLAGS.OVERFLOW, value))
     
     def set(self, mask):
         """ Set a bit in the FLAGS register. """
@@ -303,6 +304,8 @@ class CPU(object):
             self._ja()
         elif opcode == 0x79:
             self._jns()
+        elif opcode == 0x78:
+            self._js()
         elif opcode == 0x00:
             self._add_rm8_r8()
         elif opcode == 0x01:
@@ -345,8 +348,18 @@ class CPU(object):
             self._lahf()
         elif opcode == 0x73:
             self._jae_jnb_jnc()
-        elif opcode == 0x7b:
+        elif opcode == 0x7B:
             self._jnp_jpo()
+        elif opcode == 0x7A:
+            self._jp_jpe()
+        elif opcode & 0xFC == 0xD0:
+            self._rotate_and_shift(opcode)
+        elif opcode == 0x71:
+            self._jno()
+        elif opcode == 0x70:
+            self._jo()
+        elif opcode == 0x32:
+            self._xor_r8_rm8()
         else:
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
@@ -477,6 +490,12 @@ class CPU(object):
         assert sub_opcode == 0
         self._set_rm16(rm_type, rm_value, self.get_imm(True))
         
+    def _mov_sreg_rm16(self):
+        log.debug("MOV Sreg r/m16")
+        sub_opcode, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
+        assert sub_opcode == 0
+        self._set_rm16(rm_type, rm_value, self.get_imm(True))
+        
     def _xchg_r8_rm8(self):
         log.debug("XCHG r8 r/m8")
         register, rm_type, rm_value = self.get_modrm_operands(8)
@@ -571,6 +590,15 @@ class CPU(object):
         else:
             log.debug("JNP/JPO was skipped.")
             
+    def _jp_jpe(self):
+        """ Jump short if the parity flag is set. """
+        distance = signed_byte(self.get_imm(False))
+        if self.flags.pf == False:
+            log.debug("JP/JPE was skipped.")
+        else:
+            self.regs["IP"] += distance
+            log.debug("JP/JPE incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            
     def _jns(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
         if self.flags.sf:
@@ -578,6 +606,30 @@ class CPU(object):
         else:
             self.regs["IP"] += distance
             log.debug("JNS incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            
+    def _js(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.sf:
+            self.regs["IP"] += distance
+            log.debug("JS incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        else:
+            log.debug("JS was skipped.")
+            
+    def _jno(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.of:
+            log.debug("JNO was skipped.")
+        else:
+            self.regs["IP"] += distance
+            log.debug("JNO incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            
+    def _jo(self):
+        distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
+        if self.flags.of:
+            self.regs["IP"] += distance
+            log.debug("JO incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+        else:
+            log.debug("JO was skipped.")
             
     # ********** Fancy jump opcodes. **********
     def _jmpf(self):
@@ -653,6 +705,14 @@ class CPU(object):
         op1 = op1 ^ op2
         self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
+        
+    def _xor_r8_rm8(self):
+        register, rm_type, rm_value = self.get_modrm_operands(8)
+        op1 = self._get_rm8(rm_type, rm_value)
+        op2 = self.regs[register]
+        op1 = op1 ^ op2
+        self.flags.set_from_value(op1)
+        self._set_rm8(rm_type, rm_value, op1 & 0xFFFF)
         
     def _or_rm16_r16(self):
         register, rm_type, rm_value = self.get_modrm_operands(16)
@@ -765,6 +825,37 @@ class CPU(object):
         self._set_rm16(rm_type, rm_value, value)
         self.flags.set_from_value(value, include_cf = False)
         
+    # Shift opcodes.
+    def _rotate_and_shift(self, opcode):
+        log.debug("Rotate/shift")
+        
+        count = 1
+        if opcode & 0x02 == 0x02:
+            count = self.regs["CL"]
+            
+        bits = 8
+        if opcode & 0x01 == 0x01:
+            bits = 16
+            
+        high_bit_mask = 1 << (bits - 1)
+        
+        sub_opcode, rm_type, rm_value = self.get_modrm_operands(bits, decode_register = False)
+        
+        old_value = value = self._get_rm16(rm_type, rm_value)
+        if sub_opcode == 0x05:
+            value = value >> count
+            self.flags.set_from_value(value, include_cf = False)
+            self.flags.cf = (old_value >> (count - 1)) & 0x01 == 0x01
+        elif sub_opcode == 0x04:
+            # 0x0010 << 12 => CF = True
+            self.flags.cf = (value << count) & 0x10000 == 0x10000
+            value = value << count
+            self.flags.set_from_value(value, include_cf = False)
+            if count == 1:
+                self.flags.of = ((old_value & high_bit_mask) ^ (value & high_bit_mask)) == high_bit_mask
+        else:
+            assert 0
+            
     # ********** FLAGS opcodes. **********
     def _stc(self):
         self.flags.set(FLAGS.CARRY)
