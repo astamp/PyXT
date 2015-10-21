@@ -1,0 +1,16 @@
+@ECHO OFF
+SETLOCAL
+
+SET PATTERN=%1
+SET ARGS=
+
+:LOOP
+SHIFT
+IF "%1"=="" GOTO DONE
+SET ARGS=%ARGS% %1
+GOTO LOOP
+:DONE
+
+python -m unittest discover -p test_%PATTERN%* %ARGS%
+
+ENDLOCAL
