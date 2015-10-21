@@ -213,6 +213,7 @@ class CPU(object):
     def __init__(self):
         # System bus for memory accesses.
         self.bus = None
+        self.io_bus = None
         
         # Internal debugging system. (TODO: Move this elsewhere)
         self.breakpoints = []
@@ -360,6 +361,14 @@ class CPU(object):
             self._jo()
         elif opcode == 0x32:
             self._xor_r8_rm8()
+        elif opcode == 0xE6:
+            self._out_imm8_al()
+        elif opcode == 0xEE:
+            self._out_dx_al()
+        elif opcode == 0x34:
+            self._xor_al_imm8()
+        elif opcode == 0x33:
+            self._xor_r16_rm16()
         else:
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
@@ -706,6 +715,14 @@ class CPU(object):
         self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
+    def _xor_r16_rm16(self):
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        op1 = self.regs[register]
+        op2 = self._get_rm16(rm_type, rm_value)
+        op1 = op1 ^ op2
+        self.flags.set_from_value(op1)
+        self.regs[register] = op1 & 0xFFFF
+        
     def _xor_r8_rm8(self):
         register, rm_type, rm_value = self.get_modrm_operands(8)
         op1 = self._get_rm8(rm_type, rm_value)
@@ -713,6 +730,12 @@ class CPU(object):
         op1 = op1 ^ op2
         self.flags.set_from_value(op1)
         self._set_rm8(rm_type, rm_value, op1 & 0xFFFF)
+        
+    def _xor_al_imm8(self):
+        log.info("XOR al imm8")
+        value = self.regs["AL"] ^ self.get_imm(False)
+        self.flags.set_from_value(value)
+        self.regs["AL"] = value & 0xFF
         
     def _or_rm16_r16(self):
         register, rm_type, rm_value = self.get_modrm_operands(16)
@@ -861,6 +884,7 @@ class CPU(object):
         self.flags.set(FLAGS.CARRY)
         
     def _cli(self):
+        log.info("CLI Disabling interrupts.")
         self.flags.clear(FLAGS.INT_ENABLE)
         
     def _sahf(self):
@@ -888,6 +912,19 @@ class CPU(object):
         offset = signed_byte(self.get_imm(False))
         self.regs["IP"] += offset
         log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
+        
+    # ********** I/O port opcodes. **********
+    def _out_imm8_al(self):
+        port = self.get_imm(False)
+        value = self.regs["AL"]
+        log.info("Writing 0x%02x to port 0x%04x.", value, port)
+        self.io_bus.write_byte(port, value)
+        
+    def _out_dx_al(self):
+        port = self.regs["DX"]
+        value = self.regs["AL"]
+        log.info("Writing 0x%02x to port 0x%04x.", value, port)
+        self.io_bus.write_byte(port, value)
         
     # ********** Memory access helpers. **********
     def _write_word_to_ram(self, address, value):
