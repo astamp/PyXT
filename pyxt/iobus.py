@@ -110,6 +110,11 @@ class ProgrammableInterruptController(IOComponent):
             
             self.icws_state = 0
             
+    def process_ocw2_byte(self, value):
+        command = (value & 0xE0) >> 5
+        interrupt = value & 0x07
+        print "command = %r, interrupt = %r" % (command, interrupt)
+        
     # def read_byte(self, address):
         # offset = address - self.base
         # if offset == 0 or offset == 1 or offset == 2:
@@ -130,6 +135,15 @@ class ProgrammableInterruptController(IOComponent):
         
         if self.icws_state > 0:
             self.process_icws_byte(value)
+        else:
+            if offset == 1:
+                self.mask = value
+            else:
+                if value & 0x08 == 0x08:
+                    self.process_ocw3_byte(value)
+                else:
+                    self.process_ocw2_byte(value)
+                    
             
 class ProgrammableIntervalTimer(IOComponent):
     """ An IOComponent emulating an 8253 PIT timer. """

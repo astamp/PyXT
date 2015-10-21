@@ -136,3 +136,13 @@ class PICTests(unittest.TestCase):
         self.obj.write_byte(0x00A1, 0xFF)
         self.assertEqual(self.obj.auto_eoi, False)
         
+    # ***** OCW1 Tests *****
+    def test_ocw1_sets_mask(self):
+        self.obj.write_byte(0x00A1, 0x56)
+        self.assertEqual(self.obj.mask, 0x56)
+        
+        self.obj.write_byte(0x00A1, 0x00)
+        self.assertEqual(self.obj.mask, 0x00)
+        
+    # ***** OCW2 Tests *****
+    
