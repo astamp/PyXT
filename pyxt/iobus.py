@@ -59,6 +59,7 @@ class ProgrammableInterruptController(IOComponent):
         self.vector_base = 0x00
         self.i8086_8088_mode = False
         self.auto_eoi = False
+        self.slave_mode_address = 7
         
         # ICWS (Initialization Commands Words) state machine, per the datasheet.
         # 0 indicates the idle state, 1-4 indicate what byte will be processed next.
@@ -69,17 +70,24 @@ class ProgrammableInterruptController(IOComponent):
         return [x for x in xrange(self.base, self.base + 2)]
         
     def start_initialization_sequence(self):
-        self.mask = 0x00
+        """ Kick off the 8259 initialization sequence. """
         self.trigger_mode = self.EDGE_TRIGGERED
+        self.mask = 0x00
         self.priorities[7] = 7
+        self.slave_mode_address = 7
+        # TODO: Clear special mask mode?
+        # TODO: Set status read to IRR?
         self.icws_state = 1
         self.icw4_needed = False
         
     def process_icws_byte(self, value):
+        """ Run a byte through the initialization state machine. """
         if self.icws_state == 1:
             self.icw4_needed = value & 0x01 == 0x01
             self.cascade = value & 0x02 == 0x02
+            # TODO: Do we need call address interval for 8086 mode?
             self.trigger_mode = self.LEVEL_TRIGGERED if value & 0x04 == 0x04 else self.EDGE_TRIGGERED
+            # TODO: No support for full MCS-80/8085 vector addresses.
             
             if not self.icw4_needed:
                 self.i8086_8088_mode = False
@@ -89,6 +97,7 @@ class ProgrammableInterruptController(IOComponent):
             
         elif self.icws_state == 2:
             self.vector_base = value & 0xF1
+            # TODO: No support for full MCS-80/8085 vector addresses.
             
             if self.cascade:
                 self.icws_state = 3
@@ -98,7 +107,7 @@ class ProgrammableInterruptController(IOComponent):
                 self.icws_state = 0
                 
         elif self.icws_state == 3:
-            # TODO: Something with this byte maybe?!
+            # TODO: Currently no support for cascade mode or slave 8259's.
             if self.icw4_needed:
                 self.icws_state = 4
             else:
@@ -107,7 +116,8 @@ class ProgrammableInterruptController(IOComponent):
         elif self.icws_state == 4:
             self.i8086_8088_mode = value & 0x01 == 0x01
             self.auto_eoi = value & 0x02 == 0x02
-            
+            # TODO: Currently no support for buffered mode.
+            # TODO: No support for "special fully nested mode".
             self.icws_state = 0
             
     def process_ocw2_byte(self, value):
