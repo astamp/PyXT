@@ -33,8 +33,8 @@ def main():
     bus = SystemBus()
     
     # 640KB OK
-    for x in xrange(10):
-        bus.install_device(x * SIXTY_FOUR_KB, RAM(SIXTY_FOUR_KB))
+    for index in xrange(10):
+        bus.install_device(index * SIXTY_FOUR_KB, RAM(SIXTY_FOUR_KB))
         
     # ROM BIOS
     if options.bios:
