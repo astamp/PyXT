@@ -80,15 +80,19 @@ class SystemBus(object):
         self.io_decoder = {}
         
     def install_device(self, prefix, device):
+        """ Install a device into the system bus. """
         device.bus = self
-        self.devices[prefix >> BLOCK_PREFIX_SHIFT] = device
         
-    def install_io_device(self, device):
-        device.io_bus = self
-        self.devices.append(device)
-        for address in device.get_address_list():
-            self.decoder[address] = device
+        # The memory bus uses a prefix to index to the correct device.
+        if prefix is not None:
+            self.devices[prefix >> BLOCK_PREFIX_SHIFT] = device
             
+        # The I/O bus uses a decoder (dictionary in our case).
+        if len(device.get_ports_list()) > 0:
+            self.io_devices.append(device)
+            for address in device.get_ports_list():
+                self.io_decoder[address] = device
+                
     def read_byte(self, address):
         device = self.devices[address >> BLOCK_PREFIX_SHIFT]
         if device is not None:
@@ -116,9 +120,9 @@ class SystemBus(object):
             
     def io_read_byte(self, port):
         """ Read a byte from the supplied port. """
-        device = self.io_decoder.get(address, None)
+        device = self.io_decoder.get(port, None)
         if device is not None:
-            return device.io_read_byte(address)
+            return device.io_read_byte(port)
         else:
             return 0x00
             
@@ -128,9 +132,9 @@ class SystemBus(object):
         
     def io_write_byte(self, port, value):
         """ Write a byte to the supplied port. """
-        device = self.io_decoder.get(address, None)
+        device = self.io_decoder.get(port, None)
         if device is not None:
-            device.io_write_byte(address, value)
+            device.io_write_byte(port, value)
             
     def io_write_word(self, port, value):
         """ Write a word to the supplied port. """

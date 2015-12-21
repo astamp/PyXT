@@ -11,8 +11,9 @@ from optparse import OptionParser
 # PyXT imports
 from pyxt.constants import *
 from pyxt.cpu import CPU
-from pyxt.iobus import *
-from pyxt.bus import *
+from pyxt.bus import SystemBus
+from pyxt.memory import RAM, ROM
+from pyxt.onboard import ProgrammableInterruptController, ProgrammableIntervalTimer
 
 # Logging setup
 import logging
@@ -40,19 +41,15 @@ def main():
     if options.bios:
         bus.install_device(BIOS_LOCATION, ROM(SIXTY_FOUR_KB, init_file = options.bios))
         
+    # Other onboard hardware devices.
+    bus.install_device(None, ProgrammableInterruptController(0x00A0))
+    bus.install_device(None, ProgrammableIntervalTimer(0x0040))
+    
     print "\nSYSTEM BUS:"
     pprint(bus.devices)
     
-    io_bus = InputOutputBus()
-    io_bus.install_device(ProgrammableInterruptController(0x00A0))
-    io_bus.install_device(ProgrammableIntervalTimer(0x0040))
-    
-    print "\nI/O BUS:"
-    pprint(io_bus.devices)
-    
     cpu = CPU()
     cpu.bus = bus
-    cpu.io_bus = io_bus
     
     while not cpu.hlt:
         log.debug("")

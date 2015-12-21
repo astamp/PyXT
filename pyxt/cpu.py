@@ -211,9 +211,8 @@ class FLAGS(object):
         
 class CPU(object):
     def __init__(self):
-        # System bus for memory accesses.
+        # System bus for memory and I/O access.
         self.bus = None
-        self.io_bus = None
         
         # Internal debugging system. (TODO: Move this elsewhere)
         self.breakpoints = []
@@ -918,13 +917,13 @@ class CPU(object):
         port = self.get_imm(False)
         value = self.regs["AL"]
         log.info("Writing 0x%02x to port 0x%04x.", value, port)
-        self.io_bus.write_byte(port, value)
+        self.bus.io_write_byte(port, value)
         
     def _out_dx_al(self):
         port = self.regs["DX"]
         value = self.regs["AL"]
         log.info("Writing 0x%02x to port 0x%04x.", value, port)
-        self.io_bus.write_byte(port, value)
+        self.bus.io_write_byte(port, value)
         
     # ********** Memory access helpers. **********
     def _write_word_to_ram(self, address, value):
