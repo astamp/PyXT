@@ -207,6 +207,7 @@ def main():
     
     size = width, height = 720, 350
     screen = pygame.display.set_mode(size)
+    pygame.display.set_caption("PyXT")
     screen.fill(BLACK)
     
     hw = XTHardware()
