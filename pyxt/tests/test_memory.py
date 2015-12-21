@@ -1,6 +1,6 @@
 import unittest
 
-from pyxt.bus import *
+from pyxt.memory import *
 
 class RandomAccessMemoryTests(unittest.TestCase):
     def setUp(self):

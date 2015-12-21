@@ -10,76 +10,85 @@ from pyxt.helpers import *
 from pyxt.constants import *
 
 # Classes
-class BusComponent(object):
+class Device(object):
+    """ Base class for a devuce on the system bus. """
     def __init__(self):
         self.bus = None
         
-    def read_byte(self, offset):
-        """ Read a byte from the device at offset. """
-        raise NotImplementedError
+    # Common stuff.
+    def install(self, bus):
+        """ Install this device into the supplied system bus. """
+        self.bus = bus
         
-    def read_word(self, offset):
-        """ Read a word from the device at offset. """
-        raise NotImplementedError
+    def clock(self):
+        """
+        Handle one iteration of the system clock tick.
         
-    def write_byte(self, offset, value):
-        """ Write a byte value to the device at offset. """
-        raise NotImplementedError
-        
-    def write_word(self, offset):
-        """ Write a word value to the device at offset. """
-        raise NotImplementedError
-        
-class RAM(BusComponent):
-    """ A BusComponent emulating a RAM storage device. """
-    def __init__(self, size, **kwargs):
-        super(RAM, self).__init__(**kwargs)
-        self.contents = array.array("B", (0,) * size)
-        
-    def __repr__(self):
-        return "<%s(size=0x%x)>" % (self.__class__.__name__, len(self.contents))
-        
-    def read_byte(self, offset):
-        return self.contents[offset]
-        
-    def read_word(self, offset):
-        return bytes_to_word((self.contents[offset], self.contents[offset + 1]))
-        
-    def write_byte(self, offset, value):
-        self.contents[offset] = value
-        
-    def write_word(self, offset, value):
-        self.contents[offset], self.contents[offset + 1] = word_to_bytes(value)
-        
-class ROM(RAM):
-    """ A BusComponent emulating a ROM storage device. """
-    def __init__(self, size, init_file = None, **kwargs):
-        super(ROM, self).__init__(size, **kwargs)
-        if init_file is not None:
-            self.load_from_file(init_file)
-            
-    def load_from_file(self, filename, offset = 0):
-        with open(filename, "rb") as fileptr:
-            data = fileptr.read()
-            
-        for index, char in enumerate(data, start = offset):
-            self.contents[index] = ord(char)
-            
-    def write_byte(self, offset, value):
+        This is not required to be implemented as not all devices have a clock input.
+        """
         pass
         
-    def write_word(self, offset, value):
-        pass
+    # Memory bus.
+    def get_memory_size(self):
+        """ Return the length of the memory mapped area of this device. """
+        return 0
+        
+    def mem_read_byte(self, offset):
+        """ Read a byte from memory at the supplied offset from the device's base. """
+        raise NotImplementedError("This device doesn't support memory mapping.")
+        
+    def mem_read_word(self, offset):
+        """ Read a word from memory at the supplied offset from the device's base. """
+        raise NotImplementedError("This device doesn't support memory mapping.")
+        
+    def mem_write_byte(self, offset, value):
+        """ Write a byte to memory at the supplied offset from the device's base. """
+        raise NotImplementedError("This device doesn't support memory mapping.")
+        
+    def mem_write_word(self, offset):
+        """ Write a word to memory at the supplied offset from the device's base. """
+        raise NotImplementedError("This device doesn't support memory mapping.")
+        
+    # I/O bus.
+    def get_ports_list(self):
+        """ Return a list of ports used by this device. """
+        return []
+        
+    def io_read_byte(self, port):
+        """ Read a byte from the supplied port. """
+        raise NotImplementedError("This device doesn't support I/O ports.")
+        
+    def io_read_word(self, port):
+        """ Read a word from the supplied port. """
+        raise NotImplementedError("This device doesn't support I/O ports.")
+        
+    def io_write_byte(self, port, value):
+        """ Write a byte to the supplied port. """
+        raise NotImplementedError("This device doesn't support I/O ports.")
+        
+    def io_write_word(self, port, value):
+        """ Write a word to the supplied port. """
+        raise NotImplementedError("This device doesn't support I/O ports.")
         
 class SystemBus(object):
+    """ The main system bus for PyXT including memory mapped devices and I/O ports. """
     def __init__(self):
         # Array of memory blocks indexed by 4 bit prefix.
         self.devices = [None] * 16
+        
+        self.io_devices = []
+        self.io_decoder = {}
         
     def install_device(self, prefix, device):
         device.bus = self
         self.devices[prefix >> BLOCK_PREFIX_SHIFT] = device
         
+    def install_io_device(self, device):
+        device.io_bus = self
+        self.devices.append(device)
+        for address in device.get_address_list():
+            self.decoder[address] = device
+            
     def read_byte(self, address):
         device = self.devices[address >> BLOCK_PREFIX_SHIFT]
         if device is not None:
@@ -104,3 +113,26 @@ class SystemBus(object):
         if device is not None:
             device.write_word(address & BLOCK_OFFSET_MASK, value)
             
+            
+    def io_read_byte(self, port):
+        """ Read a byte from the supplied port. """
+        device = self.io_decoder.get(address, None)
+        if device is not None:
+            return device.io_read_byte(address)
+        else:
+            return 0x00
+            
+    def io_read_word(self, port):
+        """ Read a word from the supplied port. """
+        raise NotImplementedError("TODO: Support words on the I/O bus.")
+        
+    def io_write_byte(self, port, value):
+        """ Write a byte to the supplied port. """
+        device = self.io_decoder.get(address, None)
+        if device is not None:
+            device.io_write_byte(address, value)
+            
+    def io_write_word(self, port, value):
+        """ Write a word to the supplied port. """
+        raise NotImplementedError("TODO: Support words on the I/O bus.")
+        

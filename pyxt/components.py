@@ -1,48 +1,16 @@
 """
-pyxt.iobus - I/O bus and component interface for PyXT.
+pyxt.components - Various components needed for PyXT.
 """
 
 # Standard library imports
-import array
 
 # PyXT imports
 from pyxt.helpers import *
 from pyxt.constants import *
+from pyxt.bus import Device
 
 # Classes
-class IOComponent(object):
-    def __init__(self):
-        self.io_bus = None
-        
-    def get_address_list(self):
-        """ Return a list of addresses used by the device. """
-        raise NotImplementedError
-        
-    def clock(self):
-        """
-        Handle one iteration of the system clock tick.
-        
-        This is not required to be implemented as not all devices have a clock input.
-        """
-        pass
-        
-    def read_byte(self, address):
-        """ Read a byte from the device at address. """
-        raise NotImplementedError
-        
-    def read_word(self, address):
-        """ Read a word from the device at address. """
-        raise NotImplementedError
-        
-    def write_byte(self, address, value):
-        """ Write a byte value to the device at address. """
-        raise NotImplementedError
-        
-    def write_word(self, address):
-        """ Write a word value to the device at address. """
-        raise NotImplementedError
-        
-class ProgrammableInterruptController(IOComponent):
+class ProgrammableInterruptController(Device):
     """ An IOComponent emulating an 8259 PIC controller. """
     EDGE_TRIGGERED = 0
     LEVEL_TRIGGERED = 1
@@ -66,7 +34,7 @@ class ProgrammableInterruptController(IOComponent):
         self.icws_state = 0
         self.icw4_needed = False
         
-    def get_address_list(self):
+    def get_ports_list(self):
         return [x for x in xrange(self.base, self.base + 2)]
         
     def start_initialization_sequence(self):
@@ -125,7 +93,7 @@ class ProgrammableInterruptController(IOComponent):
         interrupt = value & 0x07
         print "command = %r, interrupt = %r" % (command, interrupt)
         
-    # def read_byte(self, address):
+    # def io_read_byte(self, address):
         # offset = address - self.base
         # if offset == 0 or offset == 1 or offset == 2:
             # return self.channels[offset]
@@ -134,7 +102,7 @@ class ProgrammableInterruptController(IOComponent):
         # else:
             # raise ValueError("Bad offset to the 8253!!!")
             
-    def write_byte(self, address, value):
+    def io_write_byte(self, address, value):
         offset = address - self.base
         if offset == 0 and value & 0x10 == 0x10:
             self.start_initialization_sequence()
@@ -155,17 +123,17 @@ class ProgrammableInterruptController(IOComponent):
                     self.process_ocw2_byte(value)
                     
             
-class ProgrammableIntervalTimer(IOComponent):
+class ProgrammableIntervalTimer(Device):
     """ An IOComponent emulating an 8253 PIT timer. """
     def __init__(self, base, **kwargs):
         super(ProgrammableIntervalTimer, self).__init__(**kwargs)
         self.base = base
         self.channels = [0, 0, 0]
         
-    def get_address_list(self):
+    def get_ports_list(self):
         return [x for x in xrange(self.base, self.base + 8)]
         
-    def read_byte(self, address):
+    def io_read_byte(self, address):
         offset = address - self.base
         if offset == 0 or offset == 1 or offset == 2:
             return self.channels[offset]
@@ -173,40 +141,4 @@ class ProgrammableIntervalTimer(IOComponent):
             print "CONTROL REGISTER"
         else:
             raise ValueError("Bad offset to the 8253!!!")
-            
-        
-class InputOutputBus(object):
-    def __init__(self):
-        self.devices = []
-        self.decoder = {}
-        
-    def install_device(self, device):
-        device.io_bus = self
-        self.devices.append(device)
-        for address in device.get_address_list():
-            self.decoder[address] = device
-            
-    def read_byte(self, address):
-        device = self.decoder.get(address, None)
-        if device is not None:
-            return device.read_byte(address)
-        else:
-            return 0
-            
-    # def read_word(self, address):
-        # device = self.devices[address >> BLOCK_PREFIX_SHIFT]
-        # if device is not None:
-            # return device.read_word(address & BLOCK_OFFSET_MASK)
-        # else:
-            # return 0
-            
-    def write_byte(self, address, value):
-        device = self.decoder.get(address, None)
-        if device is not None:
-            device.write_byte(address, value)
-            
-    # def write_word(self, address, value):
-        # device = self.devices[address >> BLOCK_PREFIX_SHIFT]
-        # if device is not None:
-            # device.write_word(address & BLOCK_OFFSET_MASK, value)
             
