@@ -20,6 +20,10 @@ class Device(object):
         """ Install this device into the supplied system bus. """
         self.bus = bus
         
+    def reset(self):
+        """ Called to reset the device at the beginning of time. """
+        pass
+        
     def clock(self):
         """
         Handle one iteration of the system clock tick.
