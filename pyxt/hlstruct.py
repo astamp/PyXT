@@ -157,105 +157,105 @@ class Struct(object):
 #  End of implementation - usage examples follow:
 ###################################################################
 
-###################################################################
-#
-# Usage
-#
-# Using the above code, we can now define structures in a
-# more readable class based syntax.  For example:
-###################################################################
+# ###################################################################
+# #
+# # Usage
+# #
+# # Using the above code, we can now define structures in a
+# # more readable class based syntax.  For example:
+# ###################################################################
     
-class Point(Struct):
-    _format = Format.LittleEndian
-    x = Type.Short
-    y = Type.Short
+# class Point(Struct):
+    # _format = Format.LittleEndian
+    # x = Type.Short
+    # y = Type.Short
     
-p = Point('\x01\x00\x02\x00')
+# p = Point('\x01\x00\x02\x00')
 
-print p.x, p.y   # Prints 1,2
-p.x, p.y = 100,200
-print repr(p)     # Prints "Point('d\x00\xc8\x00')
+# print p.x, p.y   # Prints 1,2
+# p.x, p.y = 100,200
+# print repr(p)     # Prints "Point('d\x00\xc8\x00')
 
-assert(struct.pack('<hh',100,200) == str(p))
+# assert(struct.pack('<hh',100,200) == str(p))
     
-###################################################################
-#
-# Arrays and Embedded structures
-#
-# You can also embed arrays, (and arrays of arrays), as well
-# as other structures within your struct definition.
-###################################################################
+# ###################################################################
+# #
+# # Arrays and Embedded structures
+# #
+# # You can also embed arrays, (and arrays of arrays), as well
+# # as other structures within your struct definition.
+# ###################################################################
 
-class Shape(Struct):
-    _format = Format.BigEndian
-    name      = Type.String[8]
-    numpoints = Type.Int
-    points    = Type.Struct(Point)[4] # Array of 4 points.
+# class Shape(Struct):
+    # _format = Format.BigEndian
+    # name      = Type.String[8]
+    # numpoints = Type.Int
+    # points    = Type.Struct(Point)[4] # Array of 4 points.
 
-s=Shape('Triangle\x00\x00\x00\x03\x00\x00\x00\x00\x05\x00\x05\x00\n\x00'
-        '\x00\x00\x00\x00\x00\x00')
+# s=Shape('Triangle\x00\x00\x00\x03\x00\x00\x00\x00\x05\x00\x05\x00\n\x00'
+        # '\x00\x00\x00\x00\x00\x00')
 
-# This will print "Triangle [(0,0), (5,5), (10,0)]"
-print s.name, [(p.x, p.y) for p in s.points[:s.numpoints]]
+# # This will print "Triangle [(0,0), (5,5), (10,0)]"
+# print s.name, [(p.x, p.y) for p in s.points[:s.numpoints]]
 
-# The same structure could be created as:
-s2=Shape(name='Triangle', numpoints=3, points=[
-                                         Point(x=0,y=0),
-                                         Point(x=5,y=5),
-                                         Point(x=10,y=0),
-                                         Point(x=0,y=0)])
+# # The same structure could be created as:
+# s2=Shape(name='Triangle', numpoints=3, points=[
+                                         # Point(x=0,y=0),
+                                         # Point(x=5,y=5),
+                                         # Point(x=10,y=0),
+                                         # Point(x=0,y=0)])
 
-assert str(s2) == str(s)
+# assert str(s2) == str(s)
 
-# Note that even though Shape is in BigEndian format, the Points
-# keep their LittleEndian setting, so mixing formats is possible,
-# and the same struct will always have the same representation
-# regardless of its context.  Hence the following is true:
+# # Note that even though Shape is in BigEndian format, the Points
+# # keep their LittleEndian setting, so mixing formats is possible,
+# # and the same struct will always have the same representation
+# # regardless of its context.  Hence the following is true:
 
-assert str(s.points[1]) == str( Point(x=5, y=5))
+# assert str(s.points[1]) == str( Point(x=5, y=5))
 
-# It is also possible to define multi-dimensional arrays,
-# which will be unpacked as lists of lists.
-# In addition, it is possible to add methods and non-struct
-# instance variables without interfering with the structure
-# (Unless you overwrite structure field names of course)
+# # It is also possible to define multi-dimensional arrays,
+# # which will be unpacked as lists of lists.
+# # In addition, it is possible to add methods and non-struct
+# # instance variables without interfering with the structure
+# # (Unless you overwrite structure field names of course)
 
-class TicTacToe(Struct):
-    board = Type.Char[3][3] # 3x3 array of chars
+# class TicTacToe(Struct):
+    # board = Type.Char[3][3] # 3x3 array of chars
 
-    ignored = 'This is not packed / unpacked by the structure'
+    # ignored = 'This is not packed / unpacked by the structure'
     
-    def display(self):
-        print '\n'.join(''.join(row) for row in self.board)
+    # def display(self):
+        # print '\n'.join(''.join(row) for row in self.board)
 
-game = TicTacToe('X.O.X...O')
-print game.board  # [['X', '.', 'O'], ['.', 'X', '.'], ['.', '.', 'O']]
+# game = TicTacToe('X.O.X...O')
+# print game.board  # [['X', '.', 'O'], ['.', 'X', '.'], ['.', '.', 'O']]
 
-game.display()
-# Prints: X.O
-#         .X.
-#         ..O
+# game.display()
+# # Prints: X.O
+# #         .X.
+# #         ..O
 
-game.board[0][1] = 'X'
-game.display()
-# Prints: XXO
-#         .X.
-#         ..O
-print str(game) # prints 'XXO.X...O'
+# game.board[0][1] = 'X'
+# game.display()
+# # Prints: XXO
+# #         .X.
+# #         ..O
+# print str(game) # prints 'XXO.X...O'
 
 
-###################################################################
-#
-# Inheritance
-#
-# Structures may also be inherited from, in which case, additional
-# fields will occur after the existing ones.
-#
-###################################################################
+# ###################################################################
+# #
+# # Inheritance
+# #
+# # Structures may also be inherited from, in which case, additional
+# # fields will occur after the existing ones.
+# #
+# ###################################################################
 
-class Point3D(Point):
-    z = Type.Short
+# class Point3D(Point):
+    # z = Type.Short
 
-p = Point3D(x=1, y=2, z=3)
+# p = Point3D(x=1, y=2, z=3)
 
-print repr(p)   # prints Point3D('\x01\x00\x02\x00\x03\x00')
+# print repr(p)   # prints Point3D('\x01\x00\x02\x00\x03\x00')
