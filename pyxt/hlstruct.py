@@ -124,7 +124,10 @@ class MetaStruct(type):
         cls._struct_data += ''.join(str(v) for (k,v) in elems)
         cls._struct_info += elems
         cls._struct_size = struct.calcsize(cls._format + cls._struct_data)
-
+        
+    def __len__(self):
+        return self._struct_size
+        
 class Struct(object):
     """Represent a binary structure."""
     __metaclass__=MetaStruct
