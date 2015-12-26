@@ -81,3 +81,17 @@ class MonochromeDisplayAdapter(Device):
         elif port == CONTROL_REG_PORT:
             self.control_reg = value
             
+# Test application.
+def main():
+    """ Test application for the MDA card. """
+    print "MDA test application."
+    mda = MonochromeDisplayAdapter()
+    mda.reset()
+    mda.mem_write_byte(0x0000, 0x41)
+    
+    print "\nPress return key to exit."
+    raw_input()
+    
+if __name__ == "__main__":
+    main()
+    
