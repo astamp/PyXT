@@ -10,13 +10,17 @@ pyxt.mda - Monochrome display adapter for PyXT based on Pygame.
 import pygame
 
 # Constants
-BLACK = (0x00, 0x00, 0x00)
-GREEN = (0x00, 0xC0, 0x00)
+EGA_BLACK = (0x00, 0x00, 0x00)
+EGA_GREEN = (0x00, 0xAA, 0x00)
+EGA_BRIGHT_GREEN = (0x55, 0xFF, 0x55)
+
+CHARGEN_ATTR_NONE = 0x0000
+CHARGEN_ATTR_BRIGHT = 0x0001
 
 # Classes
 class CharacterGenerator(object):
     """ Generates glyphs for a given character. """
-    def blit_character(self, surface, location, index):
+    def blit_character(self, surface, location, index, attributes = CHARGEN_ATTR_NONE):
         """ Place a character onto a surface at the given location. """
         raise NotImplementedError
         
@@ -55,7 +59,7 @@ class CharacterGeneratorBIOS(CharacterGenerator):
         # Make sure to explicitly del this to free the surface lock.
         del pix
         
-    def blit_character(self, surface, location, index):
+    def blit_character(self, surface, location, index, attributes = CHARGEN_ATTR_NONE):
         if index >= self.RESIDENT_CHARS:
             return
         surface.blit(self.font_data, location, area = (8 * index, 0, 8, 8))

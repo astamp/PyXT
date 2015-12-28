@@ -1,5 +1,8 @@
 """
 pyxt.mda - Monochrome display adapter for PyXT based on Pygame.
+
+Some really useful info was gathered here:
+http://www.seasip.info/VintagePC/mda.html
 """
 
 # Standard library imports
@@ -10,7 +13,7 @@ from collections import namedtuple
 from pyxt.bus import Device
 from pyxt.helpers import *
 from pyxt.constants import *
-from pyxt.chargen import CharacterGenerator, BLACK, GREEN
+from pyxt.chargen import *
 
 # Pygame Imports
 import pygame
@@ -29,15 +32,18 @@ CONTROL_REG_HIRES = 0x01
 CONTROL_REG_VIDEO_ENABLE = 0x08
 CONTROL_REG_ENABLINK = 0x20
 
-ATTR_FOREGROUND = 0x07
-ATTR_INTENSITY = 0x08
-ATTR_BACKGROUND = 0x70
-ATTR_BLINK = 0x80
-
-ATTR_UNDERLINE = 0x01
+MDA_ATTR_UNDERLINE =  0x01
+MDA_ATTR_FOREGROUND = 0x07
+MDA_ATTR_INTENSITY =  0x08
+MDA_ATTR_BACKGROUND = 0x70
+MDA_ATTR_BLINK =      0x80
 
 MDA_COLUMNS = 80
 MDA_ROWS = 25
+MDA_BYTES_PER_CHAR = 2
+
+# TODO: This is 4000, does this need to be a round 4k for compatibility?
+MDA_RAM_SIZE = MDA_COLUMNS * MDA_ROWS * MDA_BYTES_PER_CHAR
 
 BITS_LO_TO_HI = [7, 6, 5, 4, 3, 2, 1, 0]
 
@@ -51,6 +57,8 @@ class MonochromeDisplayAdapter(Device):
         self.control_reg = 0x00
         self.data_reg_index = 0x00
         
+        self.video_ram = array.array("B", (0,) * MDA_RAM_SIZE)
+        
         self.screen = None
         self.reset()
         
@@ -59,18 +67,43 @@ class MonochromeDisplayAdapter(Device):
         self.screen = pygame.display.set_mode(MDA_RESOLUTION)
         pygame.display.set_caption("PyXT Monochrome Display Adapter")
         
+    def mem_read_byte(self, offset):
+        if offset > MDA_RAM_SIZE:
+            return 0x00
+            
+        return self.video_ram[offset]
+        
     def mem_write_byte(self, offset, value):
+        if offset > MDA_RAM_SIZE:
+            return
+            
+        # Direct write to the "video RAM" for reading back.
+        self.video_ram[offset] = value
+        
         # Odd bytes are the attributes.
-        attrib = offset & 0x0001 == 0x0001
+        if offset & 0x0001 == 0x0001:
+            character = self.video_ram[offset - 1]
+            attributes = value
+        else:
+            character = value
+            attributes = self.video_ram[offset + 1]
+            
+        # Shift off the lowest bit to get the location base.
         offset = offset >> 1
         
         row = offset // MDA_COLUMNS
         column = offset % MDA_COLUMNS
         
-        if row >= MDA_ROWS:
-            return
+        # This should be handled by the check above.
+        # if row >= MDA_ROWS:
+            # return
             
-        self.char_generator.blit_character(self.screen, (column * self.char_generator.char_width, row * self.char_generator.char_height), value)
+        # Fill in the internal character generator attributes.
+        cg_attributes = CHARGEN_ATTR_NONE
+        if attributes & MDA_ATTR_INTENSITY:
+            cg_attributes |= CHARGEN_ATTR_BRIGHT
+            
+        self.char_generator.blit_character(self.screen, (column * self.char_generator.char_width, row * self.char_generator.char_height), character, cg_attributes)
         
     def get_ports_list(self):
         # range() is not inclusive so add one.
@@ -122,9 +155,14 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
     def __init__(self, rom_file, font = MDA_FONT):
         self.font_info = self.FONT_INFO[font]
         
-        self.font_data = pygame.Surface((self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual))
-        self.font_data.fill(BLACK)
-        pix = pygame.PixelArray(self.font_data)
+        self.font_data_normal = pygame.Surface((self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual))
+        self.font_data_normal.fill(EGA_BLACK)
+        
+        self.font_data_bright = pygame.Surface((self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual))
+        self.font_data_bright.fill(EGA_BLACK)
+        
+        pix_normal = pygame.PixelArray(self.font_data_normal)
+        pix_bright = pygame.PixelArray(self.font_data_bright)
         
         # The characters are split top and bottom across the first 2 2k pages of the part.
         with open(rom_file, "rb") as fileptr:
@@ -141,17 +179,23 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
                     
                 for bit in BITS_LO_TO_HI:
                     if (1 << bit) & byte:
-                        pix[(index * self.char_width) + (7 - bit), row] = GREEN
+                        pix_normal[(index * self.char_width) + (7 - bit), row] = EGA_GREEN
+                        pix_bright[(index * self.char_width) + (7 - bit), row] = EGA_BRIGHT_GREEN
                         
         # Make sure to explicitly del this to free the surface lock.
-        del pix
+        del pix_normal
+        del pix_bright
         
-    def blit_character(self, surface, location, index):
+    def blit_character(self, surface, location, index, attributes = CHARGEN_ATTR_NONE):
         """ Place a character onto a surface at the given location. """
         if index >= self.CHAR_COUNT:
             return
             
-        surface.blit(self.font_data, location, area = (self.char_width * index, 0, self.char_width, self.char_height))
+        font_data = self.font_data_normal
+        if attributes & CHARGEN_ATTR_BRIGHT:
+            font_data = self.font_data_bright
+            
+        surface.blit(font_data, location, area = (self.char_width * index, 0, self.char_width, self.char_height))
         pygame.display.flip()
         
     @property
@@ -175,10 +219,20 @@ def main():
     mda = MonochromeDisplayAdapter(char_generator)
     mda.reset()
     
+    # Test the font.
     for x in xrange(256):
         mda.mem_write_byte((x % 32) + ((x // 32) * 80) << 1, x)
+        
+    # Test screen width and setting attributes after setting chars.
     for x in xrange(80):
         mda.mem_write_byte((x << 1) + 1600, 0x30 + (x % 10))
+        mda.mem_write_byte((x << 1) + 1600 + 1, 0x08 if x & 0x01 else 0x00)
+        
+    # Test setting attributes before setting chars.
+    for x in xrange(5):
+        mda.mem_write_byte((x << 1) + 1920 + 1, 0x08)
+    for x, char in enumerate("Hello world"):
+        mda.mem_write_byte((x << 1) + 1920, ord(char))
         
     while True:
         for event in pygame.event.get():
