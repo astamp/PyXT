@@ -72,3 +72,22 @@ class CharacterGeneratorBIOS(CharacterGenerator):
     def char_height(self):
         return 8
         
+class CharacterGeneratorMock(CharacterGenerator):
+    """ Mock version of the character generator for unit testing. """
+    def __init__(self, **kwargs):
+        super(CharacterGeneratorMock, self).__init__()
+        self.last_blit = None
+        self.width = kwargs.get("width", 0)
+        self.height = kwargs.get("height", 0)
+        
+    def blit_character(self, surface, location, index, attributes = CHARGEN_ATTR_NONE):
+        self.last_blit = (surface, location, index, attributes)
+        
+    @property
+    def char_width(self):
+        return self.width
+        
+    @property
+    def char_height(self):
+        return self.height
+        

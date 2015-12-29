@@ -60,7 +60,7 @@ class MonochromeDisplayAdapter(Device):
         self.video_ram = array.array("B", (0,) * MDA_RAM_SIZE)
         
         self.screen = None
-        self.reset()
+        # self.reset()
         
     def reset(self):
         pygame.init()

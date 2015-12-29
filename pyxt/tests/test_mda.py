@@ -1,10 +1,12 @@
 import unittest
 
 from pyxt.mda import *
+from pyxt.chargen import CharacterGeneratorMock
 
 class MDATests(unittest.TestCase):
     def setUp(self):
-        self.obj = MonochromeDisplayAdapter()
+        self.char_generator = CharacterGeneratorMock(width = 9, height = 14)
+        self.obj = MonochromeDisplayAdapter(self.char_generator)
         
     def test_ports_list(self):
         self.assertEqual(self.obj.get_ports_list(), [0x03B0, 0x03B1, 0x03B2, 0x03B3,
