@@ -1,4 +1,5 @@
 import unittest
+import binascii
 
 from pyxt.constants import *
 from pyxt.cpu import *
@@ -95,6 +96,19 @@ class FlagsRegisterTest(unittest.TestCase):
         self.obj.sf = False
         self.assertEqual(self.obj.value, 0)
         
+class HelperFunctionTest(unittest.TestCase):
+    def test_decode_seg_reg_normal(self):
+        self.assertEqual(decode_seg_reg(0x00), "ES")
+        self.assertEqual(decode_seg_reg(0x01), "CS")
+        self.assertEqual(decode_seg_reg(0x02), "SS")
+        self.assertEqual(decode_seg_reg(0x03), "DS")
+        
+    def test_decode_seg_reg_masks_to_2_bits(self):
+        self.assertEqual(decode_seg_reg(0xFC), "ES")
+        self.assertEqual(decode_seg_reg(0xFD), "CS")
+        self.assertEqual(decode_seg_reg(0xFE), "SS")
+        self.assertEqual(decode_seg_reg(0xFF), "DS")
+        
 class BaseOpcodeAcceptanceTests(unittest.TestCase):
     """
     Basic acceptance testing framework for the CPU class.
@@ -111,11 +125,15 @@ class BaseOpcodeAcceptanceTests(unittest.TestCase):
         self.memory = RAM(SIXTY_FOUR_KB)
         self.bus.install_device(0x0000, self.memory)
         
-    def load_code(self, *args):
+    def load_code_bytes(self, *args):
         """ Load a program into the base memory. """
         for index, byte in enumerate(args):
             self.memory.write_byte(index, byte)
             
+    def load_code_string(self, code):
+        """ Load a program into the base memory from a hex string. """
+        self.load_code_bytes(*[ord(byte) for byte in binascii.unhexlify(code.replace(" ", ""))])
+        
     def run_to_halt(self, max_instructions = 1000):
         """
         Run the CPU until it halts, returning the number of instructions executed.
@@ -140,9 +158,21 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
             db 1
         """
         self.cpu.regs["AL"] = 7
-        self.load_code(0x00, 0x06, 0x05, 0x00, 0xF4, 0x01)
+        self.load_code_bytes(0x00, 0x06, 0x05, 0x00, 0xF4, 0x01)
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AL"], 7)
         self.assertEqual(self.memory.read_byte(0x05), 8)
         
+class MovOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_mov_sreg_rm16(self):
+        """
+        mov es, [value]
+        hlt
+        value:
+            dw 0xBEEF
+        """
+        self.cpu.regs["ES"] = 0x0000
+        self.load_code_string("8E 06 05 00 F4 EF BE")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["ES"], 0xBEEF)
         
