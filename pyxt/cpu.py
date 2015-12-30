@@ -382,6 +382,8 @@ class CPU(object):
             self._xor_r16_rm16()
         elif opcode == 0x8E:
             self._mov_sreg_rm16()
+        elif opcode == 0x8C:
+            self._mov_rm16_sreg()
         else:
             log.error("Invalid opcode: 0x%02x", opcode)
             self._hlt()
@@ -516,6 +518,11 @@ class CPU(object):
         log.debug("MOV Sreg r/m16")
         segment_register, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
         self.regs[decode_seg_reg(segment_register)] = self._get_rm16(rm_type, rm_value)
+        
+    def _mov_rm16_sreg(self):
+        log.debug("MOV r/m16 Sreg")
+        segment_register, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
+        self._set_rm16(rm_type, rm_value, self.regs[decode_seg_reg(segment_register)])
         
     def _xchg_r8_rm8(self):
         log.debug("XCHG r8 r/m8")
