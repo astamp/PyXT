@@ -13,6 +13,7 @@ from pyxt.helpers import *
 # Logging setup
 import logging
 log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 # Constants
 WORD, LOW, HIGH = range(3)
