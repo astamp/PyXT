@@ -68,13 +68,13 @@ class MonochromeDisplayAdapter(Device):
         pygame.display.set_caption("PyXT Monochrome Display Adapter")
         
     def mem_read_byte(self, offset):
-        if offset > MDA_RAM_SIZE:
+        if offset >= MDA_RAM_SIZE:
             return 0x00
             
         return self.video_ram[offset]
         
     def mem_write_byte(self, offset, value):
-        if offset > MDA_RAM_SIZE:
+        if offset >= MDA_RAM_SIZE:
             return
             
         # Direct write to the "video RAM" for reading back.
