@@ -67,6 +67,9 @@ class MonochromeDisplayAdapter(Device):
         self.screen = pygame.display.set_mode(MDA_RESOLUTION)
         pygame.display.set_caption("PyXT Monochrome Display Adapter")
         
+    def get_memory_size(self):
+        return 4096
+        
     def mem_read_byte(self, offset):
         if offset >= MDA_RAM_SIZE:
             return 0x00
@@ -181,6 +184,12 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
                     if (1 << bit) & byte:
                         pix_normal[(index * self.char_width) + (7 - bit), row] = EGA_GREEN
                         pix_bright[(index * self.char_width) + (7 - bit), row] = EGA_BRIGHT_GREEN
+                        
+                # For the box drawing characters, the last column is duplicated for continuous lines.
+                if self.char_width == 9 and 0xC0 <= index <= 0xDF:
+                    if byte & 0x01:
+                        pix_normal[(index * self.char_width) + 8, row] = EGA_GREEN
+                        pix_bright[(index * self.char_width) + 8, row] = EGA_BRIGHT_GREEN
                         
         # Make sure to explicitly del this to free the surface lock.
         del pix_normal
