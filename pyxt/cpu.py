@@ -241,6 +241,7 @@ class CPU(object):
         self.regs = REGS()
         self.regs.add("IP", Register(0))
         self.regs.add("SP", Register(0))
+        self.regs.add("BP", Register(0))
         self.regs.add("A", Register(0, byte_addressable = True))
         self.regs.add("B", Register(0, byte_addressable = True))
         self.regs.add("C", Register(0, byte_addressable = True))
@@ -295,7 +296,7 @@ class CPU(object):
         elif opcode & 0xF0 == 0xB0:
             self._mov_imm_to_reg(opcode)
         elif opcode == 0x8B:
-            self._mov_ram_to_reg_16()
+            self._mov_r16_rm16()
         elif opcode == 0x88:
             self._mov_rm8_r8()
         elif opcode == 0x89:
@@ -479,13 +480,10 @@ class CPU(object):
         self.regs[dest] = value
         log.debug("MOV'd 0x%04x into %s", value, dest)
         
-    def _mov_ram_to_reg_16(self):
-        mod, reg, rm = self.get_modrm_ex()
-        assert mod == 0x00 and rm == 0x06
-        addr = self.get_imm(True)
-        dest = WORD_REG[reg]
-        self.regs[dest] = self._read_word_from_ram(addr)
-        log.debug("MOV'd 0x%04x from 0x%04x into %s", self.regs[dest], addr, dest)
+    def _mov_r16_rm16(self):
+        log.info("MOV r16 r/m16")
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        self.regs[register] = self._get_rm16(rm_type, rm_value)
         
     def _mov_rm8_r8(self):
         log.info("MOV r/m8 r8")

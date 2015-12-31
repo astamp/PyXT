@@ -189,3 +189,17 @@ class MovOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["ES"], 0xCAFE)
         self.assertEqual(self.memory.read_word(0x05), 0xCAFE)
+        
+    def test_mov_r16_rm16(self):
+        """
+        mov bx, [value]
+        hlt
+        value:
+            dw 0x1234
+        """
+        self.cpu.regs["BX"] = 0x0000
+        self.load_code_string("8B 1E 05 00 F4 34 12")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["BX"], 0x1234)
+        self.assertEqual(self.memory.read_word(0x05), 0x1234)
+        
