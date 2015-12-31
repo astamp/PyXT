@@ -163,6 +163,20 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs["AL"], 7)
         self.assertEqual(self.memory.read_byte(0x05), 8)
         
+class OrOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_or_r16_rm16(self):
+        """
+        or bx, [value]
+        hlt
+        value:
+            dw 0xF000
+        """
+        self.cpu.regs["BX"] = 0x0ACE
+        self.load_code_string("0B 1E 05 00 F4 00 F0")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["BX"], 0xFACE)
+        self.assertEqual(self.memory.read_word(0x05), 0xF000)
+        
 class MovOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_mov_sreg_rm16(self):
         """

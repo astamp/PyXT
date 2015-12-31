@@ -307,6 +307,8 @@ class CPU(object):
             self._xor_rm16_r16()
         elif opcode == 0x09:
             self._or_rm16_r16()
+        elif opcode == 0x0B:
+            self._or_r16_rm16()
         elif opcode == 0x72:
             self._jc()
         elif opcode == 0x39:
@@ -763,6 +765,15 @@ class CPU(object):
         op1 = op1 | op2
         self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
+        
+    def _or_r16_rm16(self):
+        log.debug("OR r16 r/m16")
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        op1 = self.regs[register]
+        op2 = self._get_rm16(rm_type, rm_value)
+        op1 = op1 | op2
+        self.flags.set_from_value(op1)
+        self.regs[register] = op1 & 0xFFFF
         
     def _and_rm8_r8(self):
         register, rm_type, rm_value = self.get_modrm_operands(8)
