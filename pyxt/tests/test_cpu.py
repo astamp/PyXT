@@ -203,3 +203,25 @@ class MovOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs["BX"], 0x1234)
         self.assertEqual(self.memory.read_word(0x05), 0x1234)
         
+class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_stc(self):
+        """
+        stc
+        hlt
+        """
+        self.assertFalse(self.cpu.flags.read(FLAGS.CARRY))
+        self.load_code_string("F9 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertTrue(self.cpu.flags.read(FLAGS.CARRY))
+        
+    def test_clc(self):
+        """
+        clc
+        hlt
+        """
+        self.cpu.flags.set(FLAGS.CARRY)
+        self.assertTrue(self.cpu.flags.read(FLAGS.CARRY))
+        self.load_code_string("F8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertFalse(self.cpu.flags.read(FLAGS.CARRY))
+        

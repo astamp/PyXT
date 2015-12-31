@@ -327,6 +327,8 @@ class CPU(object):
             self._add_r8_imm8()
         elif opcode == 0x19:
             self._sbb_rm16_r16()
+        elif opcode == 0xF8:
+            self._clc()
         elif opcode == 0xF9:
             self._stc()
         elif opcode == 0x90:
@@ -898,7 +900,12 @@ class CPU(object):
             
     # ********** FLAGS opcodes. **********
     def _stc(self):
+        log.debug("STC")
         self.flags.set(FLAGS.CARRY)
+        
+    def _clc(self):
+        log.debug("CLC")
+        self.flags.clear(FLAGS.CARRY)
         
     def _cli(self):
         log.info("CLI Disabling interrupts.")
