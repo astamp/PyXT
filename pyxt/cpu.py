@@ -333,6 +333,10 @@ class CPU(object):
             self._clc()
         elif opcode == 0xF9:
             self._stc()
+        elif opcode == 0xFC:
+            self._cld()
+        elif opcode == 0xFD:
+            self._std()
         elif opcode == 0x90:
             self._nop()
         elif opcode == 0xE9:
@@ -911,12 +915,24 @@ class CPU(object):
             
     # ********** FLAGS opcodes. **********
     def _stc(self):
+        """ Sets the carry flag. """
         log.debug("STC")
         self.flags.set(FLAGS.CARRY)
         
     def _clc(self):
+        """ Clears the carry flag. """
         log.debug("CLC")
         self.flags.clear(FLAGS.CARRY)
+        
+    def _std(self):
+        """ Sets the direction flag. """
+        log.debug("STD")
+        self.flags.set(FLAGS.DIRECTION)
+        
+    def _cld(self):
+        """ Clears the direction flag. """
+        log.debug("CLD")
+        self.flags.clear(FLAGS.DIRECTION)
         
     def _cli(self):
         log.info("CLI Disabling interrupts.")

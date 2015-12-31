@@ -239,3 +239,24 @@ class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertFalse(self.cpu.flags.read(FLAGS.CARRY))
         
+    def test_std(self):
+        """
+        std
+        hlt
+        """
+        self.assertFalse(self.cpu.flags.read(FLAGS.DIRECTION))
+        self.load_code_string("FD F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertTrue(self.cpu.flags.read(FLAGS.DIRECTION))
+        
+    def test_cld(self):
+        """
+        cld
+        hlt
+        """
+        self.cpu.flags.set(FLAGS.DIRECTION)
+        self.assertTrue(self.cpu.flags.read(FLAGS.DIRECTION))
+        self.load_code_string("FC F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertFalse(self.cpu.flags.read(FLAGS.DIRECTION))
+        
