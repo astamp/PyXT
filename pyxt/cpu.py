@@ -268,7 +268,7 @@ class CPU(object):
         
     def read_byte(self):
         location = self.regs["IP"]
-        byte = self.bus.read_byte(segment_offset_to_address(self.regs["CS"], self.regs["IP"]))
+        byte = self.bus.mem_read_byte(segment_offset_to_address(self.regs["CS"], self.regs["IP"]))
         self.regs["IP"] += 1
         log.debug("Read: 0x%02x from 0x%04x", byte, location)
         return byte
@@ -1017,10 +1017,10 @@ class CPU(object):
         
     # ********** Memory access helpers. **********
     def _write_word_to_ram(self, address, value):
-        self.bus.write_word(address, value)
+        self.bus.mem_write_word(address, value)
         
     def _read_word_from_ram(self, address):
-        return self.bus.read_word(address)
+        return self.bus.mem_read_word(address)
         
     def _get_rm16(self, rm_type, rm_value):
         if rm_type == REGISTER:
@@ -1039,14 +1039,14 @@ class CPU(object):
             assert rm_value[1] in "HL"
             return self.regs[rm_value]
         elif rm_type == ADDRESS:
-            return self.bus.read_byte(rm_value)
+            return self.bus.mem_read_byte(rm_value)
             
     def _set_rm8(self, rm_type, rm_value, value):
         if rm_type == REGISTER:
             assert rm_value[1] in "HL"
             self.regs[rm_value] = value
         elif rm_type == ADDRESS:
-            self.bus.write_byte(rm_value, value)
+            self.bus.mem_write_byte(rm_value, value)
             
     # ********** Debugger functions. **********
     def dump_regs(self):
@@ -1108,7 +1108,7 @@ class CPU(object):
                 if unit == "b":
                     unit_size_hex = 2
                     ending_address = address + count
-                    data = [self.bus.read_byte(x) for x in xrange(address, ending_address)]
+                    data = [self.bus.mem_read_byte(x) for x in xrange(address, ending_address)]
                     readable = "".join([chr(x) if x > 0x20 and x < 0x7F else "." for x in data])
                 elif unit == "w":
                     unit_size_hex = 4

@@ -128,7 +128,7 @@ class BaseOpcodeAcceptanceTests(unittest.TestCase):
     def load_code_bytes(self, *args):
         """ Load a program into the base memory. """
         for index, byte in enumerate(args):
-            self.memory.write_byte(index, byte)
+            self.memory.mem_write_byte(index, byte)
             
     def load_code_string(self, code):
         """ Load a program into the base memory from a hex string. """
@@ -163,7 +163,7 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 7)
-        self.assertEqual(self.memory.read_byte(0x05), 8)
+        self.assertEqual(self.memory.mem_read_byte(0x05), 8)
         
     def test_add_rm16_r16(self):
         """
@@ -176,7 +176,7 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("01 06 05 00 F4 FF 00")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 7)
-        self.assertEqual(self.memory.read_word(0x05), 0x0106)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0x0106)
         
     def test_add_r8_rm8(self):
         """
@@ -191,7 +191,7 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 29)
-        self.assertEqual(self.memory.read_byte(0x05), 22)
+        self.assertEqual(self.memory.mem_read_byte(0x05), 22)
         
     def test_add_r16_rm16(self):
         """
@@ -204,7 +204,7 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("03 06 05 00 F4 FF 00")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 0x0106)
-        self.assertEqual(self.memory.read_word(0x05), 0xFF)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0xFF)
         
     def test_add_al_imm8(self):
         """
@@ -242,7 +242,7 @@ class OrOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 0x18)
-        self.assertEqual(self.memory.read_byte(0x05), 0x1F)
+        self.assertEqual(self.memory.mem_read_byte(0x05), 0x1F)
         
     def test_or_rm16_r16(self):
         """
@@ -255,7 +255,7 @@ class OrOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("09 06 05 00 F4 A5 01")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 0x015A)
-        self.assertEqual(self.memory.read_word(0x05), 0x01FF)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0x01FF)
         
     def test_or_r8_rm8(self):
         """
@@ -270,7 +270,7 @@ class OrOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 0x0C)
-        self.assertEqual(self.memory.read_byte(0x05), 0x04)
+        self.assertEqual(self.memory.mem_read_byte(0x05), 0x04)
         
     def test_or_r16_rm16(self):
         """
@@ -283,7 +283,7 @@ class OrOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("0B 1E 05 00 F4 00 F0")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["BX"], 0xFACE)
-        self.assertEqual(self.memory.read_word(0x05), 0xF000)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0xF000)
         
     def test_or_al_imm8(self):
         """
@@ -319,7 +319,7 @@ class MovOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("8E 06 05 00 F4 EF BE")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["ES"], 0xBEEF)
-        self.assertEqual(self.memory.read_word(0x05), 0xBEEF)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0xBEEF)
         
     def test_mov_rm16_sreg(self):
         """
@@ -332,7 +332,7 @@ class MovOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("8C 06 05 00 F4 00 00")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["ES"], 0xCAFE)
-        self.assertEqual(self.memory.read_word(0x05), 0xCAFE)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0xCAFE)
         
     def test_mov_r16_rm16(self):
         """
@@ -345,7 +345,7 @@ class MovOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("8B 1E 05 00 F4 34 12")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["BX"], 0x1234)
-        self.assertEqual(self.memory.read_word(0x05), 0x1234)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0x1234)
         
 class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_stc(self):

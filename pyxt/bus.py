@@ -97,29 +97,29 @@ class SystemBus(object):
             for address in device.get_ports_list():
                 self.io_decoder[address] = device
                 
-    def read_byte(self, address):
+    def mem_read_byte(self, address):
         device = self.devices[address >> BLOCK_PREFIX_SHIFT]
         if device is not None:
-            return device.read_byte(address & BLOCK_OFFSET_MASK)
+            return device.mem_read_byte(address & BLOCK_OFFSET_MASK)
         else:
             return 0
             
-    def read_word(self, address):
+    def mem_read_word(self, address):
         device = self.devices[address >> BLOCK_PREFIX_SHIFT]
         if device is not None:
-            return device.read_word(address & BLOCK_OFFSET_MASK)
+            return device.mem_read_word(address & BLOCK_OFFSET_MASK)
         else:
             return 0
             
-    def write_byte(self, address, value):
+    def mem_write_byte(self, address, value):
         device = self.devices[address >> BLOCK_PREFIX_SHIFT]
         if device is not None:
-            device.write_byte(address & BLOCK_OFFSET_MASK, value)
+            device.mem_write_byte(address & BLOCK_OFFSET_MASK, value)
             
-    def write_word(self, address, value):
+    def mem_write_word(self, address, value):
         device = self.devices[address >> BLOCK_PREFIX_SHIFT]
         if device is not None:
-            device.write_word(address & BLOCK_OFFSET_MASK, value)
+            device.mem_write_word(address & BLOCK_OFFSET_MASK, value)
             
             
     def io_read_byte(self, port):

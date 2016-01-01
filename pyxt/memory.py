@@ -20,16 +20,16 @@ class RAM(Device):
     def __repr__(self):
         return "<%s(size=0x%x)>" % (self.__class__.__name__, len(self.contents))
         
-    def read_byte(self, offset):
+    def mem_read_byte(self, offset):
         return self.contents[offset]
         
-    def read_word(self, offset):
+    def mem_read_word(self, offset):
         return bytes_to_word((self.contents[offset], self.contents[offset + 1]))
         
-    def write_byte(self, offset, value):
+    def mem_write_byte(self, offset, value):
         self.contents[offset] = value
         
-    def write_word(self, offset, value):
+    def mem_write_word(self, offset, value):
         self.contents[offset], self.contents[offset + 1] = word_to_bytes(value)
         
 class ROM(RAM):
@@ -46,9 +46,9 @@ class ROM(RAM):
         for index, char in enumerate(data, start = offset):
             self.contents[index] = ord(char)
             
-    def write_byte(self, offset, value):
+    def mem_write_byte(self, offset, value):
         pass
         
-    def write_word(self, offset, value):
+    def mem_write_word(self, offset, value):
         pass
         
