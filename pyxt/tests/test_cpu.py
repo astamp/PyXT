@@ -157,11 +157,76 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         value:
             db 1
         """
+        self.cpu.regs["AH"] = 0xA5
         self.cpu.regs["AL"] = 7
-        self.load_code_bytes(0x00, 0x06, 0x05, 0x00, 0xF4, 0x01)
+        self.load_code_string("00 06 05 00 F4 01")
         self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 7)
         self.assertEqual(self.memory.read_byte(0x05), 8)
+        
+    def test_add_rm16_r16(self):
+        """
+        add [value], ax
+        hlt
+        value:
+            dw 0xFF
+        """
+        self.cpu.regs["AX"] = 7
+        self.load_code_string("01 06 05 00 F4 FF 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 7)
+        self.assertEqual(self.memory.read_word(0x05), 0x0106)
+        
+    def test_add_r8_rm8(self):
+        """
+        add al, [value]
+        hlt
+        value:
+            db 22
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 7
+        self.load_code_string("02 06 05 00 F4 16")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 29)
+        self.assertEqual(self.memory.read_byte(0x05), 22)
+        
+    def test_add_rm16_r16(self):
+        """
+        add ax, [value]
+        hlt
+        value:
+            dw 0xFF
+        """
+        self.cpu.regs["AX"] = 7
+        self.load_code_string("03 06 05 00 F4 FF 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 0x0106)
+        self.assertEqual(self.memory.read_word(0x05), 0xFF)
+        
+    def test_add_al_imm8(self):
+        """
+        add al, 7
+        hlt
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 7
+        self.load_code_string("04 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 14)
+        
+    def test_add_ax_imm16(self):
+        """
+        add ax, word 2222
+        hlt
+        """
+        self.cpu.regs["AX"] = 1234
+        self.load_code_string("05 AE 08 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 3456)
         
 class OrOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_or_r16_rm16(self):

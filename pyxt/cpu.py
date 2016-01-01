@@ -6,6 +6,7 @@ pyxt.cpu - 8088-ish CPU module for PyXT.
 import re
 import sys
 import struct
+import operator
 
 # PyXT imports
 from pyxt.helpers import *
@@ -255,6 +256,16 @@ class CPU(object):
         self.regs.add("SS", Register(0))
         self.regs.add("ES", Register(0))
         
+        # ALU vector table.
+        self.alu_vector_table = {
+            0x00 : self._alu_rm8_r8,
+            0x01 : self._alu_rm16_r16,
+            0x02 : self._alu_r8_rm8,
+            0x03 : self._alu_r16_rm16,
+            0x04 : self._alu_al_imm8,
+            0x05 : self._alu_ax_imm16,
+        }
+        
     def read_byte(self):
         location = self.regs["IP"]
         byte = self.bus.read_byte(segment_offset_to_address(self.regs["CS"], self.regs["IP"]))
@@ -273,6 +284,8 @@ class CPU(object):
         log.debug("Fetched opcode: 0x%02x", opcode)
         if opcode == 0xF4:
             self._hlt()
+        elif opcode & 0xF8 == 0x00 and opcode & 0x7 < 6:
+            self._add(opcode)
         elif opcode & 0xFC == 0x80:
             self._8x(opcode)
         elif opcode & 0xF8 == 0x40:
@@ -321,12 +334,6 @@ class CPU(object):
             self._jns()
         elif opcode == 0x78:
             self._js()
-        elif opcode == 0x00:
-            self._add_rm8_r8()
-        elif opcode == 0x01:
-            self._add_rm16_r16()
-        elif opcode == 0x04:
-            self._add_r8_imm8()
         elif opcode == 0x19:
             self._sbb_rm16_r16()
         elif opcode == 0xF8:
@@ -787,28 +794,59 @@ class CPU(object):
         self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
-    # Math opcodes.
-    def _add_rm8_r8(self):
+    # Generic ALU helper functions.
+    def _alu_rm8_r8(self, operation):
+        """ Generic r/m8 r8 ALU processor. """
         register, rm_type, rm_value = self.get_modrm_operands(8)
         op1 = self._get_rm8(rm_type, rm_value)
         op2 = self.regs[register]
-        op1 = op1 + op2
+        op1 = operation(op1, op2)
         self.flags.set_from_value(op1)
         self._set_rm8(rm_type, rm_value, op1 & 0xFF)
         
-    def _add_rm16_r16(self):
+    def _alu_rm16_r16(self, operation):
+        """ Generic r/m16 r16 ALU processor. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
-        op1 = op1 + op2
+        op1 = operation(op1, op2)
         self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
-    def _add_r8_imm8(self):
-        log.debug("ADD al imm8")
-        value = self.regs["AL"] + self.get_imm(False)
+    def _alu_r8_rm8(self, operation):
+        """ Generic r8 r/m8 ALU processor. """
+        register, rm_type, rm_value = self.get_modrm_operands(8)
+        op1 = self.regs[register]
+        op2 = self._get_rm8(rm_type, rm_value)
+        op1 = operation(op1, op2)
+        self.flags.set_from_value(op1)
+        self.regs[register] = op1 & 0xFF
+        
+    def _alu_r16_rm16(self, operation):
+        """ Generic r16 r/m16 ALU processor. """
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        op1 = self.regs[register]
+        op2 = self._get_rm16(rm_type, rm_value)
+        op1 = operation(op1, op2)
+        self.flags.set_from_value(op1)
+        self.regs[register] = op1 & 0xFFFF
+        
+    def _alu_al_imm8(self, operation):
+        """ Generic al imm8 ALU processor. """
+        value = operation(self.regs["AL"], self.get_imm(False))
         self.flags.set_from_value(value)
         self.regs["AL"] = value & 0xFF
+        
+    def _alu_ax_imm16(self, operation):
+        """ Generic ax imm16 ALU processor. """
+        value = operation(self.regs["AX"], self.get_imm(True))
+        self.flags.set_from_value(value)
+        self.regs["AX"] = value & 0xFFFF
+        
+    # Math opcodes.
+    def _add(self, opcode):
+        """ Entry point for all ADD opcodes. """
+        self.alu_vector_table[opcode & 0x07](operator.add)
         
     def _sbb_rm16_r16(self):
         log.debug("SBB r/m16 r16")
