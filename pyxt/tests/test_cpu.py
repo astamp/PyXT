@@ -390,3 +390,15 @@ class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertFalse(self.cpu.flags.read(FLAGS.DIRECTION))
         
+class LoopOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_loop(self):
+        """
+        again:
+            loop again
+        hlt
+        """
+        self.cpu.regs["CX"] = 3
+        self.load_code_string("E2 FE F4")
+        self.assertEqual(self.run_to_halt(), 4)
+        self.assertEqual(self.cpu.regs["CX"], 0x00)
+        

@@ -304,6 +304,8 @@ class CPU(object):
             self._jz()
         elif opcode == 0x75:
             self._jnz()
+        elif opcode == 0xE2:
+            self._loop()
         elif opcode == 0xE8:
             self._call()
         elif opcode == 0xC3:
@@ -689,7 +691,19 @@ class CPU(object):
         self.regs["IP"] = self.__pop()
         log.debug("RET back to 0x%04x", self.regs["IP"])
         
-    
+    def _loop(self):
+        """ Decrement CX and jump short if it is non-zero. """
+        distance = signed_byte(self.get_imm(False))
+        
+        value = self.regs["CX"] - 1
+        self.flags.set_from_value(value)
+        value = value & 0xFFFF
+        self.regs["CX"] = value
+        
+        if value != 0:
+            self.regs["IP"] += distance
+            log.debug("LOOP incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            
     # ********** Arithmetic opcodes. **********
     def _8x(self, opcode):
         if opcode == 0x82:
