@@ -284,9 +284,9 @@ class CPU(object):
         log.debug("Fetched opcode: 0x%02x", opcode)
         if opcode == 0xF4:
             self._hlt()
-        elif opcode & 0xF8 == 0x00 and opcode & 0x7 < 6:
+        elif opcode & 0xF8 == 0x00 and opcode & 0x6 != 0x6:
             self._add(opcode)
-        elif opcode & 0xF8 == 0x08 and opcode & 0x7 < 6:
+        elif opcode & 0xF8 == 0x08 and opcode & 0x6 != 0x6:
             self._or(opcode)
         elif opcode & 0xFC == 0x80:
             self._8x(opcode)
