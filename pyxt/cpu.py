@@ -286,6 +286,8 @@ class CPU(object):
             self._hlt()
         elif opcode & 0xF8 == 0x00 and opcode & 0x7 < 6:
             self._add(opcode)
+        elif opcode & 0xF8 == 0x08 and opcode & 0x7 < 6:
+            self._or(opcode)
         elif opcode & 0xFC == 0x80:
             self._8x(opcode)
         elif opcode & 0xF8 == 0x40:
@@ -318,10 +320,6 @@ class CPU(object):
             self._mov_rm8_to_reg8() # BAD NAME
         elif opcode == 0x31:
             self._xor_rm16_r16()
-        elif opcode == 0x09:
-            self._or_rm16_r16()
-        elif opcode == 0x0B:
-            self._or_r16_rm16()
         elif opcode == 0x72:
             self._jc()
         elif opcode == 0x39:
@@ -769,22 +767,9 @@ class CPU(object):
         self.flags.set_from_value(value)
         self.regs["AL"] = value & 0xFF
         
-    def _or_rm16_r16(self):
-        register, rm_type, rm_value = self.get_modrm_operands(16)
-        op1 = self._get_rm16(rm_type, rm_value)
-        op2 = self.regs[register]
-        op1 = op1 | op2
-        self.flags.set_from_value(op1)
-        self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
-        
-    def _or_r16_rm16(self):
-        log.debug("OR r16 r/m16")
-        register, rm_type, rm_value = self.get_modrm_operands(16)
-        op1 = self.regs[register]
-        op2 = self._get_rm16(rm_type, rm_value)
-        op1 = op1 | op2
-        self.flags.set_from_value(op1)
-        self.regs[register] = op1 & 0xFFFF
+    def _or(self, opcode):
+        """ Entry point for all OR opcodes. """
+        self.alu_vector_table[opcode & 0x07](operator.or_)
         
     def _and_rm8_r8(self):
         register, rm_type, rm_value = self.get_modrm_operands(8)
@@ -847,6 +832,7 @@ class CPU(object):
     def _add(self, opcode):
         """ Entry point for all ADD opcodes. """
         self.alu_vector_table[opcode & 0x07](operator.add)
+        
         
     def _sbb_rm16_r16(self):
         log.debug("SBB r/m16 r16")
