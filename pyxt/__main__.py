@@ -13,6 +13,8 @@ from pyxt.constants import *
 from pyxt.cpu import CPU
 from pyxt.bus import SystemBus
 from pyxt.memory import RAM, ROM
+from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MDA_START_ADDRESS
+
 from pyxt.onboard import ProgrammableInterruptController, ProgrammableIntervalTimer
 
 # Logging setup
@@ -23,6 +25,7 @@ log = logging.getLogger(__name__)
 def parse_cmdline():
     parser = OptionParser()
     parser.add_option("--bios", action = "store", dest = "bios", help = "ROM BIOS image to load at 0xF0000.")
+    parser.add_option("--mda-rom", action = "store", dest = "mda_rom", help = "MDA ROM to use for the virtual MDA card.")
     return parser.parse_args()
     
 def main():
@@ -42,6 +45,11 @@ def main():
         bus.install_device(BIOS_LOCATION, ROM(SIXTY_FOUR_KB, init_file = options.bios))
         
     # Other onboard hardware devices.
+    char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
+    mda_card = MonochromeDisplayAdapter(char_generator)
+    # mda_card.reset()
+    bus.install_device(MDA_START_ADDRESS, mda_card)
+    
     bus.install_device(None, ProgrammableInterruptController(0x00A0))
     bus.install_device(None, ProgrammableIntervalTimer(0x0040))
     
