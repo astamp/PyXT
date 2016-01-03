@@ -5,6 +5,7 @@ pyxt - Main application for running a demo PyXT system.
 """
 
 # Standard library imports
+import os
 from pprint import pprint
 from optparse import OptionParser
 
@@ -24,15 +25,17 @@ log = logging.getLogger(__name__)
 # Functions
 def parse_cmdline():
     parser = OptionParser()
+    parser.add_option("--debug", action = "store_true", dest = "debug", help = "Enable DEBUG log level.")
     parser.add_option("--bios", action = "store", dest = "bios", help = "ROM BIOS image to load at 0xF0000.")
     parser.add_option("--mda-rom", action = "store", dest = "mda_rom", help = "MDA ROM to use for the virtual MDA card.")
     return parser.parse_args()
     
 def main():
-    logging.basicConfig(format = "%(asctime)s %(message)s", level = logging.DEBUG)
-    log.info("PyXT oh hai")
-    
     options, args = parse_cmdline()
+    
+    log_level = logging.DEBUG if options.debug else logging.INFO
+    logging.basicConfig(format = "%(asctime)s %(message)s", level = log_level)
+    log.info("PyXT oh hai")
     
     bus = SystemBus()
     
@@ -64,4 +67,9 @@ def main():
         cpu.fetch()
 
 if __name__ == "__main__":
-    main()
+    if os.environ.get("PYXT_PROFILING"):
+        import cProfile
+        cProfile.run("main()", sort = "time")
+    else:
+        main()
+    
