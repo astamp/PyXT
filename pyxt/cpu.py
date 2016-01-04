@@ -266,12 +266,11 @@ class CPU(object):
             0x05 : self._alu_ax_imm16,
         }
         
-    def read_byte(self):
-        # location = self.regs["IP"]
-        byte = self.bus.mem_read_byte(segment_offset_to_address(self.regs["CS"], self.regs["IP"]))
+    def read_instruction_byte(self):
+        """ Read a byte from CS:IP and increment IP to point at the next instruction. """
+        address = segment_offset_to_address(self.regs["CS"], self.regs["IP"])
         self.regs["IP"] += 1
-        # log.debug("Read: 0x%02x from 0x%04x", byte, location)
-        return byte
+        return self.bus.mem_read_byte(address)
         
     def fetch(self):
         # Uncomment these lines for debugging, but they make the code slow if left on.
@@ -282,7 +281,7 @@ class CPU(object):
         # if self.should_break():
             # self.enter_debugger()
             
-        opcode = self.read_byte()
+        opcode = self.read_instruction_byte()
         # log.debug("Fetched opcode: 0x%02x", opcode)
         if opcode == 0xF4:
             self._hlt()
@@ -408,7 +407,7 @@ class CPU(object):
             
     # ********** Opcode parameter helpers. **********
     def get_modrm_ex(self):
-        modrm = self.read_byte()
+        modrm = self.read_instruction_byte()
         mod = (modrm & MOD_MASK) >> MOD_SHIFT
         reg = (modrm & REG_MASK) >> REG_SHIFT
         rm = modrm & RM_MASK
@@ -479,9 +478,9 @@ class CPU(object):
         return register, rm_type, rm_value
         
     def get_imm(self, word):
-        value = self.read_byte()
+        value = self.read_instruction_byte()
         if word:
-            value |= (self.read_byte() << 8)
+            value |= (self.read_instruction_byte() << 8)
             
         return value
         
