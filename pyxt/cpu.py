@@ -256,8 +256,8 @@ class CPU(object):
         
     def read_instruction_byte(self):
         """ Read a byte from CS:IP and increment IP to point at the next instruction. """
-        address = segment_offset_to_address(self.regs["CS"], self.regs["IP"])
-        self.regs["IP"] += 1
+        address = segment_offset_to_address(self.regs.CS, self.regs.IP)
+        self.regs.IP += 1
         return self.bus.mem_read_byte(address)
         
     def fetch(self):
