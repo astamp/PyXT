@@ -406,22 +406,18 @@ class CPU(object):
             self._hlt()
             
     # ********** Opcode parameter helpers. **********
-    def get_modrm_ex(self):
-        modrm = self.read_instruction_byte()
-        mod = (modrm & MOD_MASK) >> MOD_SHIFT
-        reg = (modrm & REG_MASK) >> REG_SHIFT
-        rm = modrm & RM_MASK
-        
-        log.debug("mod = 0x%02X, reg = 0x%02X, rm = 0x%02X", mod, reg, rm)
-        return mod, reg, rm
-        
     def get_modrm_operands(self, size, decode_register = True):
         """ Returns register, rm_type, rm_value from a MODRM byte. """
         register = None
         rm_type = UNKNOWN
         rm_value = None
         
-        mod, reg, rm = self.get_modrm_ex()
+        # Get the mod r/m byte and decode it.
+        modrm = self.read_instruction_byte()
+        
+        mod = (modrm & MOD_MASK) >> MOD_SHIFT
+        reg = (modrm & REG_MASK) >> REG_SHIFT
+        rm = modrm & RM_MASK
         
         if decode_register:
             if size == 8:
