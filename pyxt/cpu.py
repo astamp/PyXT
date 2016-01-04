@@ -7,6 +7,7 @@ import re
 import sys
 import struct
 import operator
+from ctypes import Structure, Union, c_ushort, c_ubyte
 
 # PyXT imports
 from pyxt.helpers import *
@@ -91,70 +92,51 @@ def decode_seg_reg(value):
     return SEGMENT_REG[value & 0x03]
     
 # Classes
-class Register(object):
-    def __init__(self, initial = 0, byte_addressable = False):
-        self._value = 0
+class WordRegs(Structure):
+    _fields_ = [
+        ("AX", c_ushort),
+        ("BX", c_ushort),
+        ("CX", c_ushort),
+        ("DX", c_ushort),
+        ("SI", c_ushort),
+        ("DI", c_ushort),
         
-        self.x = initial
-        self.byte_addressable = byte_addressable
+        # The segment registers are not part of union REGS but are here for now.
+        ("ES", c_ushort),
+        ("CS", c_ushort),
+        ("SS", c_ushort),
+        ("DS", c_ushort),
         
-    @property
-    def x(self):
-        return self._value
-        
-    @x.setter
-    def x(self, value):
-        self._value = value & 0xFFFF
-        
-    @property
-    def h(self):
-        return (self._value & 0xFF00) >> 8
-        
-    @h.setter
-    def h(self, value):
-        self._value = (self._value & 0x00FF) | ((value & 0xFF) << 8)
-        
-    @property
-    def l(self):
-        return self._value & 0x00FF
-        
-    @l.setter
-    def l(self, value):
-        self._value = (self._value & 0xFF00) | (value & 0xFF)
-
-class REGS(object):
-    def __init__(self):
-        self._regs = {}
-        self._aliases = {}
-        
-    def add(self, name, reg):
-        self._regs[name] = reg
-        
-        if reg.byte_addressable:
-            self._aliases[name + "X"] = (reg, WORD)
-            self._aliases[name + "L"] = (reg, LOW)
-            self._aliases[name + "H"] = (reg, HIGH)
-        else:
-            self._aliases[name] = (reg, WORD)
-            
+        # These are also not part of union REGS but they need to be in our registers.
+        ("IP", c_ushort),
+        ("BP", c_ushort),
+    ]
+    
+class ByteRegs(Structure):
+    _fields_ = [
+        ("AL", c_ubyte),
+        ("AH", c_ubyte),
+        ("BL", c_ubyte),
+        ("BH", c_ubyte),
+        ("CL", c_ubyte),
+        ("CH", c_ubyte),
+        ("DL", c_ubyte),
+        ("DH", c_ubyte),
+    ]
+    
+class UnionRegs(Union):
+    _anonymous_ = ("x", "h")
+    _fields_ = [
+        ("x", WordRegs),
+        ("h", ByteRegs),
+    ]
+    
     def __getitem__(self, key):
-        reg, access = self._aliases[key]
-        if access == LOW:
-            return reg.l
-        elif access == HIGH:
-            return reg.h
-        else:
-            return reg.x
-            
+        return getattr(self, key)
+        
     def __setitem__(self, key, value):
-        reg, access = self._aliases[key]
-        if access == LOW:
-            reg.l = value
-        elif access == HIGH:
-            reg.h = value
-        else:
-            reg.x = value
-            
+        setattr(self, key, value)
+        
 class FLAGS(object):
     """ 8086/8088 FLAGS register. """
     BLANK =       0x0000
@@ -242,22 +224,25 @@ class CPU(object):
         self.flags = FLAGS()
         
         # Normal registers.
-        self.regs = REGS()
-        self.regs.add("IP", Register(0))
-        self.regs.add("SP", Register(0))
-        self.regs.add("BP", Register(0))
-        self.regs.add("A", Register(0, byte_addressable = True))
-        self.regs.add("B", Register(0, byte_addressable = True))
-        self.regs.add("C", Register(0, byte_addressable = True))
-        self.regs.add("D", Register(0, byte_addressable = True))
-        self.regs.add("SI", Register(0))
-        self.regs.add("DI", Register(0))
+        # self.regs = REGS()
+        # self.regs.add("IP", Register(0))
+        # self.regs.add("SP", Register(0))
+        # self.regs.add("BP", Register(0))
+        # self.regs.add("A", Register(0, byte_addressable = True))
+        # self.regs.add("B", Register(0, byte_addressable = True))
+        # self.regs.add("C", Register(0, byte_addressable = True))
+        # self.regs.add("D", Register(0, byte_addressable = True))
+        # self.regs.add("SI", Register(0))
+        # self.regs.add("DI", Register(0))
         
         # Segment registers.
-        self.regs.add("CS", Register(0xFFFF))
-        self.regs.add("DS", Register(0))
-        self.regs.add("SS", Register(0))
-        self.regs.add("ES", Register(0))
+        # self.regs.add("CS", Register(0xFFFF))
+        # self.regs.add("DS", Register(0))
+        # self.regs.add("SS", Register(0))
+        # self.regs.add("ES", Register(0))
+        
+        self.regs = UnionRegs()
+        self.regs["CS"] = 0xFFFF
         
         # ALU vector table.
         self.alu_vector_table = {
