@@ -211,7 +211,7 @@ class FLAGS(object):
             
     def set_from_value(self, value, include_cf = True, include_pf = True):
         """ Set ZF, SF, and CF based the result of an ALU operation. """
-        log.debug("Setting FLAGS from 0x%04x", value)
+        # log.debug("Setting FLAGS from 0x%04x", value)
         self.assign(FLAGS.ZERO, value == 0)
         self.assign(FLAGS.SIGN, 0x8000 == (value & 0x8000))
         if include_cf:
@@ -267,21 +267,23 @@ class CPU(object):
         }
         
     def read_byte(self):
-        location = self.regs["IP"]
+        # location = self.regs["IP"]
         byte = self.bus.mem_read_byte(segment_offset_to_address(self.regs["CS"], self.regs["IP"]))
         self.regs["IP"] += 1
-        log.debug("Read: 0x%02x from 0x%04x", byte, location)
+        # log.debug("Read: 0x%02x from 0x%04x", byte, location)
         return byte
         
     def fetch(self):
-        self.dump_regs()
-        self.flags.dump_flags()
+        # Uncomment these lines for debugging, but they make the code slow if left on.
         
-        if self.should_break():
-            self.enter_debugger()
+        # self.dump_regs()
+        # self.flags.dump_flags()
+        
+        # if self.should_break():
+            # self.enter_debugger()
             
         opcode = self.read_byte()
-        log.debug("Fetched opcode: 0x%02x", opcode)
+        # log.debug("Fetched opcode: 0x%02x", opcode)
         if opcode == 0xF4:
             self._hlt()
         elif opcode & 0xF8 == 0x00 and opcode & 0x6 != 0x6:
@@ -467,12 +469,12 @@ class CPU(object):
         assert rm_type != UNKNOWN
         assert rm_value is not None
         
-        log_line = "reg = %s, " % register
-        if rm_type == REGISTER:
-            log_line += "r/m = %s" % rm_value
-        elif rm_type == ADDRESS:
-            log_line += "r/m = 0x%04x" % rm_value
-        log.debug(log_line)
+        # log_line = "reg = %s, " % register
+        # if rm_type == REGISTER:
+            # log_line += "r/m = %s" % rm_value
+        # elif rm_type == ADDRESS:
+            # log_line += "r/m = 0x%04x" % rm_value
+        # log.debug(log_line)
             
         return register, rm_type, rm_value
         
@@ -702,7 +704,7 @@ class CPU(object):
         
         if value != 0:
             self.regs["IP"] += distance
-            log.debug("LOOP incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            # log.debug("LOOP incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
             
     # ********** Arithmetic opcodes. **********
     def _8x(self, opcode):
@@ -886,16 +888,16 @@ class CPU(object):
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] += 1
         self.flags.set_from_value(self.regs[dest], include_cf = False)
-        log.debug("INC'd %s to 0x%04x", dest, self.regs[dest])
+        # log.debug("INC'd %s to 0x%04x", dest, self.regs[dest])
         
     def _dec(self, opcode):
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] -= 1
         self.flags.set_from_value(self.regs[dest], include_cf = False)
-        log.debug("DEC'd %s to 0x%04x", dest, self.regs[dest])
+        # log.debug("DEC'd %s to 0x%04x", dest, self.regs[dest])
         
     def _inc_dec_rm8(self):
-        log.debug("INC/DEC r/m8")
+        # log.debug("INC/DEC r/m8")
         sub_opcode, rm_type, rm_value = self.get_modrm_operands(8, decode_register = False)
         value = self._get_rm8(rm_type, rm_value)
         if sub_opcode == 0:
