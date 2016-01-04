@@ -63,7 +63,6 @@ def main():
     cpu.bus = bus
     
     while not cpu.hlt:
-        log.debug("")
         cpu.fetch()
 
 if __name__ == "__main__":
