@@ -204,10 +204,13 @@ class FLAGS(object):
             
     def assign(self, mask, value):
         """ Set a bit in the FLAGS register. """
+        # Inline the code from set() and clear() for speed.
         if value:
-            self.set(mask)
+            # self.set(mask)
+            self.value |= mask
         else:
-            self.clear(mask)
+            # self.clear(mask)
+            self.value &= ~(mask)
             
     def set_from_value(self, value, include_cf = True, include_pf = True):
         """ Set ZF, SF, and CF based the result of an ALU operation. """
