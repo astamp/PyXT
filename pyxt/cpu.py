@@ -1003,37 +1003,55 @@ class CPU(object):
         self.bus.io_write_byte(port, value)
         
     # ********** Memory access helpers. **********
-    def _write_word_to_ram(self, address, value):
-        self.bus.mem_write_word(address, value)
+    def get_data_segment(self):
+        """ Helper function to return the effective data segment. """
+        return self.regs["DS"]
         
-    def _read_word_from_ram(self, address):
-        return self.bus.mem_read_word(address)
+    def write_data_word(self, offset, value):
+        """ Write a word to data memory at the given offset.  Assume DS unless overridden by a prefix. """
+        self.bus.mem_write_word(segment_offset_to_address(self.get_data_segment(), offset), value)
+        
+    def read_data_word(self, offset):
+        """ Read a word from data memory at the given offset.  Assume DS unless overridden by a prefix. """
+        return self.bus.mem_read_word(segment_offset_to_address(self.get_data_segment(), offset))
+        
+    def write_data_byte(self, offset, value):
+        """ Write a byte to data memory at the given offset.  Assume DS unless overridden by a prefix. """
+        self.bus.mem_write_byte(segment_offset_to_address(self.get_data_segment(), offset), value)
+        
+    def read_data_byte(self, offset):
+        """ Read a byte from data memory at the given offset.  Assume DS unless overridden by a prefix. """
+        return self.bus.mem_read_byte(segment_offset_to_address(self.get_data_segment(), offset))
         
     def _get_rm16(self, rm_type, rm_value):
+        """ Helper for reading from a 16 bit r/m field. """
         if rm_type == REGISTER:
             return self.regs[rm_value]
         elif rm_type == ADDRESS:
-            return self._read_word_from_ram(rm_value)
+            return self.read_data_word(rm_value)
             
     def _set_rm16(self, rm_type, rm_value, value):
+        """ Helper for writing to a 16 bit r/m field. """
         if rm_type == REGISTER:
             self.regs[rm_value] = value
         elif rm_type == ADDRESS:
-            self._write_word_to_ram(rm_value, value)
+            self.write_data_word(rm_value, value)
             
     def _get_rm8(self, rm_type, rm_value):
+        """ Helper for reading from an 8 bit r/m field. """
         if rm_type == REGISTER:
             assert rm_value[1] in "HL"
             return self.regs[rm_value]
         elif rm_type == ADDRESS:
-            return self.bus.mem_read_byte(rm_value)
+            return self.read_data_byte(rm_value)
             
     def _set_rm8(self, rm_type, rm_value, value):
+        """ Helper for writing to an 8 bit r/m field. """
         if rm_type == REGISTER:
             assert rm_value[1] in "HL"
             self.regs[rm_value] = value
         elif rm_type == ADDRESS:
-            self.bus.mem_write_byte(rm_value, value)
+            self.write_data_byte(rm_value, value)
             
     # ********** Debugger functions. **********
     def dump_regs(self):
