@@ -540,20 +540,22 @@ class CPU(object):
     def _push(self, opcode):
         src = WORD_REG[opcode & 0x07]
         value = self.regs[src]
-        self.__push(value)
+        self.internal_push(value)
         log.debug("PUSH'd 0x%04x from %s", value, src)
         
     def _pop(self, opcode):
         dest = WORD_REG[opcode & 0x07]
-        self.regs[dest] = self.__pop()
+        self.regs[dest] = self.internal_pop()
         log.debug("POP'd 0x%04x into %s", self.regs[dest], dest)
         
-    def __push(self, value):
+    def internal_push(self, value):
+        """ Decrement the stack pointer and push a word on to the stack. """
         self.regs["SP"] -= 2
-        self._write_word_to_ram(self.regs["SP"], value)
+        self.bus.mem_write_word(segment_offset_to_address(self.regs.SS, self.regs.SP), value)
         
-    def __pop(self):
-        value = self._read_word_from_ram(self.regs["SP"])
+    def internal_pop(self):
+        """ Pop a word off of the stack and incrementt the stack pointer. """
+        value = self.bus.mem_read_word(segment_offset_to_address(self.regs.SS, self.regs.SP))
         self.regs["SP"] += 2
         return value
         
@@ -668,12 +670,12 @@ class CPU(object):
         
     def _call(self):
         offset = self.get_imm(True)
-        self.__push(self.regs["IP"])
+        self.internal_push(self.regs["IP"])
         self.regs["IP"] += offset
         log.debug("CALL incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
         
     def _ret(self):
-        self.regs["IP"] = self.__pop()
+        self.regs["IP"] = self.internal_pop()
         log.debug("RET back to 0x%04x", self.regs["IP"])
         
     def _loop(self):
