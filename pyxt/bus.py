@@ -3,11 +3,9 @@ pyxt.bus - System bus and component interface for PyXT.
 """
 
 # Standard library imports
-import array
 
 # PyXT imports
-from pyxt.helpers import *
-from pyxt.constants import *
+from pyxt.constants import BLOCK_PREFIX_SHIFT, BLOCK_OFFSET_MASK
 
 # Classes
 class Device(object):
@@ -33,7 +31,7 @@ class Device(object):
         pass
         
     # Memory bus.
-    def get_memory_size(self):
+    def get_memory_size(self): # pylint: disable=no-self-use
         """ Return the length of the memory mapped area of this device. """
         return 0
         
@@ -54,7 +52,7 @@ class Device(object):
         raise NotImplementedError("This device doesn't support memory mapping.")
         
     # I/O bus.
-    def get_ports_list(self):
+    def get_ports_list(self): # pylint: disable=no-self-use
         """ Return a list of ports used by this device. """
         return []
         
@@ -98,6 +96,7 @@ class SystemBus(object):
                 self.io_decoder[address] = device
                 
     def mem_read_byte(self, address):
+        """ Read a byte from the supplied physical memory address. """
         device = self.devices[address >> BLOCK_PREFIX_SHIFT]
         if device is not None:
             return device.mem_read_byte(address & BLOCK_OFFSET_MASK)
@@ -105,6 +104,7 @@ class SystemBus(object):
             return 0
             
     def mem_read_word(self, address):
+        """ Read a word from the supplied physical memory address. """
         device = self.devices[address >> BLOCK_PREFIX_SHIFT]
         if device is not None:
             return device.mem_read_word(address & BLOCK_OFFSET_MASK)
@@ -112,11 +112,13 @@ class SystemBus(object):
             return 0
             
     def mem_write_byte(self, address, value):
+        """ Write a byte to the supplied physical memory address. """
         device = self.devices[address >> BLOCK_PREFIX_SHIFT]
         if device is not None:
             device.mem_write_byte(address & BLOCK_OFFSET_MASK, value)
             
     def mem_write_word(self, address, value):
+        """ Write a word to the supplied physical memory address. """
         device = self.devices[address >> BLOCK_PREFIX_SHIFT]
         if device is not None:
             device.mem_write_word(address & BLOCK_OFFSET_MASK, value)
