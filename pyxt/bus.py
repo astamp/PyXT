@@ -47,7 +47,7 @@ class Device(object):
         """ Write a byte to memory at the supplied offset from the device's base. """
         raise NotImplementedError("This device doesn't support memory mapping.")
         
-    def mem_write_word(self, offset):
+    def mem_write_word(self, offset, value):
         """ Write a word to memory at the supplied offset from the device's base. """
         raise NotImplementedError("This device doesn't support memory mapping.")
         
