@@ -10,7 +10,7 @@ from pprint import pprint
 from optparse import OptionParser
 
 # PyXT imports
-from pyxt.constants import *
+from pyxt.constants import SIXTY_FOUR_KB, BIOS_LOCATION
 from pyxt.cpu import CPU
 from pyxt.bus import SystemBus
 from pyxt.memory import RAM, ROM
@@ -24,13 +24,18 @@ log = logging.getLogger(__name__)
 
 # Functions
 def parse_cmdline():
+    """ Parse the command line arguments. """
     parser = OptionParser()
-    parser.add_option("--debug", action = "store_true", dest = "debug", help = "Enable DEBUG log level.")
-    parser.add_option("--bios", action = "store", dest = "bios", help = "ROM BIOS image to load at 0xF0000.")
-    parser.add_option("--mda-rom", action = "store", dest = "mda_rom", help = "MDA ROM to use for the virtual MDA card.")
+    parser.add_option("--debug", action = "store_true", dest = "debug",
+                      help = "Enable DEBUG log level.")
+    parser.add_option("--bios", action = "store", dest = "bios",
+                      help = "ROM BIOS image to load at 0xF0000.")
+    parser.add_option("--mda-rom", action = "store", dest = "mda_rom",
+                      help = "MDA ROM to use for the virtual MDA card.")
     return parser.parse_args()
     
 def main():
+    """ Main application that runs the PyXT machine. """
     options, args = parse_cmdline()
     
     log_level = logging.DEBUG if options.debug else logging.INFO
@@ -64,7 +69,7 @@ def main():
     
     while not cpu.hlt:
         cpu.fetch()
-
+        
 if __name__ == "__main__":
     if os.environ.get("PYXT_PROFILING"):
         import cProfile
