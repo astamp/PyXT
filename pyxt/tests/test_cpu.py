@@ -3,7 +3,7 @@ import binascii
 
 from pyxt.constants import *
 from pyxt.cpu import *
-from pyxt.bus import SystemBus
+from pyxt.bus import SystemBus, Device
 from pyxt.memory import RAM
 
 class FlagsRegisterTest(unittest.TestCase):
@@ -401,4 +401,40 @@ class LoopOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("E2 FE F4")
         self.assertEqual(self.run_to_halt(), 4)
         self.assertEqual(self.cpu.regs["CX"], 0x00)
+        
+class IOPortTester(Device):
+    """ Device that maps to all ports for testing. """
+    def __init__(self):
+        super(IOPortTester, self).__init__()
+        
+        # Fill in each port with zero.
+        self.data = {}
+        for port in self.get_ports_list():
+            self.data[port] = 0
+            
+    def get_ports_list(self):
+        return [port for port in xrange(1024)]
+        
+    def io_read_byte(self, port):
+        return self.data[port]
+        
+    def io_write_byte(self, port, value):
+        self.data[port] = value
+        
+class IOPortOpcodeTests(BaseOpcodeAcceptanceTests):
+    def setUp(self):
+        super(IOPortOpcodeTests, self).setUp()
+        self.port_tester = IOPortTester()
+        self.bus.install_device(None, self.port_tester)
+        
+    def test_in_al_imm8(self):
+        """
+        in al, 0x40
+        hlt
+        """
+        self.port_tester.data[0x40] = 77
+        self.load_code_string("E4 40 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AL"], 77)
+        self.assertEqual(self.port_tester.data[0x40], 77)
         

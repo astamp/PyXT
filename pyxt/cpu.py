@@ -377,6 +377,8 @@ class CPU(object):
             self._jo()
         elif opcode == 0x32:
             self._xor_r8_rm8()
+        elif opcode == 0xE4:
+            self.opcode_in_al_imm8()
         elif opcode == 0xE6:
             self._out_imm8_al()
         elif opcode == 0xEE:
@@ -990,6 +992,12 @@ class CPU(object):
         log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
         
     # ********** I/O port opcodes. **********
+    def opcode_in_al_imm8(self):
+        """ Read a byte from a port and put it in AL. """
+        port = self.get_imm(False)
+        self.regs.AL = self.bus.io_read_byte(port)
+        log.info("Read 0x%02x from port 0x%04x.", self.regs.AL, port)
+        
     def _out_imm8_al(self):
         port = self.get_imm(False)
         value = self.regs["AL"]
