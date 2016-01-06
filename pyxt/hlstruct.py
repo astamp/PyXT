@@ -5,6 +5,8 @@ Recipe can be found here:
 http://code.activestate.com/recipes/498149-a-higher-level-struct-module/
 """
 
+# pylint: skip-file
+
 import struct
 
 class Format(object):
