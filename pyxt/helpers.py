@@ -29,3 +29,4 @@ def count_bits(value):
             count += 1
         value = value >> 1
     return count
+    
