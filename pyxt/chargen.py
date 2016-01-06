@@ -44,7 +44,7 @@ class CharacterGeneratorBIOS(CharacterGenerator):
     
     def __init__(self, bios_file):
         self.font_data = pygame.Surface((8 * self.RESIDENT_CHARS, 8))
-        self.font_data.fill(BLACK)
+        self.font_data.fill(EGA_BLACK)
         pix = pygame.PixelArray(self.font_data)
         
         with open(bios_file, "rb") as fileptr:
@@ -54,7 +54,7 @@ class CharacterGeneratorBIOS(CharacterGenerator):
                     byte = ord(fileptr.read(1))
                     for bit in xrange(self.CHAR_WIDTH_PIXELS):
                         if (1 << (self.CHAR_WIDTH_PIXELS - bit)) & byte:
-                            pix[(index * self.CHAR_WIDTH_PIXELS) + bit, row] = GREEN
+                            pix[(index * self.CHAR_WIDTH_PIXELS) + bit, row] = EGA_GREEN
                             
         # Make sure to explicitly del this to free the surface lock.
         del pix
