@@ -110,6 +110,7 @@ class WordRegs(Structure):
         # These are also not part of union REGS but they need to be in our registers.
         ("IP", c_ushort),
         ("BP", c_ushort),
+        ("SP", c_ushort),
     ]
     
 class ByteRegs(Structure):

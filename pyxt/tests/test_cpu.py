@@ -109,6 +109,102 @@ class HelperFunctionTest(unittest.TestCase):
         self.assertEqual(decode_seg_reg(0xFE), "SS")
         self.assertEqual(decode_seg_reg(0xFF), "DS")
         
+class UnionRegsTest(unittest.TestCase):
+    def setUp(self):
+        self.regs = UnionRegs()
+        
+    def test_initialized_to_zero(self):
+        self.assertEqual(self.regs.AX, 0)
+        self.assertEqual(self.regs.BX, 0)
+        self.assertEqual(self.regs.CX, 0)
+        self.assertEqual(self.regs.DX, 0)
+        
+        self.assertEqual(self.regs.SI, 0)
+        self.assertEqual(self.regs.DI, 0)
+        self.assertEqual(self.regs.BP, 0)
+        self.assertEqual(self.regs.SP, 0)
+        
+        self.assertEqual(self.regs.IP, 0)
+        
+        self.assertEqual(self.regs.CS, 0)
+        self.assertEqual(self.regs.DS, 0)
+        self.assertEqual(self.regs.ES, 0)
+        self.assertEqual(self.regs.SS, 0)
+        
+    def test_16_bit_overflow(self):
+        self.regs.AX = 0xFFFF
+        self.regs.AX += 1
+        self.assertEqual(self.regs.AX, 0)
+        
+    def test_16_bit_underflow(self):
+        self.regs.AX = 0
+        self.regs.AX -= 1
+        self.assertEqual(self.regs.AX, 0xFFFF)
+        
+    def test_8_bit_overflow_high(self):
+        self.regs.AH = 0xFF
+        self.regs.AH += 1
+        self.assertEqual(self.regs.AH, 0)
+        self.assertEqual(self.regs.AX, 0)
+        
+    def test_8_bit_overflow_low(self):
+        self.regs.AL = 0xFF
+        self.regs.AL += 1
+        self.assertEqual(self.regs.AL, 0)
+        self.assertEqual(self.regs.AX, 0)
+        
+    def test_8_bit_underflow_high(self):
+        self.regs.AH = 0
+        self.regs.AH -= 1
+        self.assertEqual(self.regs.AH, 0xFF)
+        self.assertEqual(self.regs.AX, 0xFF00)
+        
+    def test_8_bit_underflow_low(self):
+        self.regs.AL = 0
+        self.regs.AL -= 1
+        self.assertEqual(self.regs.AL, 0xFF)
+        self.assertEqual(self.regs.AX, 0x00FF)
+        
+    def test_ax_linked_to_ah_al(self):
+        self.regs.AX = 0xCAFE
+        self.assertEqual(self.regs.AH, 0xCA)
+        self.assertEqual(self.regs.AL, 0xFE)
+        
+        self.regs.AH = 0x12
+        self.assertEqual(self.regs.AX, 0x12FE)
+        self.regs.AL = 0x34
+        self.assertEqual(self.regs.AX, 0x1234)
+        
+    def test_bx_linked_to_bh_bl(self):
+        self.regs.BX = 0xCAFE
+        self.assertEqual(self.regs.BH, 0xCA)
+        self.assertEqual(self.regs.BL, 0xFE)
+        
+        self.regs.BH = 0x12
+        self.assertEqual(self.regs.BX, 0x12FE)
+        self.regs.BL = 0x34
+        self.assertEqual(self.regs.BX, 0x1234)
+        
+    def test_cx_linked_to_ch_cl(self):
+        self.regs.CX = 0xCAFE
+        self.assertEqual(self.regs.CH, 0xCA)
+        self.assertEqual(self.regs.CL, 0xFE)
+        
+        self.regs.CH = 0x12
+        self.assertEqual(self.regs.CX, 0x12FE)
+        self.regs.CL = 0x34
+        self.assertEqual(self.regs.CX, 0x1234)
+        
+    def test_dx_linked_to_dh_dl(self):
+        self.regs.DX = 0xCAFE
+        self.assertEqual(self.regs.DH, 0xCA)
+        self.assertEqual(self.regs.DL, 0xFE)
+        
+        self.regs.DH = 0x12
+        self.assertEqual(self.regs.DX, 0x12FE)
+        self.regs.DL = 0x34
+        self.assertEqual(self.regs.DX, 0x1234)
+        
 class BaseOpcodeAcceptanceTests(unittest.TestCase):
     """
     Basic acceptance testing framework for the CPU class.
