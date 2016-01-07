@@ -205,6 +205,14 @@ class UnionRegsTest(unittest.TestCase):
         self.regs.DL = 0x34
         self.assertEqual(self.regs.DX, 0x1234)
         
+    def test_getitem(self):
+        self.regs.AX = 0x5643
+        self.assertEqual(self.regs["AX"], 0x5643)
+        
+    def test_setitem(self):
+        self.regs["BX"] = 0xF00D
+        self.assertEqual(self.regs.BX, 0xF00D)
+        
 class BaseOpcodeAcceptanceTests(unittest.TestCase):
     """
     Basic acceptance testing framework for the CPU class.
