@@ -278,6 +278,8 @@ class CPU(object):
             self.opcode_group_add(opcode)
         elif opcode & 0xF8 == 0x08 and opcode & 0x6 != 0x6:
             self.opcode_group_or(opcode)
+        elif opcode & 0xF8 == 0x18 and opcode & 0x6 != 0x6:
+            self.opcode_group_sbb(opcode)
         elif opcode & 0xF8 == 0x20 and opcode & 0x6 != 0x6:
             self.opcode_group_and(opcode)
         elif opcode & 0xF8 == 0x28 and opcode & 0x6 != 0x6:
@@ -328,8 +330,6 @@ class CPU(object):
             self._jns()
         elif opcode == 0x78:
             self._js()
-        elif opcode == 0x19:
-            self._sbb_rm16_r16()
         elif opcode == 0xF8:
             self._clc()
         elif opcode == 0xF9:
@@ -837,16 +837,16 @@ class CPU(object):
         """ Entry point for all SUB opcodes. """
         self.alu_vector_table[opcode & 0x07](operator.sub)
         
-    def _sbb_rm16_r16(self):
-        log.debug("SBB r/m16 r16")
-        register, rm_type, rm_value = self.get_modrm_operands(16)
-        op1 = self._get_rm16(rm_type, rm_value)
-        op2 = self.regs[register]
-        op1 = op1 - op2
+    def operator_sbb(self, operand_a, operand_b):
+        """ Implements the SBB operator which subtracts an extra 1 if CF is set. """
+        result = operand_a - operand_b
         if self.flags.cf:
-            op1 -= 1
-        self.flags.set_from_value(op1)
-        self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
+            result -= 1
+        return result
+        
+    def opcode_group_sbb(self, opcode):
+        """ Entry point for all SUB opcodes. """
+        self.alu_vector_table[opcode & 0x07](self.operator_sbb)
         
     def _cmp_rm16_r16(self):
         log.debug("CMP r/m16 r16")

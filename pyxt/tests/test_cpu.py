@@ -411,6 +411,178 @@ class SubOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 3421)
         
+class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_sbb_operator_carry_clear(self):
+        self.assertFalse(self.cpu.flags.cf)
+        self.assertEqual(self.cpu.operator_sbb(7, 5), 2)
+        
+    def test_sbb_operator_carry_set(self):
+        self.cpu.flags.cf = True
+        self.assertTrue(self.cpu.flags.cf)
+        self.assertEqual(self.cpu.operator_sbb(7, 5), 1)
+        
+    def test_sbb_rm8_r8_carry_clear(self):
+        """
+        sbb [value], al
+        hlt
+        value:
+            db 50
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 7
+        self.load_code_string("18 06 05 00 F4 32")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 7)
+        self.assertEqual(self.memory.mem_read_byte(0x05), 43)
+        
+    def test_sbb_rm8_r8_carry_set(self):
+        """
+        sbb [value], al
+        hlt
+        value:
+            db 50
+        """
+        self.cpu.flags.cf = True
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 7
+        self.load_code_string("18 06 05 00 F4 32")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 7)
+        self.assertEqual(self.memory.mem_read_byte(0x05), 42)
+        
+    def test_sbb_rm16_r16_carry_clear(self):
+        """
+        sbb [value], ax
+        hlt
+        value:
+            dw 10
+        """
+        self.cpu.regs["AX"] = 11
+        self.load_code_string("19 06 05 00 F4 0A 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 11)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0xFFFF)
+        
+    def test_sbb_rm16_r16_carry_set(self):
+        """
+        sbb [value], ax
+        hlt
+        value:
+            dw 10
+        """
+        self.cpu.flags.cf = True
+        self.cpu.regs["AX"] = 11
+        self.load_code_string("19 06 05 00 F4 0A 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 11)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0xFFFE)
+        
+    def test_sbb_r8_rm8_carry_clear(self):
+        """
+        sbb al, [value]
+        hlt
+        value:
+            db 22
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 7
+        self.load_code_string("1A 06 05 00 F4 16")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 241)
+        self.assertEqual(self.memory.mem_read_byte(0x05), 22)
+        
+    def test_sbb_r8_rm8_carry_set(self):
+        """
+        sbb al, [value]
+        hlt
+        value:
+            db 22
+        """
+        self.cpu.flags.cf = True
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 7
+        self.load_code_string("1A 06 05 00 F4 16")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 240)
+        self.assertEqual(self.memory.mem_read_byte(0x05), 22)
+        
+    def test_sbb_r16_rm16_carry_clear(self):
+        """
+        sbb ax, [value]
+        hlt
+        value:
+            dw 1111
+        """
+        self.cpu.regs["AX"] = 2345
+        self.load_code_string("1B 06 05 00 F4 57 04")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 1234)
+        self.assertEqual(self.memory.mem_read_word(0x05), 1111)
+        
+    def test_sbb_r16_rm16_carry_set(self):
+        """
+        sbb ax, [value]
+        hlt
+        value:
+            dw 1111
+        """
+        self.cpu.flags.cf = True
+        self.cpu.regs["AX"] = 2345
+        self.load_code_string("1B 06 05 00 F4 57 04")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 1233)
+        self.assertEqual(self.memory.mem_read_word(0x05), 1111)
+        
+    def test_sbb_al_imm8_carry_clear(self):
+        """
+        sbb al, 7
+        hlt
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 7
+        self.load_code_string("1C 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 0)
+        
+    def test_sbb_al_imm8_carry_set(self):
+        """
+        sbb al, 7
+        hlt
+        """
+        self.cpu.flags.cf = True
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 7
+        self.load_code_string("1C 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 0xFF)
+        
+    def test_sbb_ax_imm16_carry_clear(self):
+        """
+        sbb ax, word 2222
+        hlt
+        """
+        self.cpu.regs["AX"] = 5643
+        self.load_code_string("1D AE 08 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 3421)
+        
+    def test_sbb_ax_imm16_carry_set(self):
+        """
+        sbb ax, word 2222
+        hlt
+        """
+        self.cpu.flags.cf = True
+        self.cpu.regs["AX"] = 5643
+        self.load_code_string("1D AE 08 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 3420)
+        
 class OrOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_or_rm8_r8(self):
         """
