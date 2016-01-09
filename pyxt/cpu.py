@@ -275,9 +275,9 @@ class CPU(object):
         if opcode == 0xF4:
             self._hlt()
         elif opcode & 0xF8 == 0x00 and opcode & 0x6 != 0x6:
-            self._add(opcode)
+            self.opcode_group_add(opcode)
         elif opcode & 0xF8 == 0x08 and opcode & 0x6 != 0x6:
-            self._or(opcode)
+            self.opcode_group_or(opcode)
         elif opcode & 0xF8 == 0x20 and opcode & 0x6 != 0x6:
             self.opcode_group_and(opcode)
         elif opcode & 0xFC == 0x80:
@@ -771,7 +771,7 @@ class CPU(object):
         self.flags.set_from_value(value)
         self.regs["AL"] = value & 0xFF
         
-    def _or(self, opcode):
+    def opcode_group_or(self, opcode):
         """ Entry point for all OR opcodes. """
         self.alu_vector_table[opcode & 0x07](operator.or_)
         
@@ -829,10 +829,9 @@ class CPU(object):
         self.regs["AX"] = value & 0xFFFF
         
     # Math opcodes.
-    def _add(self, opcode):
+    def opcode_group_add(self, opcode):
         """ Entry point for all ADD opcodes. """
         self.alu_vector_table[opcode & 0x07](operator.add)
-        
         
     def _sbb_rm16_r16(self):
         log.debug("SBB r/m16 r16")
