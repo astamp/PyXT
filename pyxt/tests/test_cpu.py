@@ -411,6 +411,85 @@ class OrOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 0xCAFE)
         
+class AndOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_and_rm8_r8(self):
+        """
+        and [value], al
+        hlt
+        value:
+            db 0x0F
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 0x7E
+        self.load_code_string("20 06 05 00 F4 0F")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 0x7E)
+        self.assertEqual(self.memory.mem_read_byte(0x05), 0x0E)
+        
+    def test_and_rm16_r16(self):
+        """
+        and [value], ax
+        hlt
+        value:
+            dw 0xFACE
+        """
+        self.cpu.regs["AX"] = 0x0FF0
+        self.load_code_string("21 06 05 00 F4 CE FA")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 0x0FF0)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0x0AC0)
+        
+    def test_and_r8_rm8(self):
+        """
+        and al, [value]
+        hlt
+        value:
+            db 0x3C
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 0xA5
+        self.load_code_string("22 06 05 00 F4 3C")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 0x24)
+        self.assertEqual(self.memory.mem_read_byte(0x05), 0x3C)
+        
+    def test_and_r16_rm16(self):
+        """
+        and bx, [value]
+        hlt
+        value:
+            dw 0xF000
+        """
+        self.cpu.regs["BX"] = 0xFACE
+        self.load_code_string("23 1E 05 00 F4 00 F0")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["BX"], 0xF000)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0xF000)
+        
+    def test_and_al_imm8(self):
+        """
+        and al, 0x07
+        hlt
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 0x1E
+        self.load_code_string("24 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 0x06)
+        
+    def test_and_ax_imm16(self):
+        """
+        and ax, 0xF00F
+        hlt
+        """
+        self.cpu.regs["AX"] = 0xBEEF
+        self.load_code_string("25 0F F0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 0xB00F)
+        
 class MovOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_mov_sreg_rm16(self):
         """

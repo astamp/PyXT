@@ -278,6 +278,8 @@ class CPU(object):
             self._add(opcode)
         elif opcode & 0xF8 == 0x08 and opcode & 0x6 != 0x6:
             self._or(opcode)
+        elif opcode & 0xF8 == 0x20 and opcode & 0x6 != 0x6:
+            self.opcode_group_and(opcode)
         elif opcode & 0xFC == 0x80:
             self._8x(opcode)
         elif opcode & 0xF8 == 0x40:
@@ -344,8 +346,6 @@ class CPU(object):
             self._sub_rm16_r16()
         elif opcode == 0x86:
             self._xchg_r8_rm8()
-        elif opcode == 0x20:
-            self._and_rm8_r8()
         elif opcode == 0xFE:
             self._inc_dec_rm8()
         elif opcode == 0xFF:
@@ -775,13 +775,9 @@ class CPU(object):
         """ Entry point for all OR opcodes. """
         self.alu_vector_table[opcode & 0x07](operator.or_)
         
-    def _and_rm8_r8(self):
-        register, rm_type, rm_value = self.get_modrm_operands(8)
-        op1 = self._get_rm8(rm_type, rm_value)
-        op2 = self.regs[register]
-        op1 = op1 & op2
-        self.flags.set_from_value(op1)
-        self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
+    def opcode_group_and(self, opcode):
+        """ Entry point for all AND opcodes. """
+        self.alu_vector_table[opcode & 0x07](operator.and_)
         
     # Generic ALU helper functions.
     def _alu_rm8_r8(self, operation):
