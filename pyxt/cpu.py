@@ -270,15 +270,15 @@ class CPU(object):
         elif opcode & 0xF8 == 0x28 and opcode & 0x6 != 0x6:
             self.opcode_group_sub(opcode)
         elif opcode & 0xFC == 0x80:
-            self._8x(opcode)
+            self.opcode_group_8x(opcode)
         elif opcode & 0xF8 == 0x40:
-            self._inc(opcode)
+            self.opcode_group_inc(opcode)
         elif opcode & 0xF8 == 0x48:
-            self._dec(opcode)
+            self.opcode_group_dec(opcode)
         elif opcode & 0xF8 == 0x50:
-            self._push(opcode)
+            self.opcode_group_push(opcode)
         elif opcode & 0xF8 == 0x58:
-            self._pop(opcode)
+            self.opcode_group_pop(opcode)
         elif opcode & 0xF8 == 0x90:
             self._xchg_r16_ax(opcode)
         elif opcode == 0x74:
@@ -525,13 +525,15 @@ class CPU(object):
         self.regs["AX"] = temp
         
     # ********** Stack opcodes. **********
-    def _push(self, opcode):
+    def opcode_group_push(self, opcode):
+        """ Handler for all PUSH [register] instructions. """
         src = WORD_REG[opcode & 0x07]
         value = self.regs[src]
         self.internal_push(value)
         log.debug("PUSH'd 0x%04x from %s", value, src)
         
-    def _pop(self, opcode):
+    def opcode_group_pop(self, opcode):
+        """ Handler for all POP [register] instructions. """
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] = self.internal_pop()
         log.debug("POP'd 0x%04x into %s", self.regs[dest], dest)
@@ -680,7 +682,8 @@ class CPU(object):
             # log.debug("LOOP incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
             
     # ********** Arithmetic opcodes. **********
-    def _8x(self, opcode):
+    def opcode_group_8x(self, opcode):
+        """ Handler for immediate ALU instructions. """
         if opcode == 0x82:
             opcode = 0x80
             
@@ -858,13 +861,15 @@ class CPU(object):
         self.flags.set_from_value(value)
         
     # Inc/dec opcodes.
-    def _inc(self, opcode):
+    def opcode_group_inc(self, opcode):
+        """ Handler for all INC [register] instructions. """
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] += 1
         self.flags.set_from_value(self.regs[dest], include_cf = False)
         # log.debug("INC'd %s to 0x%04x", dest, self.regs[dest])
         
-    def _dec(self, opcode):
+    def opcode_group_dec(self, opcode):
+        """ Handler for all DEC [register] instructions. """
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] -= 1
         self.flags.set_from_value(self.regs[dest], include_cf = False)
