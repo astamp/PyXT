@@ -280,6 +280,8 @@ class CPU(object):
             self.opcode_group_or(opcode)
         elif opcode & 0xF8 == 0x20 and opcode & 0x6 != 0x6:
             self.opcode_group_and(opcode)
+        elif opcode & 0xF8 == 0x28 and opcode & 0x6 != 0x6:
+            self.opcode_group_sub(opcode)
         elif opcode & 0xFC == 0x80:
             self._8x(opcode)
         elif opcode & 0xF8 == 0x40:
@@ -342,8 +344,6 @@ class CPU(object):
             self._jmp_rel16()
         elif opcode == 0xEB:
             self._jmp_rel8()
-        elif opcode == 0x29:
-            self._sub_rm16_r16()
         elif opcode == 0x86:
             self._xchg_r8_rm8()
         elif opcode == 0xFE:
@@ -833,6 +833,10 @@ class CPU(object):
         """ Entry point for all ADD opcodes. """
         self.alu_vector_table[opcode & 0x07](operator.add)
         
+    def opcode_group_sub(self, opcode):
+        """ Entry point for all SUB opcodes. """
+        self.alu_vector_table[opcode & 0x07](operator.sub)
+        
     def _sbb_rm16_r16(self):
         log.debug("SBB r/m16 r16")
         register, rm_type, rm_value = self.get_modrm_operands(16)
@@ -841,15 +845,6 @@ class CPU(object):
         op1 = op1 - op2
         if self.flags.cf:
             op1 -= 1
-        self.flags.set_from_value(op1)
-        self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
-        
-    def _sub_rm16_r16(self):
-        log.debug("SUB r/m16 r16")
-        register, rm_type, rm_value = self.get_modrm_operands(16)
-        op1 = self._get_rm16(rm_type, rm_value)
-        op2 = self.regs[register]
-        op1 = op1 - op2
         self.flags.set_from_value(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
