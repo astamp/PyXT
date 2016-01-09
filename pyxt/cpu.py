@@ -225,23 +225,6 @@ class CPU(object):
         self.flags = FLAGS()
         
         # Normal registers.
-        # self.regs = REGS()
-        # self.regs.add("IP", Register(0))
-        # self.regs.add("SP", Register(0))
-        # self.regs.add("BP", Register(0))
-        # self.regs.add("A", Register(0, byte_addressable = True))
-        # self.regs.add("B", Register(0, byte_addressable = True))
-        # self.regs.add("C", Register(0, byte_addressable = True))
-        # self.regs.add("D", Register(0, byte_addressable = True))
-        # self.regs.add("SI", Register(0))
-        # self.regs.add("DI", Register(0))
-        
-        # Segment registers.
-        # self.regs.add("CS", Register(0xFFFF))
-        # self.regs.add("DS", Register(0))
-        # self.regs.add("SS", Register(0))
-        # self.regs.add("ES", Register(0))
-        
         self.regs = UnionRegs()
         self.regs["CS"] = 0xFFFF
         
