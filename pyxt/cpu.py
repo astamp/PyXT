@@ -261,6 +261,8 @@ class CPU(object):
             self.opcode_group_add(opcode)
         elif opcode & 0xF8 == 0x08 and opcode & 0x6 != 0x6:
             self.opcode_group_or(opcode)
+        elif opcode & 0xF8 == 0x10 and opcode & 0x6 != 0x6:
+            self.opcode_group_adc(opcode)
         elif opcode & 0xF8 == 0x18 and opcode & 0x6 != 0x6:
             self.opcode_group_sbb(opcode)
         elif opcode & 0xF8 == 0x20 and opcode & 0x6 != 0x6:
@@ -828,8 +830,19 @@ class CPU(object):
         return result
         
     def opcode_group_sbb(self, opcode):
-        """ Entry point for all SUB opcodes. """
+        """ Entry point for all SBB opcodes. """
         self.alu_vector_table[opcode & 0x07](self.operator_sbb)
+        
+    def operator_adc(self, operand_a, operand_b):
+        """ Implements the ADC operator which adds an extra 1 if CF is set. """
+        result = operand_a + operand_b
+        if self.flags.cf:
+            result += 1
+        return result
+        
+    def opcode_group_adc(self, opcode):
+        """ Entry point for all ADC opcodes. """
+        self.alu_vector_table[opcode & 0x07](self.operator_adc)
         
     def _cmp_rm16_r16(self):
         log.debug("CMP r/m16 r16")
