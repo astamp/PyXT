@@ -244,6 +244,10 @@ class BaseOpcodeAcceptanceTests(unittest.TestCase):
         
         If it runs for more than max_instructions the test immediately fails.
         """
+        # Reset these in case there are multiple runs in the same test.
+        self.cpu.regs.IP = 0
+        self.cpu.hlt = False
+        
         instruction_count = 0
         while not self.cpu.hlt:
             self.cpu.fetch()
@@ -1043,4 +1047,79 @@ class IOPortOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AL"], 77)
         self.assertEqual(self.port_tester.data[0x40], 77)
+        
+class IncOpcodeTests(BaseOpcodeAcceptanceTests):
+    def run_inc_16_bit_test(self, code_string, register):
+        """
+        Generic function for testing INC on 16 bit registers.
+        """
+        self.load_code_string(code_string)
+        
+        test_data = (
+            (0, 1), # Start from zero.
+            (0xFF, 0x0100), # Byte rollover.
+            (5643, 5644), # Random value.
+            (0xFFFF, 0), # Word rollover
+        )
+        
+        for (before, after) in test_data:
+            self.cpu.regs[register] = before
+            self.assertEqual(self.run_to_halt(), 2)
+            self.assertEqual(self.cpu.regs[register], after)
+            
+    def test_inc_ax(self):
+        """
+        inc ax
+        hlt
+        """
+        self.run_inc_16_bit_test("40 F4", "AX")
+        
+    def test_inc_bx(self):
+        """
+        inc bx
+        hlt
+        """
+        self.run_inc_16_bit_test("43 F4", "BX")
+        
+    def test_inc_cx(self):
+        """
+        inc cx
+        hlt
+        """
+        self.run_inc_16_bit_test("41 F4", "CX")
+        
+    def test_inc_dx(self):
+        """
+        inc dx
+        hlt
+        """
+        self.run_inc_16_bit_test("42 F4", "DX")
+        
+    def test_inc_sp(self):
+        """
+        inc sp
+        hlt
+        """
+        self.run_inc_16_bit_test("44 F4", "SP")
+        
+    def test_inc_bp(self):
+        """
+        inc bp
+        hlt
+        """
+        self.run_inc_16_bit_test("45 F4", "BP")
+        
+    def test_inc_si(self):
+        """
+        inc si
+        hlt
+        """
+        self.run_inc_16_bit_test("46 F4", "SI")
+        
+    def test_inc_di(self):
+        """
+        inc di
+        hlt
+        """
+        self.run_inc_16_bit_test("47 F4", "DI")
         
