@@ -378,7 +378,7 @@ class CPU(object):
         elif opcode == 0x8C:
             self._mov_rm16_sreg()
         else:
-            log.error("Invalid opcode: 0x%02x", opcode)
+            log.error("Invalid opcode: 0x%02x at CS:IP 0x%04x:0x%04x", opcode, self.regs.CS, self.regs.IP)
             self._hlt()
             
     # ********** Opcode parameter helpers. **********
