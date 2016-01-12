@@ -243,7 +243,7 @@ class BaseOpcodeAcceptanceTests(unittest.TestCase):
     def setUp(self):
         self.bus = SystemBus()
         self.cpu = CPU()
-        self.cpu.bus = self.bus
+        self.cpu.install_bus(self.bus)
         self.cpu.regs["CS"] = 0x0000
         self.cpu.regs["DS"] = 0x0000
         self.memory = RAM(SIXTY_FOUR_KB)

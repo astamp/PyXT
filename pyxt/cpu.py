@@ -238,11 +238,16 @@ class CPU(object):
             0x05 : self._alu_ax_imm16,
         }
         
+    def install_bus(self, bus):
+        """ Register the bus with the CPU. """
+        self.bus = bus
+        self.mem_read_byte = self.bus.mem_read_byte
+        
     def read_instruction_byte(self):
         """ Read a byte from CS:IP and increment IP to point at the next instruction. """
         address = segment_offset_to_address(self.regs.CS, self.regs.IP)
         self.regs.IP += 1
-        return self.bus.mem_read_byte(address)
+        return self.mem_read_byte(address)
         
     def fetch(self):
         # Uncomment these lines for debugging, but they make the code slow if left on.
@@ -1021,7 +1026,7 @@ class CPU(object):
         
     def read_data_byte(self, offset):
         """ Read a byte from data memory at the given offset.  Assume DS unless overridden by a prefix. """
-        return self.bus.mem_read_byte(segment_offset_to_address(self.get_data_segment(), offset))
+        return self.mem_read_byte(segment_offset_to_address(self.get_data_segment(), offset))
         
     def _get_rm16(self, rm_type, rm_value):
         """ Helper for reading from a 16 bit r/m field. """
@@ -1113,7 +1118,7 @@ class CPU(object):
                 if unit == "b":
                     unit_size_hex = 2
                     ending_address = address + count
-                    data = [self.bus.mem_read_byte(x) for x in xrange(address, ending_address)]
+                    data = [self.mem_read_byte(x) for x in xrange(address, ending_address)]
                     readable = "".join([chr(x) if x > 0x20 and x < 0x7F else "." for x in data])
                 elif unit == "w":
                     unit_size_hex = 4
