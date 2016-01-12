@@ -6,6 +6,26 @@ from pyxt.cpu import *
 from pyxt.bus import SystemBus, Device
 from pyxt.memory import RAM
 
+class CpuTests(unittest.TestCase):
+    def setUp(self):
+        self.cpu = CPU()
+        
+    def test_cs_init_to_ffff(self):
+        self.assertEqual(self.cpu.regs.CS, 0xFFFF)
+        
+    def test_other_regs_init_to_zero(self):
+        self.assertEqual(self.cpu.regs.AX, 0)
+        self.assertEqual(self.cpu.regs.BX, 0)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.cpu.regs.DX, 0)
+        self.assertEqual(self.cpu.regs.IP, 0)
+        self.assertEqual(self.cpu.regs.BP, 0)
+        self.assertEqual(self.cpu.regs.SI, 0)
+        self.assertEqual(self.cpu.regs.DI, 0)
+        self.assertEqual(self.cpu.regs.DS, 0)
+        self.assertEqual(self.cpu.regs.ES, 0)
+        self.assertEqual(self.cpu.regs.SS, 0)
+        
 class FlagsRegisterTest(unittest.TestCase):
     def setUp(self):
         self.obj = FLAGS()
