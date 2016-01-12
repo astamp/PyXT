@@ -211,6 +211,15 @@ class UnionRegsTest(unittest.TestCase):
         self.regs["BX"] = 0xF00D
         self.assertEqual(self.regs.BX, 0xF00D)
         
+    def test_assignment_masks_to_8_bits(self):
+        self.regs.AL = 384
+        self.assertEqual(self.regs.AL, 128)
+        self.assertEqual(self.regs.AH, 0)
+        
+    def test_assignment_masks_to_16_bits(self):
+        self.regs.AX = 115200
+        self.assertEqual(self.regs.AX, 49664)
+        
 class BaseOpcodeAcceptanceTests(unittest.TestCase):
     """
     Basic acceptance testing framework for the CPU class.
