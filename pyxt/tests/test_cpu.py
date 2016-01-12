@@ -1059,7 +1059,7 @@ class IncOpcodeTests(BaseOpcodeAcceptanceTests):
             (0, 1), # Start from zero.
             (0xFF, 0x0100), # Byte rollover.
             (5643, 5644), # Random value.
-            (0xFFFF, 0), # Word rollover
+            (0xFFFF, 0), # Word rollover.
         )
         
         for (before, after) in test_data:
@@ -1122,4 +1122,79 @@ class IncOpcodeTests(BaseOpcodeAcceptanceTests):
         hlt
         """
         self.run_inc_16_bit_test("47 F4", "DI")
+        
+class DecOpcodeTests(BaseOpcodeAcceptanceTests):
+    def run_dec_16_bit_test(self, code_string, register):
+        """
+        Generic function for testing DEC on 16 bit registers.
+        """
+        self.load_code_string(code_string)
+        
+        test_data = (
+            (0, 0xFFFF), # Word rollover.
+            (0x0100, 0x00FF), # Byte rollover.
+            (5643, 5642), # Random value.
+            (0xFFFF, 0xFFFE), # Start from "-1".
+        )
+        
+        for (before, after) in test_data:
+            self.cpu.regs[register] = before
+            self.assertEqual(self.run_to_halt(), 2)
+            self.assertEqual(self.cpu.regs[register], after)
+            
+    def test_dec_ax(self):
+        """
+        dec ax
+        hlt
+        """
+        self.run_dec_16_bit_test("48 F4", "AX")
+        
+    def test_dec_bx(self):
+        """
+        dec bx
+        hlt
+        """
+        self.run_dec_16_bit_test("4B F4", "BX")
+        
+    def test_dec_cx(self):
+        """
+        dec cx
+        hlt
+        """
+        self.run_dec_16_bit_test("49 F4", "CX")
+        
+    def test_dec_dx(self):
+        """
+        dec dx
+        hlt
+        """
+        self.run_dec_16_bit_test("4A F4", "DX")
+        
+    def test_dec_sp(self):
+        """
+        dec sp
+        hlt
+        """
+        self.run_dec_16_bit_test("4C F4", "SP")
+        
+    def test_dec_bp(self):
+        """
+        dec bp
+        hlt
+        """
+        self.run_dec_16_bit_test("4D F4", "BP")
+        
+    def test_dec_si(self):
+        """
+        dec si
+        hlt
+        """
+        self.run_dec_16_bit_test("4E F4", "SI")
+        
+    def test_dec_di(self):
+        """
+        dec di
+        hlt
+        """
+        self.run_dec_16_bit_test("4F F4", "DI")
         
