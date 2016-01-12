@@ -226,7 +226,7 @@ class CPU(object):
         
         # Normal registers.
         self.regs = UnionRegs()
-        self.regs["CS"] = 0xFFFF
+        self.regs.CS = 0xFFFF
         
         # ALU vector table.
         self.alu_vector_table = {
@@ -406,18 +406,18 @@ class CPU(object):
         if mod in (0x00, 0x01, 0x02):
             rm_type = ADDRESS
             if rm == 0x00:
-                rm_value = self.regs["BX"] + self.regs["SI"]
+                rm_value = self.regs.BX + self.regs.SI
             elif rm == 0x01:
-                rm_value = self.regs["BX"] + self.regs["DI"]
+                rm_value = self.regs.BX + self.regs.DI
             elif rm == 0x05:
-                rm_value = self.regs["DI"]
+                rm_value = self.regs.DI
             elif rm == 0x06:
                 if mod == 0x00:
                     rm_value = self.get_imm(True)
                 else:
                     assert 0
             elif rm == 0x07:
-                rm_value = self.regs["BX"]
+                rm_value = self.regs.BX
                 
             displacement = 0
             if not (mod == 0x00 and rm == 0x06):
@@ -521,8 +521,8 @@ class CPU(object):
         log.debug("XCHG r16 AX")
         dest = WORD_REG[opcode & 0x07]
         temp = self.regs[dest]
-        self.regs[dest] = self.regs["AX"]
-        self.regs["AX"] = temp
+        self.regs[dest] = self.regs.AX
+        self.regs.AX = temp
         
     # ********** Stack opcodes. **********
     def opcode_group_push(self, opcode):
@@ -540,29 +540,29 @@ class CPU(object):
         
     def internal_push(self, value):
         """ Decrement the stack pointer and push a word on to the stack. """
-        self.regs["SP"] -= 2
+        self.regs.SP -= 2
         self.bus.mem_write_word(segment_offset_to_address(self.regs.SS, self.regs.SP), value)
         
     def internal_pop(self):
         """ Pop a word off of the stack and incrementt the stack pointer. """
         value = self.bus.mem_read_word(segment_offset_to_address(self.regs.SS, self.regs.SP))
-        self.regs["SP"] += 2
+        self.regs.SP += 2
         return value
         
     # ********** Conditional jump opcodes. **********
     def _jc(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
         if self.flags.cf:
-            self.regs["IP"] += distance
-            log.debug("JC incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            log.debug("JC incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
             log.debug("JC was skipped.")
             
     def _jz(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
         if self.flags.zf:
-            self.regs["IP"] += distance
-            log.debug("JZ incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            log.debug("JZ incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
             log.debug("JZ was skipped.")
             
@@ -571,22 +571,22 @@ class CPU(object):
         if self.flags.zf:
             log.debug("JNZ/JNE was skipped.")
         else:
-            self.regs["IP"] += distance
-            log.debug("JNZ/JNE incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            log.debug("JNZ/JNE incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     def _jna(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
         if self.flags.zf or self.flags.cf:
-            self.regs["IP"] += distance
-            log.debug("JNA/JBE incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            log.debug("JNA/JBE incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
             log.debug("JNA/JBE was skipped.")
             
     def _ja(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
         if self.flags.zf == False and self.flags.cf == False:
-            self.regs["IP"] += distance
-            log.debug("JA incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            log.debug("JA incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
             log.debug("JA was skipped.")
             
@@ -594,8 +594,8 @@ class CPU(object):
         """ Jump short if the carry flag is clear. """
         distance = signed_byte(self.get_imm(False))
         if self.flags.cf == False:
-            self.regs["IP"] += distance
-            log.debug("JAE/JNB/JNC incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            log.debug("JAE/JNB/JNC incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
             log.debug("JAE/JNB/JNC was skipped.")
             
@@ -603,8 +603,8 @@ class CPU(object):
         """ Jump short if the parity flag is clear. """
         distance = signed_byte(self.get_imm(False))
         if self.flags.pf == False:
-            self.regs["IP"] += distance
-            log.debug("JNP/JPO incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            log.debug("JNP/JPO incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
             log.debug("JNP/JPO was skipped.")
             
@@ -614,22 +614,22 @@ class CPU(object):
         if self.flags.pf == False:
             log.debug("JP/JPE was skipped.")
         else:
-            self.regs["IP"] += distance
-            log.debug("JP/JPE incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            log.debug("JP/JPE incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     def _jns(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
         if self.flags.sf:
             log.debug("JNS was skipped.")
         else:
-            self.regs["IP"] += distance
-            log.debug("JNS incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            log.debug("JNS incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     def _js(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
         if self.flags.sf:
-            self.regs["IP"] += distance
-            log.debug("JS incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            log.debug("JS incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
             log.debug("JS was skipped.")
             
@@ -638,14 +638,14 @@ class CPU(object):
         if self.flags.of:
             log.debug("JNO was skipped.")
         else:
-            self.regs["IP"] += distance
-            log.debug("JNO incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            log.debug("JNO incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     def _jo(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
         if self.flags.of:
-            self.regs["IP"] += distance
-            log.debug("JO incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            log.debug("JO incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
             log.debug("JO was skipped.")
             
@@ -654,32 +654,32 @@ class CPU(object):
         # This may look silly, but you can't modify IP or CS while reading the JUMP FAR parameters.
         new_ip = self.get_imm(True)
         new_cs = self.get_imm(True)
-        self.regs["IP"] = new_ip
-        self.regs["CS"] = new_cs
-        log.debug("JMP FAR to CS: 0x%04x  IP:0x%04x", self.regs["CS"], self.regs["IP"])
+        self.regs.IP = new_ip
+        self.regs.CS = new_cs
+        log.debug("JMP FAR to CS: 0x%04x  IP:0x%04x", self.regs.CS, self.regs.IP)
         
     def _call(self):
         offset = self.get_imm(True)
-        self.internal_push(self.regs["IP"])
-        self.regs["IP"] += offset
-        log.debug("CALL incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
+        self.internal_push(self.regs.IP)
+        self.regs.IP += offset
+        log.debug("CALL incremented IP by 0x%04x to 0x%04x", offset, self.regs.IP)
         
     def _ret(self):
-        self.regs["IP"] = self.internal_pop()
-        log.debug("RET back to 0x%04x", self.regs["IP"])
+        self.regs.IP = self.internal_pop()
+        log.debug("RET back to 0x%04x", self.regs.IP)
         
     def _loop(self):
         """ Decrement CX and jump short if it is non-zero. """
         distance = signed_byte(self.get_imm(False))
         
-        value = self.regs["CX"] - 1
+        value = self.regs.CX - 1
         self.flags.set_from_value(value)
         value = value & 0xFFFF
-        self.regs["CX"] = value
+        self.regs.CX = value
         
         if value != 0:
-            self.regs["IP"] += distance
-            # log.debug("LOOP incremented IP by 0x%04x to 0x%04x", distance, self.regs["IP"])
+            self.regs.IP += distance
+            # log.debug("LOOP incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     # ********** Arithmetic opcodes. **********
     def opcode_group_8x(self, opcode):
@@ -755,9 +755,9 @@ class CPU(object):
         
     def _xor_al_imm8(self):
         log.info("XOR al imm8")
-        value = self.regs["AL"] ^ self.get_imm(False)
+        value = self.regs>AL ^ self.get_imm(False)
         self.flags.set_from_value(value)
-        self.regs["AL"] = value & 0xFF
+        self.regs.AL = value & 0xFF
         
     def opcode_group_or(self, opcode):
         """ Entry point for all OR opcodes. """
@@ -806,15 +806,15 @@ class CPU(object):
         
     def _alu_al_imm8(self, operation):
         """ Generic al imm8 ALU processor. """
-        value = operation(self.regs["AL"], self.get_imm(False))
+        value = operation(self.regs.AL, self.get_imm(False))
         self.flags.set_from_value(value)
-        self.regs["AL"] = value & 0xFF
+        self.regs.AL = value & 0xFF
         
     def _alu_ax_imm16(self, operation):
         """ Generic ax imm16 ALU processor. """
-        value = operation(self.regs["AX"], self.get_imm(True))
+        value = operation(self.regs.AX, self.get_imm(True))
         self.flags.set_from_value(value)
-        self.regs["AX"] = value & 0xFFFF
+        self.regs.AX = value & 0xFFFF
         
     # Math opcodes.
     def opcode_group_add(self, opcode):
@@ -857,7 +857,7 @@ class CPU(object):
         
     def _cmp_al_imm8(self):
         log.debug("CMP al imm8")
-        value = self.regs["AL"] - self.get_imm(False)
+        value = self.regs.AL - self.get_imm(False)
         self.flags.set_from_value(value)
         
     # Inc/dec opcodes.
@@ -907,7 +907,7 @@ class CPU(object):
         
         count = 1
         if opcode & 0x02 == 0x02:
-            count = self.regs["CL"]
+            count = self.regs.CL
             
         bits = 8
         if opcode & 0x01 == 0x01:
@@ -959,11 +959,11 @@ class CPU(object):
         
     def _sahf(self):
         """ Copy AH into the lower byte of FLAGS (SF, ZF, AF, PF, CF). """
-        self.flags.value = (self.flags.value & 0xFF00) | self.regs["AH"]
+        self.flags.value = (self.flags.value & 0xFF00) | self.regs.AH
         
     def _lahf(self):
         """ Copy the lower byte of FLAGS into AH (SF, ZF, AF, PF, CF). """
-        self.regs["AH"] = self.flags.value & 0x00FF
+        self.regs.AH = self.flags.value & 0x00FF
         
     # ********** Miscellaneous opcodes. **********
     def _nop(self):
@@ -975,13 +975,13 @@ class CPU(object):
         
     def _jmp_rel16(self):
         offset = signed_word(self.get_imm(True))
-        self.regs["IP"] += offset
-        log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
+        self.regs.IP += offset
+        log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs.IP)
         
     def _jmp_rel8(self):
         offset = signed_byte(self.get_imm(False))
-        self.regs["IP"] += offset
-        log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs["IP"])
+        self.regs.IP += offset
+        log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs.IP)
         
     # ********** I/O port opcodes. **********
     def opcode_in_al_imm8(self):
@@ -992,20 +992,20 @@ class CPU(object):
         
     def _out_imm8_al(self):
         port = self.get_imm(False)
-        value = self.regs["AL"]
+        value = self.regs.AL
         log.info("Writing 0x%02x to port 0x%04x.", value, port)
         self.bus.io_write_byte(port, value)
         
     def _out_dx_al(self):
-        port = self.regs["DX"]
-        value = self.regs["AL"]
+        port = self.regs.DX
+        value = self.regs.AL
         log.info("Writing 0x%02x to port 0x%04x.", value, port)
         self.bus.io_write_byte(port, value)
         
     # ********** Memory access helpers. **********
     def get_data_segment(self):
         """ Helper function to return the effective data segment. """
-        return self.regs["DS"]
+        return self.regs.DS
         
     def write_data_word(self, offset, value):
         """ Write a word to data memory at the given offset.  Assume DS unless overridden by a prefix. """
@@ -1063,7 +1063,7 @@ class CPU(object):
         log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
         
     def should_break(self):
-        return self.single_step or self.regs["IP"] in self.breakpoints
+        return self.single_step or self.regs.IP in self.breakpoints
         
     def enter_debugger(self):
         while True:
