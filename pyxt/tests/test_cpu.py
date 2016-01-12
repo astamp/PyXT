@@ -28,93 +28,71 @@ class CpuTests(unittest.TestCase):
         
 class FlagsRegisterTest(unittest.TestCase):
     def setUp(self):
-        self.obj = FLAGS()
+        self.flags = FLAGS()
         
     def test_initialized_to_zero(self):
-        self.assertEqual(self.obj.value, 0)
-        
-    def test_set(self):
-        self.obj.value = FLAGS.CARRY
-        self.obj.set(FLAGS.PARITY)
-        self.assertEqual(self.obj.value, FLAGS.CARRY | FLAGS.PARITY)
-        
-    def test_clear(self):
-        self.obj.value = FLAGS.CARRY | FLAGS.PARITY
-        self.obj.clear(FLAGS.PARITY)
-        self.assertEqual(self.obj.value, FLAGS.CARRY)
-        
-    def test_assign(self):
-        self.obj.value = FLAGS.CARRY
-        self.obj.assign(FLAGS.ZERO, True)
-        self.assertEqual(self.obj.value, FLAGS.CARRY | FLAGS.ZERO)
-        self.obj.assign(FLAGS.ZERO, False)
-        self.assertEqual(self.obj.value, FLAGS.CARRY)
-        
-    def test_read(self):
-        self.obj.value = FLAGS.CARRY | FLAGS.PARITY
-        self.assertTrue(self.obj.read(FLAGS.CARRY))
-        self.assertFalse(self.obj.read(FLAGS.ZERO))
+        self.assertEqual(self.flags.value, 0)
         
     # Property tests.
     def test_carry_flag_property_get(self):
-        self.assertFalse(self.obj.cf)
-        self.obj.value |= FLAGS.CARRY
-        self.assertTrue(self.obj.cf)
+        self.assertFalse(self.flags.carry)
+        self.flags.value |= FLAGS.CARRY
+        self.assertTrue(self.flags.carry)
         
     def test_carry_flag_property_set(self):
-        self.assertEqual(self.obj.value, 0)
-        self.obj.cf = True
-        self.assertEqual(self.obj.value, FLAGS.CARRY)
-        self.obj.cf = False
-        self.assertEqual(self.obj.value, 0)
+        self.assertEqual(self.flags.value, 0)
+        self.flags.carry = True
+        self.assertEqual(self.flags.value, FLAGS.CARRY)
+        self.flags.carry = False
+        self.assertEqual(self.flags.value, 0)
         
     def test_parity_flag_property_get(self):
-        self.assertFalse(self.obj.pf)
-        self.obj.value |= FLAGS.PARITY
-        self.assertTrue(self.obj.pf)
+        self.assertFalse(self.flags.parity)
+        self.flags.value |= FLAGS.PARITY
+        self.assertTrue(self.flags.parity)
         
     def test_parity_flag_property_set(self):
-        self.assertEqual(self.obj.value, 0)
-        self.obj.pf = True
-        self.assertEqual(self.obj.value, FLAGS.PARITY)
-        self.obj.pf = False
-        self.assertEqual(self.obj.value, 0)
+        self.assertEqual(self.flags.value, 0)
+        self.flags.parity = True
+        self.assertEqual(self.flags.value, FLAGS.PARITY)
+        self.flags.parity = False
+        self.assertEqual(self.flags.value, 0)
         
     def test_adjust_flag_property_get(self):
-        self.assertFalse(self.obj.af)
-        self.obj.value |= FLAGS.ADJUST
-        self.assertTrue(self.obj.af)
+        self.assertFalse(self.flags.adjust)
+        self.flags.value |= FLAGS.ADJUST
+        self.assertTrue(self.flags.adjust)
         
     def test_adjust_flag_property_set(self):
-        self.assertEqual(self.obj.value, 0)
-        self.obj.af = True
-        self.assertEqual(self.obj.value, FLAGS.ADJUST)
-        self.obj.af = False
-        self.assertEqual(self.obj.value, 0)
+        self.assertEqual(self.flags.value, 0)
+        self.flags.adjust = True
+        self.assertEqual(self.flags.value, FLAGS.ADJUST)
+        self.flags.adjust = False
+        self.assertEqual(self.flags.value, 0)
         
     def test_zero_flag_property_get(self):
-        self.assertFalse(self.obj.zf)
-        self.obj.value |= FLAGS.ZERO
-        self.assertTrue(self.obj.zf)
+        self.assertFalse(self.flags.zero)
+        self.flags.value |= FLAGS.ZERO
+        self.assertTrue(self.flags.zero)
         
     def test_zero_flag_property_set(self):
-        self.assertEqual(self.obj.value, 0)
-        self.obj.zf = True
-        self.assertEqual(self.obj.value, FLAGS.ZERO)
-        self.obj.zf = False
-        self.assertEqual(self.obj.value, 0)
+        self.assertEqual(self.flags.value, 0)
+        self.flags.zero = True
+        self.assertEqual(self.flags.value, FLAGS.ZERO)
+        self.flags.zero = False
+        self.assertEqual(self.flags.value, 0)
         
     def test_sign_flag_property_get(self):
-        self.assertFalse(self.obj.sf)
-        self.obj.value |= FLAGS.SIGN
-        self.assertTrue(self.obj.sf)
+        self.assertFalse(self.flags.sign)
+        self.flags.value |= FLAGS.SIGN
+        self.assertTrue(self.flags.sign)
         
     def test_sign_flag_property_set(self):
-        self.assertEqual(self.obj.value, 0)
-        self.obj.sf = True
-        self.assertEqual(self.obj.value, FLAGS.SIGN)
-        self.obj.sf = False
-        self.assertEqual(self.obj.value, 0)
+        self.assertEqual(self.flags.value, 0)
+        self.flags.sign = True
+        self.assertEqual(self.flags.value, FLAGS.SIGN)
+        self.flags.sign = False
+        self.assertEqual(self.flags.value, 0)
         
 class HelperFunctionTest(unittest.TestCase):
     def test_decode_seg_reg_normal(self):
@@ -358,12 +336,12 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         
 class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_adc_operator_carry_clear(self):
-        self.assertFalse(self.cpu.flags.cf)
+        self.assertFalse(self.cpu.flags.carry)
         self.assertEqual(self.cpu.operator_adc(7, 5), 12)
         
     def test_adc_operator_carry_set(self):
-        self.cpu.flags.cf = True
-        self.assertTrue(self.cpu.flags.cf)
+        self.cpu.flags.carry = True
+        self.assertTrue(self.cpu.flags.carry)
         self.assertEqual(self.cpu.operator_adc(7, 5), 13)
         
     def test_adc_rm8_r8_carry_clear(self):
@@ -388,7 +366,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         value:
             db 1
         """
-        self.cpu.flags.cf = True
+        self.cpu.flags.carry = True
         self.cpu.regs["AH"] = 0xA5
         self.cpu.regs["AL"] = 7
         self.load_code_string("10 06 05 00 F4 01")
@@ -417,7 +395,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         value:
             dw 0xFF
         """
-        self.cpu.flags.cf = True
+        self.cpu.flags.carry = True
         self.cpu.regs["AX"] = 7
         self.load_code_string("11 06 05 00 F4 FF 00")
         self.assertEqual(self.run_to_halt(), 2)
@@ -446,7 +424,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         value:
             db 22
         """
-        self.cpu.flags.cf = True
+        self.cpu.flags.carry = True
         self.cpu.regs["AH"] = 0xA5
         self.cpu.regs["AL"] = 7
         self.load_code_string("12 06 05 00 F4 16")
@@ -475,7 +453,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         value:
             dw 0xFF
         """
-        self.cpu.flags.cf = True
+        self.cpu.flags.carry = True
         self.cpu.regs["AX"] = 7
         self.load_code_string("13 06 05 00 F4 FF 00")
         self.assertEqual(self.run_to_halt(), 2)
@@ -499,7 +477,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         adc al, 7
         hlt
         """
-        self.cpu.flags.cf = True
+        self.cpu.flags.carry = True
         self.cpu.regs["AH"] = 0xA5
         self.cpu.regs["AL"] = 7
         self.load_code_string("14 07 F4")
@@ -522,7 +500,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         adc ax, word 2222
         hlt
         """
-        self.cpu.flags.cf = True
+        self.cpu.flags.carry = True
         self.cpu.regs["AX"] = 1234
         self.load_code_string("15 AE 08 F4")
         self.assertEqual(self.run_to_halt(), 2)
@@ -609,12 +587,12 @@ class SubOpcodeTests(BaseOpcodeAcceptanceTests):
         
 class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_sbb_operator_carry_clear(self):
-        self.assertFalse(self.cpu.flags.cf)
+        self.assertFalse(self.cpu.flags.carry)
         self.assertEqual(self.cpu.operator_sbb(7, 5), 2)
         
     def test_sbb_operator_carry_set(self):
-        self.cpu.flags.cf = True
-        self.assertTrue(self.cpu.flags.cf)
+        self.cpu.flags.carry = True
+        self.assertTrue(self.cpu.flags.carry)
         self.assertEqual(self.cpu.operator_sbb(7, 5), 1)
         
     def test_sbb_rm8_r8_carry_clear(self):
@@ -639,7 +617,7 @@ class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
         value:
             db 50
         """
-        self.cpu.flags.cf = True
+        self.cpu.flags.carry = True
         self.cpu.regs["AH"] = 0xA5
         self.cpu.regs["AL"] = 7
         self.load_code_string("18 06 05 00 F4 32")
@@ -668,7 +646,7 @@ class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
         value:
             dw 10
         """
-        self.cpu.flags.cf = True
+        self.cpu.flags.carry = True
         self.cpu.regs["AX"] = 11
         self.load_code_string("19 06 05 00 F4 0A 00")
         self.assertEqual(self.run_to_halt(), 2)
@@ -697,7 +675,7 @@ class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
         value:
             db 22
         """
-        self.cpu.flags.cf = True
+        self.cpu.flags.carry = True
         self.cpu.regs["AH"] = 0xA5
         self.cpu.regs["AL"] = 7
         self.load_code_string("1A 06 05 00 F4 16")
@@ -726,7 +704,7 @@ class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
         value:
             dw 1111
         """
-        self.cpu.flags.cf = True
+        self.cpu.flags.carry = True
         self.cpu.regs["AX"] = 2345
         self.load_code_string("1B 06 05 00 F4 57 04")
         self.assertEqual(self.run_to_halt(), 2)
@@ -750,7 +728,7 @@ class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
         sbb al, 7
         hlt
         """
-        self.cpu.flags.cf = True
+        self.cpu.flags.carry = True
         self.cpu.regs["AH"] = 0xA5
         self.cpu.regs["AL"] = 7
         self.load_code_string("1C 07 F4")
@@ -773,7 +751,7 @@ class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
         sbb ax, word 2222
         hlt
         """
-        self.cpu.flags.cf = True
+        self.cpu.flags.carry = True
         self.cpu.regs["AX"] = 5643
         self.load_code_string("1D AE 08 F4")
         self.assertEqual(self.run_to_halt(), 2)
@@ -983,42 +961,42 @@ class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
         stc
         hlt
         """
-        self.assertFalse(self.cpu.flags.read(FLAGS.CARRY))
+        self.assertFalse(self.cpu.flags.carry)
         self.load_code_string("F9 F4")
         self.assertEqual(self.run_to_halt(), 2)
-        self.assertTrue(self.cpu.flags.read(FLAGS.CARRY))
+        self.assertTrue(self.cpu.flags.carry)
         
     def test_clc(self):
         """
         clc
         hlt
         """
-        self.cpu.flags.set(FLAGS.CARRY)
-        self.assertTrue(self.cpu.flags.read(FLAGS.CARRY))
+        self.cpu.flags.carry = True
+        self.assertTrue(self.cpu.flags.carry)
         self.load_code_string("F8 F4")
         self.assertEqual(self.run_to_halt(), 2)
-        self.assertFalse(self.cpu.flags.read(FLAGS.CARRY))
+        self.assertFalse(self.cpu.flags.carry)
         
     def test_std(self):
         """
         std
         hlt
         """
-        self.assertFalse(self.cpu.flags.read(FLAGS.DIRECTION))
+        self.assertFalse(self.cpu.flags.direction)
         self.load_code_string("FD F4")
         self.assertEqual(self.run_to_halt(), 2)
-        self.assertTrue(self.cpu.flags.read(FLAGS.DIRECTION))
+        self.assertTrue(self.cpu.flags.direction)
         
     def test_cld(self):
         """
         cld
         hlt
         """
-        self.cpu.flags.set(FLAGS.DIRECTION)
-        self.assertTrue(self.cpu.flags.read(FLAGS.DIRECTION))
+        self.cpu.flags.direction = True
+        self.assertTrue(self.cpu.flags.direction)
         self.load_code_string("FC F4")
         self.assertEqual(self.run_to_halt(), 2)
-        self.assertFalse(self.cpu.flags.read(FLAGS.DIRECTION))
+        self.assertFalse(self.cpu.flags.direction)
         
 class LoopOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_loop(self):

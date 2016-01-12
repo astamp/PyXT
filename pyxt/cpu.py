@@ -163,50 +163,58 @@ class FLAGS(object):
     RESERVED_4 =  0x8000
     
     def __init__(self):
-        self.value = FLAGS.BLANK
+        self.carry = False
+        self.parity = False
+        self.adjust = False
+        self.zero = False
+        self.sign = False
+        self.trap = False
+        self.interrupt_enable = False
+        self.direction = False
+        self.overflow = False
         
-    # Property helpers.
-    cf = property(lambda self: self.read(FLAGS.CARRY), lambda self, value: self.assign(FLAGS.CARRY, value))
-    pf = property(lambda self: self.read(FLAGS.PARITY), lambda self, value: self.assign(FLAGS.PARITY, value))
-    af = property(lambda self: self.read(FLAGS.ADJUST), lambda self, value: self.assign(FLAGS.ADJUST, value))
-    zf = property(lambda self: self.read(FLAGS.ZERO), lambda self, value: self.assign(FLAGS.ZERO, value))
-    sf = property(lambda self: self.read(FLAGS.SIGN), lambda self, value: self.assign(FLAGS.SIGN, value))
-    of = property(lambda self: self.read(FLAGS.OVERFLOW), lambda self, value: self.assign(FLAGS.OVERFLOW, value))
-    
-    def set(self, mask):
-        """ Set a bit in the FLAGS register. """
-        self.value |= mask
+    def set_from_alu(self, value):
+        """ Set ZF, SF, CF, and PF based the result of an ALU operation. """
+        self.zero = not value
+        self.sign = bool(value & 0x8000)
+        self.carry = bool(value & 0x10000)
+        self.parity = (count_bits(value & 0x00FF) % 2) == 0
         
-    def clear(self, mask):
-        """ Clear a bit in the FLAGS register. """
-        self.value &= ~(mask)
+    def set_from_alu_no_carry(self, value):
+        """ Set ZF, SF, and PF based the result of an ALU operation. """
+        self.zero = not value
+        self.sign = bool(value & 0x8000)
+        self.parity = (count_bits(value & 0x00FF) % 2) == 0
         
-    def read(self, mask):
-        """ Return the boolean state of a bit in the FLAGS register. """
-        return self.value & mask == mask
-            
-    def assign(self, mask, value):
-        """ Set a bit in the FLAGS register. """
-        # Inline the code from set() and clear() for speed.
-        if value:
-            # self.set(mask)
-            self.value |= mask
-        else:
-            # self.clear(mask)
-            self.value &= ~(mask)
-            
-    def set_from_value(self, value, include_cf = True, include_pf = True):
-        """ Set ZF, SF, and CF based the result of an ALU operation. """
-        # log.debug("Setting FLAGS from 0x%04x", value)
-        self.assign(FLAGS.ZERO, value == 0)
-        self.assign(FLAGS.SIGN, 0x8000 == (value & 0x8000))
-        if include_cf:
-            self.assign(FLAGS.CARRY, 0x10000 == (value & 0x10000))
-        if include_pf:
-            self.assign(FLAGS.PARITY, (count_bits(value & 0x00FF) % 2) == 0)
-            
-    def dump_flags(self):
-        log.debug("CF=%d  ZF=%d  SF=%d", self.cf, self.zf, self.sf)
+    @property
+    def value(self):
+        """ Return the FLAGS register as a word value. """
+        value = self.BLANK
+        
+        if self.carry: value |= self.CARRY
+        if self.parity: value |= self.PARITY
+        if self.adjust: value |= self.ADJUST
+        if self.zero: value |= self.ZERO
+        if self.sign: value |= self.SIGN
+        if self.trap: value |= self.TRAP
+        if self.interrupt_enable: value |= self.INT_ENABLE
+        if self.direction: value |= self.DIRECTION
+        if self.overflow: value |= self.OVERFLOW
+        
+        return value
+        
+    @value.setter
+    def value(self, value):
+        """ Set the FLAGS register from a word value. """
+        self.carry = bool(value & self.CARRY)
+        self.parity = bool(value & self.PARITY)
+        self.adjust = bool(value & self.ADJUST)
+        self.zero = bool(value & self.ZERO)
+        self.sign = bool(value & self.SIGN)
+        self.trap = bool(value & self.TRAP)
+        self.interrupt_enable = bool(value & self.INT_ENABLE)
+        self.direction = bool(value & self.DIRECTION)
+        self.overflow = bool(value & self.OVERFLOW)
         
 class CPU(object):
     def __init__(self):
@@ -253,7 +261,6 @@ class CPU(object):
         # Uncomment these lines for debugging, but they make the code slow if left on.
         
         # self.dump_regs()
-        # self.flags.dump_flags()
         
         # if self.should_break():
             # self.enter_debugger()
@@ -557,7 +564,7 @@ class CPU(object):
     # ********** Conditional jump opcodes. **********
     def _jc(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.cf:
+        if self.flags.carry:
             self.regs.IP += distance
             log.debug("JC incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
@@ -565,7 +572,7 @@ class CPU(object):
             
     def _jz(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.zf:
+        if self.flags.zero:
             self.regs.IP += distance
             log.debug("JZ incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
@@ -573,7 +580,7 @@ class CPU(object):
             
     def _jnz(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.zf:
+        if self.flags.zero:
             log.debug("JNZ/JNE was skipped.")
         else:
             self.regs.IP += distance
@@ -581,7 +588,7 @@ class CPU(object):
             
     def _jna(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.zf or self.flags.cf:
+        if self.flags.zero or self.flags.carry:
             self.regs.IP += distance
             log.debug("JNA/JBE incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
@@ -589,7 +596,7 @@ class CPU(object):
             
     def _ja(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.zf == False and self.flags.cf == False:
+        if self.flags.zero == False and self.flags.carry == False:
             self.regs.IP += distance
             log.debug("JA incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
@@ -598,7 +605,7 @@ class CPU(object):
     def _jae_jnb_jnc(self):
         """ Jump short if the carry flag is clear. """
         distance = signed_byte(self.get_imm(False))
-        if self.flags.cf == False:
+        if self.flags.carry == False:
             self.regs.IP += distance
             log.debug("JAE/JNB/JNC incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
@@ -607,7 +614,7 @@ class CPU(object):
     def _jnp_jpo(self):
         """ Jump short if the parity flag is clear. """
         distance = signed_byte(self.get_imm(False))
-        if self.flags.pf == False:
+        if self.flags.parity == False:
             self.regs.IP += distance
             log.debug("JNP/JPO incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
@@ -616,7 +623,7 @@ class CPU(object):
     def _jp_jpe(self):
         """ Jump short if the parity flag is set. """
         distance = signed_byte(self.get_imm(False))
-        if self.flags.pf == False:
+        if self.flags.parity == False:
             log.debug("JP/JPE was skipped.")
         else:
             self.regs.IP += distance
@@ -624,7 +631,7 @@ class CPU(object):
             
     def _jns(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.sf:
+        if self.flags.sign:
             log.debug("JNS was skipped.")
         else:
             self.regs.IP += distance
@@ -632,7 +639,7 @@ class CPU(object):
             
     def _js(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.sf:
+        if self.flags.sign:
             self.regs.IP += distance
             log.debug("JS incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
@@ -640,7 +647,7 @@ class CPU(object):
             
     def _jno(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.of:
+        if self.flags.overflow:
             log.debug("JNO was skipped.")
         else:
             self.regs.IP += distance
@@ -648,7 +655,7 @@ class CPU(object):
             
     def _jo(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_imm(False)))[0]
-        if self.flags.of:
+        if self.flags.overflow:
             self.regs.IP += distance
             log.debug("JO incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
@@ -678,7 +685,7 @@ class CPU(object):
         distance = signed_byte(self.get_imm(False))
         
         value = self.regs.CX - 1
-        self.flags.set_from_value(value)
+        self.flags.set_from_alu(value)
         value = value & 0xFFFF
         self.regs.CX = value
         
@@ -715,7 +722,7 @@ class CPU(object):
         elif sub_opcode == 0x01:
             result = value | immediate
         elif sub_opcode == 0x02:
-            result = value + immediate + (1 if self.flags.cf else 0)
+            result = value + immediate + (1 if self.flags.carry else 0)
         elif sub_opcode == 0x04:
             result = value & immediate
         elif sub_opcode == 0x05:
@@ -726,7 +733,7 @@ class CPU(object):
         else:
             assert 0
             
-        self.flags.set_from_value(result)
+        self.flags.set_from_alu(result)
         if set_value:
             if word_reg:
                 self._set_rm16(rm_type, rm_value, result)
@@ -739,7 +746,7 @@ class CPU(object):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 ^ op2
-        self.flags.set_from_value(op1)
+        self.flags.set_from_alu(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _xor_r16_rm16(self):
@@ -747,7 +754,7 @@ class CPU(object):
         op1 = self.regs[register]
         op2 = self._get_rm16(rm_type, rm_value)
         op1 = op1 ^ op2
-        self.flags.set_from_value(op1)
+        self.flags.set_from_alu(op1)
         self.regs[register] = op1 & 0xFFFF
         
     def _xor_r8_rm8(self):
@@ -755,13 +762,13 @@ class CPU(object):
         op1 = self._get_rm8(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 ^ op2
-        self.flags.set_from_value(op1)
+        self.flags.set_from_alu(op1)
         self._set_rm8(rm_type, rm_value, op1 & 0xFFFF)
         
     def _xor_al_imm8(self):
         log.info("XOR al imm8")
         value = self.regs>AL ^ self.get_imm(False)
-        self.flags.set_from_value(value)
+        self.flags.set_from_alu(value)
         self.regs.AL = value & 0xFF
         
     def opcode_group_or(self, opcode):
@@ -779,7 +786,7 @@ class CPU(object):
         op1 = self._get_rm8(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = operation(op1, op2)
-        self.flags.set_from_value(op1)
+        self.flags.set_from_alu(op1)
         self._set_rm8(rm_type, rm_value, op1 & 0xFF)
         
     def _alu_rm16_r16(self, operation):
@@ -788,7 +795,7 @@ class CPU(object):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = operation(op1, op2)
-        self.flags.set_from_value(op1)
+        self.flags.set_from_alu(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _alu_r8_rm8(self, operation):
@@ -797,7 +804,7 @@ class CPU(object):
         op1 = self.regs[register]
         op2 = self._get_rm8(rm_type, rm_value)
         op1 = operation(op1, op2)
-        self.flags.set_from_value(op1)
+        self.flags.set_from_alu(op1)
         self.regs[register] = op1 & 0xFF
         
     def _alu_r16_rm16(self, operation):
@@ -806,19 +813,19 @@ class CPU(object):
         op1 = self.regs[register]
         op2 = self._get_rm16(rm_type, rm_value)
         op1 = operation(op1, op2)
-        self.flags.set_from_value(op1)
+        self.flags.set_from_alu(op1)
         self.regs[register] = op1 & 0xFFFF
         
     def _alu_al_imm8(self, operation):
         """ Generic al imm8 ALU processor. """
         value = operation(self.regs.AL, self.get_imm(False))
-        self.flags.set_from_value(value)
+        self.flags.set_from_alu(value)
         self.regs.AL = value & 0xFF
         
     def _alu_ax_imm16(self, operation):
         """ Generic ax imm16 ALU processor. """
         value = operation(self.regs.AX, self.get_imm(True))
-        self.flags.set_from_value(value)
+        self.flags.set_from_alu(value)
         self.regs.AX = value & 0xFFFF
         
     # Math opcodes.
@@ -833,7 +840,7 @@ class CPU(object):
     def operator_sbb(self, operand_a, operand_b):
         """ Implements the SBB operator which subtracts an extra 1 if CF is set. """
         result = operand_a - operand_b
-        if self.flags.cf:
+        if self.flags.carry:
             result -= 1
         return result
         
@@ -844,7 +851,7 @@ class CPU(object):
     def operator_adc(self, operand_a, operand_b):
         """ Implements the ADC operator which adds an extra 1 if CF is set. """
         result = operand_a + operand_b
-        if self.flags.cf:
+        if self.flags.carry:
             result += 1
         return result
         
@@ -858,26 +865,26 @@ class CPU(object):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         value = op1 - op2
-        self.flags.set_from_value(value)
+        self.flags.set_from_alu(value)
         
     def _cmp_al_imm8(self):
         log.debug("CMP al imm8")
         value = self.regs.AL - self.get_imm(False)
-        self.flags.set_from_value(value)
+        self.flags.set_from_alu(value)
         
     # Inc/dec opcodes.
     def opcode_group_inc(self, opcode):
         """ Handler for all INC [register] instructions. """
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] += 1
-        self.flags.set_from_value(self.regs[dest], include_cf = False)
+        self.flags.set_from_alu_no_carry(self.regs[dest])
         # log.debug("INC'd %s to 0x%04x", dest, self.regs[dest])
         
     def opcode_group_dec(self, opcode):
         """ Handler for all DEC [register] instructions. """
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] -= 1
-        self.flags.set_from_value(self.regs[dest], include_cf = False)
+        self.flags.set_from_alu_no_carry(self.regs[dest])
         # log.debug("DEC'd %s to 0x%04x", dest, self.regs[dest])
         
     def _inc_dec_rm8(self):
@@ -891,7 +898,7 @@ class CPU(object):
         else:
             assert 0
         self._set_rm8(rm_type, rm_value, value)
-        self.flags.set_from_value(value, include_cf = False)
+        self.flags.set_from_alu_no_carry(value)
         
     def _inc_dec_rm16(self):
         log.debug("INC/DEC r/m16")
@@ -904,7 +911,7 @@ class CPU(object):
         else:
             assert 0
         self._set_rm16(rm_type, rm_value, value)
-        self.flags.set_from_value(value, include_cf = False)
+        self.flags.set_from_alu_no_carry(value)
         
     # Shift opcodes.
     def _rotate_and_shift(self, opcode):
@@ -925,15 +932,15 @@ class CPU(object):
         old_value = value = self._get_rm16(rm_type, rm_value)
         if sub_opcode == 0x05:
             value = value >> count
-            self.flags.set_from_value(value, include_cf = False)
-            self.flags.cf = (old_value >> (count - 1)) & 0x01 == 0x01
+            self.flags.set_from_alu_no_carry(value)
+            self.flags.carry = (old_value >> (count - 1)) & 0x01 == 0x01
         elif sub_opcode == 0x04:
             # 0x0010 << 12 => CF = True
-            self.flags.cf = (value << count) & 0x10000 == 0x10000
+            self.flags.carry = (value << count) & 0x10000 == 0x10000
             value = value << count
-            self.flags.set_from_value(value, include_cf = False)
+            self.flags.set_from_alu_no_carry(value)
             if count == 1:
-                self.flags.of = ((old_value & high_bit_mask) ^ (value & high_bit_mask)) == high_bit_mask
+                self.flags.overflow = ((old_value & high_bit_mask) ^ (value & high_bit_mask)) == high_bit_mask
         else:
             assert 0
             
@@ -941,26 +948,26 @@ class CPU(object):
     def _stc(self):
         """ Sets the carry flag. """
         log.debug("STC")
-        self.flags.set(FLAGS.CARRY)
+        self.flags.carry = True
         
     def _clc(self):
         """ Clears the carry flag. """
         log.debug("CLC")
-        self.flags.clear(FLAGS.CARRY)
+        self.flags.carry = False
         
     def _std(self):
         """ Sets the direction flag. """
         log.debug("STD")
-        self.flags.set(FLAGS.DIRECTION)
+        self.flags.direction = True
         
     def _cld(self):
         """ Clears the direction flag. """
         log.debug("CLD")
-        self.flags.clear(FLAGS.DIRECTION)
+        self.flags.direction = False
         
     def _cli(self):
         log.info("CLI Disabling interrupts.")
-        self.flags.clear(FLAGS.INT_ENABLE)
+        self.flags.interrupt_enable = False
         
     def _sahf(self):
         """ Copy AH into the lower byte of FLAGS (SF, ZF, AF, PF, CF). """
