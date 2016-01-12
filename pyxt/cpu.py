@@ -178,13 +178,13 @@ class FLAGS(object):
         self.zero = not value
         self.sign = bool(value & 0x8000)
         self.carry = bool(value & 0x10000)
-        self.parity = (count_bits(value & 0x00FF) % 2) == 0
+        self.parity = (count_bits_fast(value & 0x00FF) % 2) == 0
         
     def set_from_alu_no_carry(self, value):
         """ Set ZF, SF, and PF based the result of an ALU operation. """
         self.zero = not value
         self.sign = bool(value & 0x8000)
-        self.parity = (count_bits(value & 0x00FF) % 2) == 0
+        self.parity = (count_bits_fast(value & 0x00FF) % 2) == 0
         
     @property
     def value(self):

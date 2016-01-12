@@ -66,3 +66,13 @@ class CountBitsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             count_bits(-1)
         
+class CountBitsFastTests(unittest.TestCase):
+    def test_zero(self):
+        self.assertEqual(count_bits_fast(0x00), 0)
+        
+    def test_simple(self):
+        self.assertEqual(count_bits_fast(0x08), 1)
+        
+    def test_word(self):
+        self.assertEqual(count_bits_fast(0xF00D), 7)
+        

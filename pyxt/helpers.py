@@ -30,3 +30,13 @@ def count_bits(value):
         value = value >> 1
     return count
     
+import array
+
+HAMMING_WEIGHT_LUT = array.array("B", (0,) * 0x10000)
+for __value in xrange(0, 0x10000):
+    HAMMING_WEIGHT_LUT[__value] = count_bits(__value)
+    
+def count_bits_fast(value):
+    """ Very quickly count the number of set bits in a 16 bit value with no error checking. """
+    return HAMMING_WEIGHT_LUT[value]
+    
