@@ -81,11 +81,18 @@ def bytes_to_word_le(data):
     assert len(data) == 2
     return ((data[1] & 0xFF) << 8) | (data[0] & 0xFF)
     
+SIGNED_WORD = struct.Struct("<h")
+UNSIGNED_WORD = struct.Struct("<H")
+SIGNED_BYTE = struct.Struct("<b")
+UNSIGNED_BYTE = struct.Struct("<B")
+
 def signed_word(value):
-    return struct.unpack("<h", struct.pack("<H", value))[0]
+    """ Interpret an unsigned word as a signed word. """
+    return SIGNED_WORD.unpack(UNSIGNED_WORD.pack(value))[0]
     
 def signed_byte(value):
-    return struct.unpack("<b", struct.pack("<B", value))[0]
+    """ Interpret an unsigned byte as a signed byte. """
+    return SIGNED_BYTE.unpack(UNSIGNED_BYTE.pack(value))[0]
     
 def decode_seg_reg(value):
     """ Decode a segment register selector into the string register name. """
