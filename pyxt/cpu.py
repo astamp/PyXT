@@ -782,7 +782,7 @@ class CPU(object):
         
     def _xor_al_imm8(self):
         log.info("XOR al imm8")
-        value = self.regs>AL ^ self.get_byte_immediate()
+        value = self.regs.AL ^ self.get_byte_immediate()
         self.flags.set_from_alu(value)
         self.regs.AL = value & 0xFF
         
