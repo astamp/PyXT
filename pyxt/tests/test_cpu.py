@@ -1055,6 +1055,18 @@ class IOPortOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs["AL"], 77)
         self.assertEqual(self.port_tester.data[0x40], 77)
         
+    def test_in_al_dx(self):
+        """
+        in al, dx
+        hlt
+        """
+        self.cpu.regs.DX = 0x3F8
+        self.port_tester.data[0x3F8] = 77
+        self.load_code_string("EC F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AL"], 77)
+        self.assertEqual(self.port_tester.data[0x3F8], 77)
+        
 class IncOpcodeTests(BaseOpcodeAcceptanceTests):
     def run_inc_16_bit_test(self, code_string, register):
         """

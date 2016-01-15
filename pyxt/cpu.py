@@ -384,6 +384,8 @@ class CPU(object):
             self._xor_r8_rm8()
         elif opcode == 0xE4:
             self.opcode_in_al_imm8()
+        elif opcode == 0xEC:
+            self.opcode_in_al_dx()
         elif opcode == 0xE6:
             self._out_imm8_al()
         elif opcode == 0xEE:
@@ -1012,8 +1014,14 @@ class CPU(object):
         
     # ********** I/O port opcodes. **********
     def opcode_in_al_imm8(self):
-        """ Read a byte from a port and put it in AL. """
+        """ Read a byte from a port specified by an immediate byte and put it in AL. """
         port = self.get_byte_immediate()
+        self.regs.AL = self.bus.io_read_byte(port)
+        log.info("Read 0x%02x from port 0x%04x.", self.regs.AL, port)
+        
+    def opcode_in_al_dx(self):
+        """ Read a byte from a port specified by DX and put it in AL. """
+        port = self.regs.DX
         self.regs.AL = self.bus.io_read_byte(port)
         log.info("Read 0x%02x from port 0x%04x.", self.regs.AL, port)
         
