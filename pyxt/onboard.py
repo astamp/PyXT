@@ -5,8 +5,6 @@ pyxt.components - Various components needed for PyXT.
 # Standard library imports
 
 # PyXT imports
-from pyxt.helpers import *
-from pyxt.constants import *
 from pyxt.bus import Device
 
 # Classes
@@ -122,23 +120,219 @@ class ProgrammableInterruptController(Device):
                 else:
                     self.process_ocw2_byte(value)
                     
+PIT_COMMAND_LATCH = 0x00
+PIT_READ_WRITE_NONE = 0x00
+PIT_READ_WRITE_LOW = 0x01
+PIT_READ_WRITE_HIGH = 0x02
+PIT_READ_WRITE_BOTH = 0x03
+
+class Counter(object):
+    """ Class containing the configuration for a single PIT channel. """
+    def __init__(self, index):
+        self.index = index
+        self.count = 0
+        self.value = 0
+        self.latched_value = None
+        self.mode = 0
+        self.enabled = False
+        
+        self.read_write_mode = PIT_READ_WRITE_NONE
+        self.low_byte = True
+        self.output = False
+        self.__gate = False
+        self.gate = False
+        
+    @property
+    def gate(self):
+        """ Returns the current gate value. """
+        return self.__gate
+        
+    @gate.setter
+    def gate(self, value):
+        """ Sets the gate value. """
+        self.__gate = value
+        
+        if self.mode == 2:
+            if value:
+                self.value = self.count
+                self.enabled = True
+            else:
+                self.enabled = False
+                self.output = True
+                
+    def clock(self):
+        """ Handle the clock input to the channel. """
+        if not self.enabled:
+            return
+            
+        if self.mode == 0:
+            if self.gate:
+                self.value -= 1
+                
+            if self.value == 0:
+                self.output = True
+            elif self.value == -1:
+                self.value = 0xFFFF
+                
+        elif self.mode == 2:
+            self.value = (self.value - 1) & 0xFFFF
+            print "index = %d, self.value = %x" % (self.index, self.value)
+            if self.value == 1:
+                self.output = False
+            elif self.value == 0:
+                self.value = self.count
+                self.output = True
+                
+    def latch(self):
+        """ Latch the running counter into the holding register. """
+        self.latched_value = self.value
+        
+    def reconfigure(self, command, mode, bcd):
+        """ Reconfigure this PIT channel. """
+        assert bcd == 0, "BCD mode is not supported."
+        assert command != 0, "Command 0x00 should have latched the value!"
+        self.mode = mode
+        print "=" * 80
+        print "SETTING MODE TO %d" % mode
+        print "=" * 80
+        self.read_write_mode = command
+        if self.read_write_mode == PIT_READ_WRITE_BOTH:
+            self.low_byte = True
+        
+        if self.mode == 0:
+            self.output = False
+            self.value = self.count
+            
+        elif self.mode == 2:
+            pass
+            
+        else:
+            raise NotImplementedError("Mode %d is not currently supported!" % self.mode)
+            
+    def get_read_value(self):
+        """ Return the value for a read operation. """
+        if self.latched_value is not None:
+            print "A"
+            return self.latched_value
+        else:
+            print "B"
+            return self.value
+            
+    def read(self):
+        """ Read a byte from this counter. """
+        value = self.get_read_value()
+        
+        if self.read_write_mode == PIT_READ_WRITE_LOW:
+            return value & 0xFF
+            
+        elif self.read_write_mode == PIT_READ_WRITE_HIGH:
+            return (value >> 8) & 0xFF
+            
+        elif self.read_write_mode == PIT_READ_WRITE_BOTH:
+            if self.low_byte:
+                self.low_byte = False
+                return value & 0xFF
+            else:
+                self.low_byte = True
+                self.latched_value = None
+                return (value >> 8) & 0xFF
+                
+        else:
+            raise RuntimeError("Invalid PIT channel mode: %r", self.mode)
+            
+    def write(self, value):
+        """ Write a byte to this counter. """
+        if self.read_write_mode == PIT_READ_WRITE_LOW:
+            self.count = value
+            if self.mode == 0:
+                self.enabled = True
+                self.value = self.count
+            elif self.mode == 2:
+                self.enabled = True
+            
+        elif self.read_write_mode == PIT_READ_WRITE_HIGH:
+            self.count = value << 8
+            if self.mode == 0:
+                self.enabled = True
+                self.value = self.count
+            elif self.mode == 2:
+                self.enabled = True
+                self.value = self.count
+            
+        elif self.read_write_mode == PIT_READ_WRITE_BOTH:
+            if self.low_byte:
+                if self.mode == 0: # Do not disable here for mode 2.
+                    self.enabled = False
+                self.low_byte = False
+                self.count = value
+            else:
+                self.low_byte = True
+                self.count = (value << 8) | self.count
+                if self.mode == 0:
+                    self.enabled = True
+                    self.value = self.count
+                elif self.mode == 2:
+                    self.enabled = True
+        else:
+            raise RuntimeError("Invalid PIT channel mode: %r", self.mode)
             
 class ProgrammableIntervalTimer(Device):
     """ An IOComponent emulating an 8253 PIT timer. """
+    # This is intentionally not 4 so that it is misaligned with the CPU which currenly assumes 1
+    # clock cycle per instruction.
+    CLOCK_DIVISOR = 3
+    
     def __init__(self, base, **kwargs):
         super(ProgrammableIntervalTimer, self).__init__(**kwargs)
         self.base = base
-        self.channels = [0, 0, 0]
+        self.channels = [Counter(0), Counter(1), Counter(2)]
+        self.divisor = self.CLOCK_DIVISOR
         
-    def get_ports_list(self):
-        return [x for x in xrange(self.base, self.base + 8)]
-        
-    def io_read_byte(self, address):
-        offset = address - self.base
-        if offset == 0 or offset == 1 or offset == 2:
-            return self.channels[offset]
-        elif offset == 3:
-            print "CONTROL REGISTER"
-        else:
-            raise ValueError("Bad offset to the 8253!!!")
+    def clock(self):
+        self.divisor -= 1
+        if self.divisor == 0:
+            self.divisor = self.CLOCK_DIVISOR
+            for channel in self.channels:
+                channel.clock()
+        # else:
             
+    def get_ports_list(self):
+        return [x for x in xrange(self.base, self.base + 4)]
+        
+    def io_read_byte(self, port):
+        offset = port - self.base
+        if offset < 3:
+            print "reading from ", offset
+            return self.channels[offset].read()
+        else:
+            return 0x00
+            
+    def io_write_byte(self, port, value):
+        offset = port - self.base
+        if offset < 3:
+            print "wrote %x to %x" % (value, offset)
+            self.channels[offset].write(value)
+        elif offset == 3:
+            counter, command, mode, bcd = self.decode_control_word(value)
+            print counter, command, mode, bcd
+            if command == PIT_COMMAND_LATCH:
+                self.channels[counter].latch()
+            else:
+                self.channels[counter].reconfigure(command, mode, bcd)
+                
+    @classmethod
+    def decode_control_word(cls, value):
+        """ Decode a control word into its fields. """
+        counter = (value >> 6) & 0x03
+        assert counter != 3, "There are only 3 counters!"
+        
+        command = (value >> 4) & 0x03
+        
+        mode = (value >> 1) & 0x07
+        if mode > 5:
+            mode -= 4
+            
+        bcd = value & 0x01
+        
+        return counter, command, mode, bcd
+        
