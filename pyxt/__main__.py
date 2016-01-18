@@ -59,15 +59,20 @@ def main():
     bus.install_device(MDA_START_ADDRESS, mda_card)
     
     bus.install_device(None, ProgrammableInterruptController(0x00A0))
-    bus.install_device(None, ProgrammableIntervalTimer(0x0040))
+    
+    pit = ProgrammableIntervalTimer(0x0040)
+    pit.channels[0].gate = True
+    pit.channels[1].gate = True
+    bus.install_device(None, pit)
     
     print "\nSYSTEM BUS:"
     pprint(bus.devices)
     
     cpu = CPU()
-    cpu.bus = bus
+    cpu.install_bus(bus)
     
     while not cpu.hlt:
+        pit.clock()
         cpu.fetch()
         
 if __name__ == "__main__":
