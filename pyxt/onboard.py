@@ -128,8 +128,7 @@ PIT_READ_WRITE_BOTH = 0x03
 
 class Counter(object):
     """ Class containing the configuration for a single PIT channel. """
-    def __init__(self, index):
-        self.index = index
+    def __init__(self):
         self.count = 0
         self.value = 0
         self.latched_value = None
@@ -176,7 +175,6 @@ class Counter(object):
                 
         elif self.mode == 2:
             self.value = (self.value - 1) & 0xFFFF
-            print "index = %d, self.value = %x" % (self.index, self.value)
             if self.value == 1:
                 self.output = False
             elif self.value == 0:
@@ -192,9 +190,7 @@ class Counter(object):
         assert bcd == 0, "BCD mode is not supported."
         assert command != 0, "Command 0x00 should have latched the value!"
         self.mode = mode
-        print "=" * 80
-        print "SETTING MODE TO %d" % mode
-        print "=" * 80
+        
         self.read_write_mode = command
         if self.read_write_mode == PIT_READ_WRITE_BOTH:
             self.low_byte = True
@@ -212,10 +208,8 @@ class Counter(object):
     def get_read_value(self):
         """ Return the value for a read operation. """
         if self.latched_value is not None:
-            print "A"
             return self.latched_value
         else:
-            print "B"
             return self.value
             
     def read(self):
@@ -285,7 +279,7 @@ class ProgrammableIntervalTimer(Device):
     def __init__(self, base, **kwargs):
         super(ProgrammableIntervalTimer, self).__init__(**kwargs)
         self.base = base
-        self.channels = [Counter(0), Counter(1), Counter(2)]
+        self.channels = [Counter(), Counter(), Counter()]
         self.divisor = self.CLOCK_DIVISOR
         
     def clock(self):
@@ -302,7 +296,6 @@ class ProgrammableIntervalTimer(Device):
     def io_read_byte(self, port):
         offset = port - self.base
         if offset < 3:
-            print "reading from ", offset
             return self.channels[offset].read()
         else:
             return 0x00
@@ -310,11 +303,9 @@ class ProgrammableIntervalTimer(Device):
     def io_write_byte(self, port, value):
         offset = port - self.base
         if offset < 3:
-            print "wrote %x to %x" % (value, offset)
             self.channels[offset].write(value)
         elif offset == 3:
             counter, command, mode, bcd = self.decode_control_word(value)
-            print counter, command, mode, bcd
             if command == PIT_COMMAND_LATCH:
                 self.channels[counter].latch()
             else:
