@@ -10,7 +10,7 @@ import operator
 from ctypes import Structure, Union, c_ushort, c_ubyte
 
 # PyXT imports
-from pyxt.helpers import *
+from pyxt.helpers import count_bits_fast, segment_offset_to_address
 
 # Logging setup
 import logging
@@ -20,7 +20,7 @@ log.addHandler(logging.NullHandler())
 # Constants
 WORD, LOW, HIGH = range(3)
 
-GDB_EXAMINE_REGEX = re.compile("^x\/(\\d+)([xduotacfs])([bwd])$")
+GDB_EXAMINE_REGEX = re.compile("^x\\/(\\d+)([xduotacfs])([bwd])$")
 
 MOD_MASK = 0xC0
 MOD_SHIFT = 6
@@ -198,15 +198,24 @@ class FLAGS(object):
         """ Return the FLAGS register as a word value. """
         value = self.BLANK
         
-        if self.carry: value |= self.CARRY
-        if self.parity: value |= self.PARITY
-        if self.adjust: value |= self.ADJUST
-        if self.zero: value |= self.ZERO
-        if self.sign: value |= self.SIGN
-        if self.trap: value |= self.TRAP
-        if self.interrupt_enable: value |= self.INT_ENABLE
-        if self.direction: value |= self.DIRECTION
-        if self.overflow: value |= self.OVERFLOW
+        if self.carry:
+            value |= self.CARRY
+        if self.parity:
+            value |= self.PARITY
+        if self.adjust:
+            value |= self.ADJUST
+        if self.zero:
+            value |= self.ZERO
+        if self.sign:
+            value |= self.SIGN
+        if self.trap:
+            value |= self.TRAP
+        if self.interrupt_enable:
+            value |= self.INT_ENABLE
+        if self.direction:
+            value |= self.DIRECTION
+        if self.overflow:
+            value |= self.OVERFLOW
         
         return value
         
@@ -700,7 +709,6 @@ class CPU(object):
     def _loop(self):
         """ Decrement CX and jump short if it is non-zero. """
         distance = self.get_byte_immediate()
-        regs = self.regs
         
         value = self.regs.CX - 1
         self.flags.set_from_alu(value)
