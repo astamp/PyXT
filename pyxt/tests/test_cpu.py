@@ -766,6 +766,313 @@ class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 3420)
         
+class CmpOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_cmp_rm8_r8_none(self):
+        """
+        cmp [value], al
+        hlt
+        value:
+            db 50
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 7
+        self.load_code_string("38 06 05 00 F4 32")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 7) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x05), 50) # Should be unmodified.
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_cmp_rm8_r8_zero(self):
+        """
+        cmp [value], al
+        hlt
+        value:
+            db 50
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 50
+        self.load_code_string("38 06 05 00 F4 32")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 50) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x05), 50) # Should be unmodified.
+        
+        self.assertTrue(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_cmp_rm8_r8_sign_carry(self):
+        """
+        cmp [value], al
+        hlt
+        value:
+            db 50
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 51
+        self.load_code_string("38 06 05 00 F4 32")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 51) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x05), 50) # Should be unmodified.
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertTrue(self.cpu.flags.sign)
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_cmp_rm16_r16_none(self):
+        """
+        cmp [value], ax
+        hlt
+        value:
+            dw 1000
+        """
+        self.cpu.regs["AX"] = 11
+        self.load_code_string("39 06 05 00 F4 E8 03")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 11) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_word(0x05), 1000) # Should be unmodified.
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_cmp_rm16_r16_zero(self):
+        """
+        cmp [value], ax
+        hlt
+        value:
+            dw 1000
+        """
+        self.cpu.regs["AX"] = 1000
+        self.load_code_string("39 06 05 00 F4 E8 03")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 1000) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_word(0x05), 1000) # Should be unmodified.
+        
+        self.assertTrue(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_cmp_rm16_r16_sign_carry(self):
+        """
+        cmp [value], ax
+        hlt
+        value:
+            dw 1000
+        """
+        self.cpu.regs["AX"] = 1001
+        self.load_code_string("39 06 05 00 F4 E8 03")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 1001) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_word(0x05), 1000) # Should be unmodified.
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertTrue(self.cpu.flags.sign)
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_cmp_r8_rm8_none(self):
+        """
+        cmp al, [value]
+        hlt
+        value:
+            db 22
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 23
+        self.load_code_string("3A 06 05 00 F4 16")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 23) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x05), 22) # Should be unmodified.
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_cmp_r8_rm8_zero(self):
+        """
+        cmp al, [value]
+        hlt
+        value:
+            db 22
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 22
+        self.load_code_string("3A 06 05 00 F4 16")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 22) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x05), 22) # Should be unmodified.
+        
+        self.assertTrue(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_cmp_r8_rm8_sign_carry(self):
+        """
+        cmp al, [value]
+        hlt
+        value:
+            db 22
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 21
+        self.load_code_string("3A 06 05 00 F4 16")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 21) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x05), 22) # Should be unmodified.
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertTrue(self.cpu.flags.sign)
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_cmp_r16_rm16_none(self):
+        """
+        cmp ax, [value]
+        hlt
+        value:
+            dw 1111
+        """
+        self.cpu.regs["AX"] = 2000
+        self.load_code_string("3B 06 05 00 F4 57 04")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 2000) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_word(0x05), 1111) # Should be unmodified.
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_cmp_r16_rm16_zero(self):
+        """
+        cmp ax, [value]
+        hlt
+        value:
+            dw 1111
+        """
+        self.cpu.regs["AX"] = 1111
+        self.load_code_string("3B 06 05 00 F4 57 04")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 1111) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_word(0x05), 1111) # Should be unmodified.
+        
+        self.assertTrue(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_cmp_r16_rm16_sign_carry(self):
+        """
+        cmp ax, [value]
+        hlt
+        value:
+            dw 1111
+        """
+        self.cpu.regs["AX"] = 500
+        self.load_code_string("3B 06 05 00 F4 57 04")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 500) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_word(0x05), 1111) # Should be unmodified.
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertTrue(self.cpu.flags.sign)
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_cmp_al_imm8_none(self):
+        """
+        cmp al, 7
+        hlt
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 8
+        self.load_code_string("3C 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 8) # Should be unmodified.
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_cmp_al_imm8_zero(self):
+        """
+        cmp al, 7
+        hlt
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 7
+        self.load_code_string("3C 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 7) # Should be unmodified.
+        
+        self.assertTrue(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_cmp_al_imm8_sign_carry(self):
+        """
+        cmp al, 7
+        hlt
+        """
+        self.cpu.regs["AH"] = 0xA5
+        self.cpu.regs["AL"] = 6
+        self.load_code_string("3C 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs["AL"], 6) # Should be unmodified.
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertTrue(self.cpu.flags.sign)
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_cmp_ax_imm16_none(self):
+        """
+        cmp ax, word 2222
+        hlt
+        """
+        self.cpu.regs["AX"] = 5643
+        self.load_code_string("3D AE 08 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 5643) # Should be unmodified.
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_cmp_ax_imm16_zero(self):
+        """
+        cmp ax, word 2222
+        hlt
+        """
+        self.cpu.regs["AX"] = 2222
+        self.load_code_string("3D AE 08 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 2222) # Should be unmodified.
+        
+        self.assertTrue(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_cmp_ax_imm16_sign_carry(self):
+        """
+        cmp ax, word 2222
+        hlt
+        """
+        self.cpu.regs["AX"] = 0
+        self.load_code_string("3D AE 08 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs["AX"], 0) # Should be unmodified.
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertTrue(self.cpu.flags.sign)
+        self.assertTrue(self.cpu.flags.carry)
+        
 class OrOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_or_rm8_r8(self):
         """

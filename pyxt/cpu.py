@@ -333,8 +333,21 @@ class CPU(object):
             self._xor_rm16_r16()
         elif opcode == 0x72:
             self._jc()
+            
+        # CMP
+        elif opcode == 0x38:
+            self.opcode_cmp_rm8_r8()
         elif opcode == 0x39:
-            self._cmp_rm16_r16()
+            self.opcode_cmp_rm16_r16()
+        elif opcode == 0x3A:
+            self.opcode_cmp_r8_rm8()
+        elif opcode == 0x3B:
+            self.opcode_cmp_r16_rm16()
+        elif opcode == 0x3C:
+            self.opcode_cmp_al_imm8()
+        elif opcode == 0x3D:
+            self.opcode_cmp_ax_imm16()
+            
         elif opcode == 0x76:
             self._jna()
         elif opcode == 0x77:
@@ -363,8 +376,6 @@ class CPU(object):
             self._inc_dec_rm8()
         elif opcode == 0xFF:
             self._inc_dec_rm16()
-        elif opcode == 0x3C:
-            self._cmp_al_imm8()
         elif opcode == 0xC6:
             self._mov_rm8_imm8()
         elif opcode == 0xC7:
@@ -884,17 +895,46 @@ class CPU(object):
         """ Entry point for all ADC opcodes. """
         self.alu_vector_table[opcode & 0x07](self.operator_adc)
         
-    def _cmp_rm16_r16(self):
-        log.debug("CMP r/m16 r16")
+    def opcode_cmp_rm8_r8(self):
+        """ Subtract op2 from op1, update the flags, but don't store the value. """
+        register, rm_type, rm_value = self.get_modrm_operands(8)
+        op1 = self._get_rm8(rm_type, rm_value)
+        op2 = self.regs[register]
+        op1 = op1 - op2
+        self.flags.set_from_alu(op1)
+        
+    def opcode_cmp_rm16_r16(self):
+        """ Subtract op2 from op1, update the flags, but don't store the value. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
-        value = op1 - op2
+        op1 = op1 - op2
+        self.flags.set_from_alu(op1)
+        
+    def opcode_cmp_r8_rm8(self):
+        """ Subtract op2 from op1, update the flags, but don't store the value. """
+        register, rm_type, rm_value = self.get_modrm_operands(8)
+        op1 = self.regs[register]
+        op2 = self._get_rm8(rm_type, rm_value)
+        op1 = op1 - op2
+        self.flags.set_from_alu(op1)
+        
+    def opcode_cmp_r16_rm16(self):
+        """ Subtract op2 from op1, update the flags, but don't store the value. """
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        op1 = self.regs[register]
+        op2 = self._get_rm16(rm_type, rm_value)
+        op1 = op1 - op2
+        self.flags.set_from_alu(op1)
+        
+    def opcode_cmp_al_imm8(self):
+        """ Subtract immediate byte from AL, update the flags, but don't store the value. """
+        value = self.regs.AL - self.get_byte_immediate()
         self.flags.set_from_alu(value)
         
-    def _cmp_al_imm8(self):
-        log.debug("CMP al imm8")
-        value = self.regs.AL - self.get_byte_immediate()
+    def opcode_cmp_ax_imm16(self):
+        """ Subtract immediate word from AX, update the flags, but don't store the value. """
+        value = self.regs.AX - self.get_word_immediate()
         self.flags.set_from_alu(value)
         
     # Inc/dec opcodes.
