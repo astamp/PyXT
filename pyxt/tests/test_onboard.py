@@ -333,3 +333,96 @@ class PITCounterTests(unittest.TestCase):
         self.assertEqual(self.counter.value, 0x0002)
         self.assertTrue(self.counter.output)
         
+    def test_reconfigure_mode_3(self):
+        # Should be same as mode 2.
+        self.counter.output = True
+        self.counter.reconfigure(PIT_READ_WRITE_BOTH, 3, 0)
+        self.assertEqual(self.counter.mode, 3)
+        self.assertTrue(self.counter.output) # Not affected by reconfigure().
+        
+    def test_write_mode_3(self):
+        # Should be same as mode 3.
+        self.counter.enabled = True
+        self.counter.count = 0x8888
+        self.counter.value = 0x7777
+        
+        self.counter.reconfigure(PIT_READ_WRITE_BOTH, 3, 0)
+        self.assertEqual(self.counter.value, 0x7777) # Unaffected by reconfigure or writing the value.
+        self.assertTrue(self.counter.enabled) # Should always stay enabled during this.
+        
+        self.counter.write(0xFE)
+        self.assertEqual(self.counter.value, 0x7777) # Unaffected by reconfigure or writing the value.
+        self.assertTrue(self.counter.enabled) # Should always stay enabled during this.
+        
+        self.counter.write(0xCA)
+        self.assertEqual(self.counter.value, 0x7777) # Unaffected by reconfigure or writing the value.
+        self.assertTrue(self.counter.enabled) # Should always stay enabled during this.
+        self.assertEqual(self.counter.count, 0xCAFE)
+        
+    def test_clock_mode_3_odd(self):
+        self.counter.reconfigure(PIT_READ_WRITE_BOTH, 3, 0)
+        
+        # Gate low stops counting and raises output.
+        self.counter.gate = False
+        self.assertTrue(self.counter.output)
+        self.assertFalse(self.counter.enabled)
+        
+        # Writing the value enables counting.
+        self.counter.write(0x07)
+        self.counter.write(0x00)
+        self.assertTrue(self.counter.enabled)
+        
+        # These should not have changed.
+        self.assertEqual(self.counter.value, 0x0000)
+        self.assertTrue(self.counter.output)
+        
+        # Gate high reloads and starts.
+        self.counter.gate = True
+        self.assertEqual(self.counter.value, 0x0007)
+        self.assertTrue(self.counter.output)
+        self.assertTrue(self.counter.enabled)
+        
+        # Output high and odd should decrement by 1.
+        self.counter.clock()
+        self.assertEqual(self.counter.value, 0x0006)
+        self.assertTrue(self.counter.output)
+        
+        # Output high and even should decrement by 2.
+        self.counter.clock()
+        self.assertEqual(self.counter.value, 0x0004)
+        self.assertTrue(self.counter.output)
+        
+        # Output high and even should decrement by 2 (repeat).
+        self.counter.clock()
+        self.assertEqual(self.counter.value, 0x0002)
+        self.assertTrue(self.counter.output)
+        
+        # On hitting zero with output high, lowers output and reloads count.
+        self.counter.clock()
+        self.assertEqual(self.counter.value, 0x0007)
+        self.assertFalse(self.counter.output)
+        
+        # Output low and odd should decrement by 3.
+        self.counter.clock()
+        self.assertEqual(self.counter.value, 0x0004)
+        self.assertFalse(self.counter.output)
+        
+        # Output low and even should decrement by 2.
+        self.counter.clock()
+        self.assertEqual(self.counter.value, 0x0002)
+        self.assertFalse(self.counter.output)
+        
+        # On hitting zero with output low, raises output and reloads count.
+        self.counter.clock()
+        self.assertEqual(self.counter.value, 0x0007)
+        self.assertTrue(self.counter.output)
+        
+        # Make sure this loops forever...
+        self.counter.clock()
+        self.assertEqual(self.counter.value, 0x0006)
+        self.assertTrue(self.counter.output)
+        self.counter.clock()
+        self.assertEqual(self.counter.value, 0x0004)
+        self.assertTrue(self.counter.output)
+        # ... and so on.
+        

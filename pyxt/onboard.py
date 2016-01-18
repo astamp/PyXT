@@ -151,7 +151,7 @@ class Counter(object):
         """ Sets the gate value. """
         self.__gate = value
         
-        if self.mode == 2:
+        if self.mode == 2 or self.mode == 3:
             if value:
                 self.value = self.count
                 self.enabled = True
@@ -181,6 +181,19 @@ class Counter(object):
                 self.value = self.count
                 self.output = True
                 
+        elif self.mode == 3:
+            if self.value & 0x0001:
+                if self.output:
+                    self.value -= 1
+                else:
+                    self.value -= 3
+            else:
+                self.value -= 2
+                
+            if self.value == 0:
+                self.output = not self.output
+                self.value = self.count
+                
     def latch(self):
         """ Latch the running counter into the holding register. """
         self.latched_value = self.value
@@ -199,7 +212,7 @@ class Counter(object):
             self.output = False
             self.value = self.count
             
-        elif self.mode == 2:
+        elif self.mode == 2 or self.mode == 3:
             pass
             
         else:
@@ -232,7 +245,7 @@ class Counter(object):
                 return (value >> 8) & 0xFF
                 
         else:
-            raise RuntimeError("Invalid PIT channel mode: %r", self.mode)
+            raise RuntimeError("Invalid PIT channel r/w mode: %r", self.read_write_mode)
             
     def write(self, value):
         """ Write a byte to this counter. """
@@ -241,7 +254,7 @@ class Counter(object):
             if self.mode == 0:
                 self.enabled = True
                 self.value = self.count
-            elif self.mode == 2:
+            elif self.mode == 2 or self.mode == 3:
                 self.enabled = True
             
         elif self.read_write_mode == PIT_READ_WRITE_HIGH:
@@ -249,13 +262,13 @@ class Counter(object):
             if self.mode == 0:
                 self.enabled = True
                 self.value = self.count
-            elif self.mode == 2:
+            elif self.mode == 2 or self.mode == 3:
                 self.enabled = True
                 self.value = self.count
             
         elif self.read_write_mode == PIT_READ_WRITE_BOTH:
             if self.low_byte:
-                if self.mode == 0: # Do not disable here for mode 2.
+                if self.mode == 0: # Do not disable here for mode 2 or 3.
                     self.enabled = False
                 self.low_byte = False
                 self.count = value
@@ -265,10 +278,10 @@ class Counter(object):
                 if self.mode == 0:
                     self.enabled = True
                     self.value = self.count
-                elif self.mode == 2:
+                elif self.mode == 2 or self.mode == 3:
                     self.enabled = True
         else:
-            raise RuntimeError("Invalid PIT channel mode: %r", self.mode)
+            raise RuntimeError("Invalid PIT channel r/w mode: %r", self.read_write_mode)
             
 class ProgrammableIntervalTimer(Device):
     """ An IOComponent emulating an 8253 PIT timer. """
