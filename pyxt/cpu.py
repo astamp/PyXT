@@ -722,7 +722,6 @@ class CPU(object):
         distance = self.get_byte_immediate()
         
         value = self.regs.CX - 1
-        self.flags.set_from_alu(value)
         self.regs.CX = value
         
         if value != 0:

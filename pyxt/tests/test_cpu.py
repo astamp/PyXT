@@ -1326,6 +1326,24 @@ class LoopOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 4)
         self.assertEqual(self.cpu.regs["CX"], 0x00)
         
+    def test_loop_does_not_modify_flags(self):
+        """
+        again:
+            loop again
+        hlt
+        """
+        self.cpu.flags.zero = False
+        self.cpu.flags.sign = True
+        self.cpu.flags.carry = True
+        
+        self.cpu.regs["CX"] = 3
+        self.load_code_string("E2 FE F4")
+        self.assertEqual(self.run_to_halt(), 4)
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertTrue(self.cpu.flags.sign)
+        self.assertTrue(self.cpu.flags.carry)
+        
 class IOPortTester(Device):
     """ Device that maps to all ports for testing. """
     def __init__(self):
