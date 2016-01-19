@@ -16,6 +16,7 @@ from pyxt.bus import SystemBus
 from pyxt.memory import RAM, ROM
 from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MDA_START_ADDRESS
 
+from pyxt.dma import DmaController
 from pyxt.onboard import ProgrammableInterruptController, ProgrammableIntervalTimer
 
 # Logging setup
@@ -58,6 +59,7 @@ def main():
     # mda_card.reset()
     bus.install_device(MDA_START_ADDRESS, mda_card)
     
+    bus.install_device(None, DmaController(0x0000))
     bus.install_device(None, ProgrammableInterruptController(0x00A0))
     
     pit = ProgrammableIntervalTimer(0x0040)
@@ -67,6 +69,7 @@ def main():
     
     print "\nSYSTEM BUS:"
     pprint(bus.devices)
+    pprint(bus.io_decoder)
     
     cpu = CPU()
     cpu.install_bus(bus)
