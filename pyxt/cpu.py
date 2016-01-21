@@ -418,7 +418,12 @@ class CPU(object):
             self._mov_sreg_rm16()
         elif opcode == 0x8C:
             self._mov_rm16_sreg()
+        elif opcode == 0xAC:
+            self.opcode_lodsb()
+        elif opcode == 0xAD:
+            self.opcode_lodsw()
         else:
+            self.dump_regs()
             log.error("Invalid opcode: 0x%02x at CS:IP 0x%04x:0x%04x", opcode, self.regs.CS, self.regs.IP)
             self._hlt()
             
@@ -1083,6 +1088,17 @@ class CPU(object):
         value = self.regs.AL
         log.info("Writing 0x%02x to port 0x%04x.", value, port)
         self.bus.io_write_byte(port, value)
+        
+    # ********** String opcodes. **********
+    def opcode_lodsb(self):
+        """ Reads a byte from DS:SI into AL and increments or decrements SI. """
+        self.regs.AL = self.read_data_byte(self.regs.SI)
+        self.regs.SI += -1 if self.flags.direction else 1
+        
+    def opcode_lodsw(self):
+        """ Reads a word from DS:SI into AX and increments or decrements SI by 2. """
+        self.regs.AX = self.read_data_word(self.regs.SI)
+        self.regs.SI += -2 if self.flags.direction else 2
         
     # ********** Memory access helpers. **********
     def get_data_segment(self):

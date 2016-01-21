@@ -1542,3 +1542,78 @@ class DecOpcodeTests(BaseOpcodeAcceptanceTests):
         """
         self.run_dec_16_bit_test("4F F4", "DI")
         
+class LodsOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_lodsb_incrementing(self):
+        """
+        lodsb
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI = 0x0004
+        self.cpu.regs.AX = 0x0000
+        self.memory.mem_write_word(19, 0xF0)
+        self.memory.mem_write_word(20, 0x77)
+        self.memory.mem_write_word(21, 0x0F)
+        self.load_code_string("AC F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x77)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DS, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SI, 0x0005)
+        
+    def test_lodsb_decrementing(self):
+        """
+        lodsb
+        hlt
+        """
+        self.cpu.flags.direction = True
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI = 0x0004
+        self.cpu.regs.AX = 0x0000
+        self.memory.mem_write_word(19, 0xF0)
+        self.memory.mem_write_word(20, 0x77)
+        self.memory.mem_write_word(21, 0x0F)
+        self.load_code_string("AC F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x77)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DS, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SI, 0x0003)
+        
+    def test_lodsw_incrementing(self):
+        """
+        lodsw
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI = 0x0004
+        self.cpu.regs.AX = 0x00
+        self.memory.mem_write_word(19, 0xF0)
+        self.memory.mem_write_word(20, 0x77)
+        self.memory.mem_write_word(21, 0x0F)
+        self.load_code_string("AD F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0F77)
+        self.assertEqual(self.cpu.regs.DS, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SI, 0x0006)
+        
+    def test_lodsw_deccrementing(self):
+        """
+        lodsw
+        hlt
+        """
+        self.cpu.flags.direction = True
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI = 0x0004
+        self.cpu.regs.AX = 0x00
+        self.memory.mem_write_word(19, 0xF0)
+        self.memory.mem_write_word(20, 0x77)
+        self.memory.mem_write_word(21, 0x0F)
+        self.load_code_string("AD F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0F77)
+        self.assertEqual(self.cpu.regs.DS, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SI, 0x0002)
+        
