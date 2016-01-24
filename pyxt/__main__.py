@@ -74,6 +74,10 @@ def main():
     cpu = CPU()
     cpu.install_bus(bus)
     
+    for breakpoint in args:
+        (cs, ip) = breakpoint.split(":")
+        cpu.breakpoints.append((int(cs, 16), int(ip, 16)))
+        
     while not cpu.hlt:
         pit.clock()
         cpu.fetch()
