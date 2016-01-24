@@ -241,6 +241,7 @@ class CPU(object):
         self.breakpoints = []
         self.single_step = False
         self.debugger_shortcut = []
+        self.dump_enabled = False
         
         # CPU halt flag.
         self.hlt = False
@@ -276,13 +277,18 @@ class CPU(object):
     def fetch(self):
         # Uncomment these lines for debugging, but they make the code slow if left on.
         
-        # self.dump_regs()
-        
+        # if self.dump_enabled:
+            # log.debug("")
+            # self.dump_regs()
+            
         # if self.should_break():
             # self.enter_debugger()
             
         opcode = self.read_instruction_byte()
-        # log.debug("Fetched opcode: 0x%02x", opcode)
+        
+        # if self.dump_enabled:
+            # log.debug("Fetched opcode: 0x%02x", opcode)
+            
         if opcode == 0xF4:
             self._hlt()
         elif opcode & 0xF8 == 0x00 and opcode & 0x6 != 0x6:
@@ -1159,13 +1165,16 @@ class CPU(object):
         log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
         regs = ("CS", "SS", "DS", "ES")
         log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
-        
+        log.debug("BP = 0x%04x, cf=%d, zf=%d, sf=%d, df=%d", self.regs.BP, self.flags.carry, self.flags.zero, self.flags.sign, self.flags.direction)
     def should_break(self):
-        return self.single_step or self.regs.IP in self.breakpoints
+        return self.single_step or (self.regs.CS, self.regs.IP) in self.breakpoints
         
     def enter_debugger(self):
         while True:
-            print ">",
+            if len(self.debugger_shortcut) != 0:
+                print "[%s] >" % self.debugger_shortcut,
+            else:
+                print ">",
             cmd = raw_input().lower().split()
             
             if len(cmd) == 0 and len(self.debugger_shortcut) != 0:
@@ -1187,6 +1196,14 @@ class CPU(object):
                 
             elif len(cmd) == 1 and cmd[0] in ("quit", "q"):
                 sys.exit(0)
+                
+            elif len(cmd) >= 1 and cmd[0] == "set":
+                if len(cmd) == 2 and cmd[1] == "dump":
+                    self.dump_enabled = True
+                
+            elif len(cmd) >= 1 and cmd[0] == "clear":
+                if len(cmd) == 2 and cmd[1] == "dump":
+                    self.dump_enabled = False
                 
             elif len(cmd) >= 1 and cmd[0][0] == "x":
                 if len(cmd[0]) > 1:
