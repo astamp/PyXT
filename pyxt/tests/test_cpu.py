@@ -1271,6 +1271,19 @@ class MovOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs["BX"], 0x1234)
         self.assertEqual(self.memory.mem_read_word(0x05), 0x1234)
         
+    def test_mov_r8_rm8(self):
+        """
+        mov bl, [value]
+        hlt
+        value:
+            db 0x5A
+        """
+        self.cpu.regs.BX = 0x1234
+        self.load_code_string("8A 1E 05 00 F4 5A")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BH, 0x12) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.BL, 0x5A)
+    
 class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_stc(self):
         """

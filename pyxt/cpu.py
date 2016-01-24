@@ -332,9 +332,9 @@ class CPU(object):
         elif opcode == 0x88:
             self._mov_rm8_r8()
         elif opcode == 0x89:
-            self._mov_reg16_to_rm16()
+            self._mov_reg16_to_rm16() # BAD NAME
         elif opcode == 0x8A:
-            self._mov_rm8_to_reg8() # BAD NAME
+            self.opcode_mov_r8_rm8()
         elif opcode == 0x31:
             self._xor_rm16_r16()
         elif opcode == 0x72:
@@ -538,10 +538,9 @@ class CPU(object):
         register, rm_type, rm_value = self.get_modrm_operands(8)
         self._set_rm8(rm_type, rm_value, self.regs[register])
         
-    def _mov_rm8_to_reg8(self):
-        log.info("MOV 8-bit r/m to reg (mov r8, r/m8)")
-        register, rm_type, rm_value = self.get_modrm_operands(16)
-        self.regs[register] = self._get_rm16(rm_type, rm_value)
+    def opcode_mov_r8_rm8(self):
+        register, rm_type, rm_value = self.get_modrm_operands(8)
+        self.regs[register] = self._get_rm8(rm_type, rm_value)
         
     def _mov_reg16_to_rm16(self):
         log.info("MOV 16-bit reg to r/m (mov r/m16/32, r16/32)")
