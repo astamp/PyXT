@@ -315,6 +315,8 @@ class CPU(object):
             self.opcode_group_pop(opcode)
         elif opcode & 0xF8 == 0x90:
             self._xchg_r16_ax(opcode)
+        elif opcode & 0xFE == 0xF6:
+            self.opcode_group_f6f7(opcode)
         elif opcode == 0x74:
             self._jz()
         elif opcode == 0x75:
@@ -501,7 +503,8 @@ class CPU(object):
             
         return register, rm_type, rm_value
         
-    def get_imm(self, word):
+    def get_immediate(self, word):
+        """ Get either a byte or word immediate value from CS:IP. """
         if word:
             return self.get_word_immediate()
         else:
@@ -524,7 +527,7 @@ class CPU(object):
         else:
             dest = BYTE_REG[opcode & 0x07]
             
-        value = self.get_imm(word)
+        value = self.get_immediate(word)
         self.regs[dest] = value
         log.debug("MOV'd 0x%04x into %s", value, dest)
         
@@ -755,7 +758,7 @@ class CPU(object):
             value = self._get_rm8(rm_type, rm_value)
             
         # Process the immediate.
-        immediate = self.get_imm(word_imm)
+        immediate = self.get_immediate(word_imm)
         if sign_extend and not word_imm:
             extended_imm = sign_extend_byte_to_word(immediate)
             log.debug("Sign extending 0x%02x to 0x%04x", immediate, extended_imm)
@@ -945,6 +948,22 @@ class CPU(object):
         """ Subtract immediate word from AX, update the flags, but don't store the value. """
         value = self.regs.AX - self.get_word_immediate()
         self.flags.set_from_alu(value)
+        
+    def opcode_group_f6f7(self, opcode):
+        """ "Group 1" byte and word instructions. """
+        word_reg = opcode == 0xF7
+        
+        sub_opcode, rm_type, rm_value = self.get_modrm_operands(16 if word_reg else 8, decode_register = False)
+        
+        if word_reg:
+            value = self._get_rm16(rm_type, rm_value)
+        else:
+            value = self._get_rm8(rm_type, rm_value)
+            
+        if sub_opcode == 0: # TEST
+            self.flags.set_from_alu(value & self.get_immediate(word_reg))
+        else:
+            assert 0
         
     # Inc/dec opcodes.
     def opcode_group_inc(self, opcode):

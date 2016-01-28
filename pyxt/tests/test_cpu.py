@@ -1612,7 +1612,7 @@ class LodsOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.DS, 0x0001) # Should be unmodified.
         self.assertEqual(self.cpu.regs.SI, 0x0006)
         
-    def test_lodsw_deccrementing(self):
+    def test_lodsw_decrementing(self):
         """
         lodsw
         hlt
@@ -1629,4 +1629,58 @@ class LodsOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0x0F77)
         self.assertEqual(self.cpu.regs.DS, 0x0001) # Should be unmodified.
         self.assertEqual(self.cpu.regs.SI, 0x0002)
+        
+class TestOpcodeTests(BaseOpcodeAcceptanceTests):
+    """ Yo dawg... """
+    def test_test_rm8_imm8_zero(self):
+        """
+        test bl, 0x80
+        hlt
+        """
+        self.cpu.regs.BL = 0x1F
+        self.load_code_string("F6 C3 80 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        
+        self.assertTrue(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_test_rm8_imm8_nonzero(self):
+        """
+        test bl, 0x80
+        hlt
+        """
+        self.cpu.regs.BL = 0xF0
+        self.load_code_string("F6 C3 80 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_test_rm16_imm16_zero(self):
+        """
+        test bx, 0x80FF
+        hlt
+        """
+        self.cpu.regs.BX = 0x7F00
+        self.load_code_string("F7 C3 FF 80 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        
+        self.assertTrue(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_test_rm16_imm16_nonzero(self):
+        """
+        test bx, 0x80FF
+        hlt
+        """
+        self.cpu.regs.BX = 0x8000
+        self.load_code_string("F7 C3 FF 80 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertTrue(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
         
