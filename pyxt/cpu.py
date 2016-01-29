@@ -10,7 +10,7 @@ import operator
 from ctypes import Structure, Union, c_ushort, c_ubyte
 
 # PyXT imports
-from pyxt.helpers import count_bits_fast, segment_offset_to_address
+from pyxt.helpers import count_bits_fast, segment_offset_to_address, rotate_left_8_bits, rotate_left_16_bits
 
 # Logging setup
 import logging
@@ -403,7 +403,7 @@ class CPU(object):
         elif opcode == 0x7A:
             self._jp_jpe()
         elif opcode & 0xFC == 0xD0:
-            self._rotate_and_shift(opcode)
+            self.opcode_group_rotate_and_shift(opcode)
         elif opcode == 0x71:
             self._jno()
         elif opcode == 0x70:
@@ -1007,8 +1007,8 @@ class CPU(object):
         self.flags.set_from_alu_no_carry(value)
         
     # Shift opcodes.
-    def _rotate_and_shift(self, opcode):
-        log.debug("Rotate/shift")
+    def opcode_group_rotate_and_shift(self, opcode):
+        """ Opcode group for ROL, ROR, RCL, RCR, SHL, SHR, SAL/SHL, and SAR. """
         
         count = 1
         if opcode & 0x02 == 0x02:
@@ -1022,11 +1022,22 @@ class CPU(object):
         
         sub_opcode, rm_type, rm_value = self.get_modrm_operands(bits, decode_register = False)
         
-        old_value = value = self._get_rm16(rm_type, rm_value)
-        if sub_opcode == 0x05:
+        old_value = value = self._get_rm_bits(bits, rm_type, rm_value)
+        
+        if sub_opcode == 0x00: # ROL - Rotate left shifting bits back in on the right.
+            if bits == 8:
+                value, self.flags.carry = rotate_left_8_bits(value, count)
+            else:
+                value, self.flags.carry = rotate_left_16_bits(value, count)
+                
+            self.flags.set_from_alu_no_carry(value)
+            self._set_rm_bits(bits, rm_type, rm_value, value)
+            
+        elif sub_opcode == 0x05:
             value = value >> count
             self.flags.set_from_alu_no_carry(value)
             self.flags.carry = (old_value >> (count - 1)) & 0x01 == 0x01
+            
         elif sub_opcode == 0x04:
             # 0x0010 << 12 => CF = True
             self.flags.carry = (value << count) & 0x10000 == 0x10000
@@ -1035,6 +1046,7 @@ class CPU(object):
             if count == 1:
                 self.flags.overflow = ((old_value & high_bit_mask) ^ (value & high_bit_mask)) == high_bit_mask
         else:
+            print sub_opcode
             assert 0
             
     # ********** FLAGS opcodes. **********
@@ -1174,6 +1186,20 @@ class CPU(object):
             self.regs[rm_value] = value
         elif rm_type == ADDRESS:
             self.write_data_byte(rm_value, value)
+            
+    def _get_rm_bits(self, bits, rm_type, rm_value):
+        """ Helper for reading from either an 8 or 16 bit r/m field. """
+        if bits == 8:
+            return self._get_rm8(rm_type, rm_value)
+        else:
+            return self._get_rm16(rm_type, rm_value)
+            
+    def _set_rm_bits(self, bits, rm_type, rm_value, value):
+        """ Helper for writing to either an 8 or 16 bit r/m field. """
+        if bits == 8:
+            return self._set_rm8(rm_type, rm_value, value)
+        else:
+            return self._set_rm16(rm_type, rm_value, value)
             
     # ********** Debugger functions. **********
     def dump_regs(self):

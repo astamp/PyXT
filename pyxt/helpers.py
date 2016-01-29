@@ -62,5 +62,5 @@ def rotate_left_16_bits(value, count):
     left_rotate_mask = (~right_rotate_mask) & 0xFFFF
     
     new_value = ((value << count) & left_rotate_mask) | ((value >> (16 - count)) & right_rotate_mask)
-    return new_value, new_value & 0x01 == 0x01
+    return new_value, new_value & 0x0001 == 0x0001
     

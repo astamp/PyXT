@@ -1684,3 +1684,28 @@ class TestOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertTrue(self.cpu.flags.sign)
         self.assertFalse(self.cpu.flags.carry)
         
+class RolOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_rol_rm8_1_simple(self):
+        """
+        rol al, 1
+        hlt
+        """
+        self.cpu.regs.AL = 0x0F
+        self.load_code_string("D0 C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x1E)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_rol_rm8_1_wrap_around(self):
+        """
+        rol al, 1
+        hlt
+        """
+        self.cpu.regs.AL = 0x80
+        self.load_code_string("D0 C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x01)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertTrue(self.cpu.flags.carry)
+        
