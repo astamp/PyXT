@@ -2,6 +2,8 @@
 pyxt.helpers - A collection of helper functions used throughout PyXT.
 """
 
+import array
+
 def segment_offset_to_address(segment, offset):
     """ Convert a segment and offset to a real address. """
     return ((segment << 4) + offset) & 0xFFFFF
@@ -30,8 +32,6 @@ def count_bits(value):
         value = value >> 1
     return count
     
-import array
-
 HAMMING_WEIGHT_LUT = array.array("B", (0,) * 0x10000)
 for __value in xrange(0, 0x10000):
     HAMMING_WEIGHT_LUT[__value] = count_bits(__value)
