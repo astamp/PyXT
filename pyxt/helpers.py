@@ -40,3 +40,27 @@ def count_bits_fast(value):
     """ Very quickly count the number of set bits in a 16 bit value with no error checking. """
     return HAMMING_WEIGHT_LUT[value]
     
+def rotate_left_8_bits(value, count):
+    """ Rotate an 8-bit value left by count and return the result and the carry flag. """
+    # It doesn't make sense to rotate more than 7 bits.
+    count = count & 0x07
+    
+    # Calculate the masks.
+    right_rotate_mask = (1 << count) - 1
+    left_rotate_mask = (~right_rotate_mask) & 0xFF
+    
+    new_value = ((value << count) & left_rotate_mask) | ((value >> (8 - count)) & right_rotate_mask)
+    return new_value, new_value & 0x01 == 0x01
+    
+def rotate_left_16_bits(value, count):
+    """ Rotate a 26-bit value left by count and return the result and the carry flag. """
+    # It doesn't make sense to rotate more than 15 bits.
+    count = count & 0x0F
+    
+    # Calculate the masks.
+    right_rotate_mask = (1 << count) - 1
+    left_rotate_mask = (~right_rotate_mask) & 0xFFFF
+    
+    new_value = ((value << count) & left_rotate_mask) | ((value >> (16 - count)) & right_rotate_mask)
+    return new_value, new_value & 0x01 == 0x01
+    
