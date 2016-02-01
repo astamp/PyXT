@@ -91,14 +91,19 @@ class RotateTests(unittest.TestCase):
         self.assertEqual(rotate_left_8_bits(0xEF, 3), (0x7F, True))
         self.assertEqual(rotate_left_8_bits(0xDF, 3), (0xFE, False))
         
-    def test_rotate_left_8_bits_by_0(self):
-        self.assertEqual(rotate_left_8_bits(0xEF, 0), (0xEF, True))
+    # Rotate by zero will be handled by the caller.
+    def test_rotate_left_8_bits_by_0_doesnt_crash(self):
+        ham, wah = rotate_left_8_bits(0xEF, 0)
+        # self.assertEqual(rotate_left_8_bits(0xEF, 0), (0xEF, False))
+        # self.assertEqual(rotate_left_8_bits(0x01, 0), (0x01, False))
+        # self.assertEqual(rotate_left_8_bits(0x80, 0), (0x00, False))
         
     def test_rotate_left_8_bits_by_8(self):
         self.assertEqual(rotate_left_8_bits(0xEF, 8), (0xEF, True))
         
     def test_rotate_left_8_bits_by_more_than_8(self):
         self.assertEqual(rotate_left_8_bits(0x01, 9), (0x02, False))
+        
         
     def test_rotate_left_16_bits_by_1(self):
         self.assertEqual(rotate_left_16_bits(0x0001, 1), (0x0002, False))
@@ -109,8 +114,12 @@ class RotateTests(unittest.TestCase):
         self.assertEqual(rotate_left_16_bits(0xFFEF, 3), (0xFF7F, True))
         self.assertEqual(rotate_left_16_bits(0xDFFF, 3), (0xFFFE, False))
         
-    def test_rotate_left_16_bits_by_0(self):
-        self.assertEqual(rotate_left_16_bits(0xCAFE, 0), (0xCAFE, False))
+    # Rotate by zero will be handled by the caller.
+    def test_rotate_left_16_bits_by_0_doesnt_crash(self):
+        ham, wah = rotate_left_16_bits(0xCAFE, 0)
+        # self.assertEqual(rotate_left_16_bits(0xCAFE, 0), (0xCAFE, False))
+        # self.assertEqual(rotate_left_16_bits(0x0001, 0), (0x0001, False))
+        # self.assertEqual(rotate_left_16_bits(0x8000, 0), (0x8000, False))
         
     def test_rotate_left_16_bits_by_8(self):
         self.assertEqual(rotate_left_16_bits(0xFACE, 8), (0xCEFA, False))
@@ -120,4 +129,66 @@ class RotateTests(unittest.TestCase):
         
     def test_rotate_left_16_bits_by_more_than_16(self):
         self.assertEqual(rotate_left_16_bits(0xBEEF, 20), (0xEEFB, True))
+        
+class ShiftArithmeticRightTests(unittest.TestCase):
+    def test_sar_8_bits_by_1(self):
+        self.assertEqual(shift_arithmetic_right_8_bits(0x01, 1), (0x00, True))
+        self.assertEqual(shift_arithmetic_right_8_bits(0x10, 1), (0x08, False))
+        self.assertEqual(shift_arithmetic_right_8_bits(0x80, 1), (0xC0, False))
+        
+    def test_sar_8_bits_by_3(self):
+        self.assertEqual(shift_arithmetic_right_8_bits(0x01, 3), (0x00, False))
+        self.assertEqual(shift_arithmetic_right_8_bits(0x70, 3), (0x0E, False))
+        self.assertEqual(shift_arithmetic_right_8_bits(0x80, 3), (0xF0, False))
+        
+    # Rotate by zero will be handled by the caller.
+    # def test_sar_8_bits_by_0_doesnt_crash(self):
+        # ham, wah = shift_arithmetic_right_8_bits(0x80, 0)
+        
+    def test_sar_8_bits_by_7(self):
+        self.assertEqual(shift_arithmetic_right_8_bits(0x80, 7), (0xFF, False))
+        self.assertEqual(shift_arithmetic_right_8_bits(0x40, 7), (0x00, True))
+        
+    def test_sar_8_bits_by_8(self):
+        self.assertEqual(shift_arithmetic_right_8_bits(0x80, 8), (0xFF, True))
+        self.assertEqual(shift_arithmetic_right_8_bits(0x40, 8), (0x00, False))
+        
+    def test_sar_8_bits_by_9(self):
+        self.assertEqual(shift_arithmetic_right_8_bits(0x80, 9), (0xFF, True))
+        self.assertEqual(shift_arithmetic_right_8_bits(0x40, 9), (0x00, False))
+        
+    def test_sar_8_bits_by_alot(self):
+        self.assertEqual(shift_arithmetic_right_8_bits(0x80, 22), (0xFF, True))
+        self.assertEqual(shift_arithmetic_right_8_bits(0x40, 22), (0x00, False))
+        
+        
+    def test_sar_16_bits_by_1(self):
+        self.assertEqual(shift_arithmetic_right_16_bits(0x0001, 1), (0x0000, True))
+        self.assertEqual(shift_arithmetic_right_16_bits(0x0010, 1), (0x0008, False))
+        self.assertEqual(shift_arithmetic_right_16_bits(0x8000, 1), (0xC000, False))
+        
+    def test_sar_16_bits_by_3(self):
+        self.assertEqual(shift_arithmetic_right_16_bits(0x0001, 3), (0x0000, False))
+        self.assertEqual(shift_arithmetic_right_16_bits(0x0070, 3), (0x000E, False))
+        self.assertEqual(shift_arithmetic_right_16_bits(0x8000, 3), (0xF000, False))
+        
+    # Rotate by zero will be handled by the caller.
+    # def test_sar_16_bits_by_0_doesnt_crash(self):
+        # ham, wah = shift_arithmetic_right_16_bits(0x80, 0)
+        
+    def test_sar_16_bits_by_15(self):
+        self.assertEqual(shift_arithmetic_right_16_bits(0x8000, 15), (0xFFFF, False))
+        self.assertEqual(shift_arithmetic_right_16_bits(0x4000, 15), (0x0000, True))
+        
+    def test_sar_16_bits_by_16(self):
+        self.assertEqual(shift_arithmetic_right_16_bits(0x8000, 16), (0xFFFF, True))
+        self.assertEqual(shift_arithmetic_right_16_bits(0x4000, 16), (0x0000, False))
+        
+    def test_sar_16_bits_by_17(self):
+        self.assertEqual(shift_arithmetic_right_16_bits(0x8000, 17), (0xFFFF, True))
+        self.assertEqual(shift_arithmetic_right_16_bits(0x4000, 17), (0x0000, False))
+        
+    def test_sar_16_bits_by_more_alot(self):
+        self.assertEqual(shift_arithmetic_right_16_bits(0x8000, 22), (0xFFFF, True))
+        self.assertEqual(shift_arithmetic_right_16_bits(0x4000, 22), (0x0000, False))
         
