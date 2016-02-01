@@ -1709,3 +1709,25 @@ class RolOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
         self.assertTrue(self.cpu.flags.carry)
         
+    def test_rol_rm16_1_simple(self):
+        """
+        rol ax, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x00F0
+        self.load_code_string("D1 C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x01E0)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_rol_rm16_1_wrap_around(self):
+        """
+        rol ax, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x8000
+        self.load_code_string("D1 C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0001)
+        self.assertTrue(self.cpu.flags.carry)
+        
