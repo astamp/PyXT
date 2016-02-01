@@ -21,5 +21,8 @@ python -m coverage run -m unittest discover -p test_%PATTERN%* %ARGS%
 ECHO Generating HTML report...
 python -m coverage html
 
+:: Launch the report in the browser.
+htmlcov\index.html
+
 ECHO DONE!
 ENDLOCAL
