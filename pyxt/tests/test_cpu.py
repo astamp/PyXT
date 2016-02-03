@@ -1731,3 +1731,84 @@ class RolOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0x0001)
         self.assertTrue(self.cpu.flags.carry)
         
+class SarOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_sar_rm8_1_positive(self):
+        """
+        sar al, 1
+        hlt
+        """
+        self.cpu.regs.AL = 0x40
+        self.load_code_string("D0 F8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x20)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_sar_rm8_1_negative(self):
+        """
+        sar al, 1
+        hlt
+        """
+        self.cpu.regs.AL = 0x80
+        self.load_code_string("D0 F8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0xC0)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_sar_rm8_1_shift_out(self):
+        """
+        sar al, 1
+        hlt
+        """
+        self.cpu.regs.AL = 0x01
+        self.load_code_string("D0 F8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x00)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_sar_rm16_1_positive(self):
+        """
+        sar ax, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x4000
+        self.load_code_string("D1 F8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x2000)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_sar_rm8_1_negative(self):
+        """
+        sar al, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x8000
+        self.load_code_string("D1 F8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xC000)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_sar_rm8_1_shift_out(self):
+        """
+        sar al, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x0001
+        self.load_code_string("D1 F8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0000)
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_sar_rm8_1_cross_byte(self):
+        """
+        sar al, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x0100
+        self.load_code_string("D1 F8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x0080)
+        self.assertFalse(self.cpu.flags.carry)
+        

@@ -11,6 +11,7 @@ from ctypes import Structure, Union, c_ushort, c_ubyte
 
 # PyXT imports
 from pyxt.helpers import count_bits_fast, segment_offset_to_address, rotate_left_8_bits, rotate_left_16_bits
+from pyxt.helpers import shift_arithmetic_right_8_bits, shift_arithmetic_right_16_bits
 
 # Logging setup
 import logging
@@ -1009,11 +1010,12 @@ class CPU(object):
     # Shift opcodes.
     def opcode_group_rotate_and_shift(self, opcode):
         """ Opcode group for ROL, ROR, RCL, RCR, SHL, SHR, SAL/SHL, and SAR. """
-        
+        # 0xD0 and 0xD1 use a count of 1, 0xD2 and 0xD3 use the value in CL.
         count = 1
         if opcode & 0x02 == 0x02:
             count = self.regs.CL
             
+        # 0xD0 and 0xD2 work on bytes, 0xD1 and 0xD3 work on words.
         bits = 8
         if opcode & 0x01 == 0x01:
             bits = 16
@@ -1034,9 +1036,9 @@ class CPU(object):
             self._set_rm_bits(bits, rm_type, rm_value, value)
             
         elif sub_opcode == 0x05:
+            self.flags.carry = (value >> (count - 1)) & 0x01 == 0x01
             value = value >> count
             self.flags.set_from_alu_no_carry(value)
-            self.flags.carry = (old_value >> (count - 1)) & 0x01 == 0x01
             
         elif sub_opcode == 0x04:
             # 0x0010 << 12 => CF = True
@@ -1045,6 +1047,16 @@ class CPU(object):
             self.flags.set_from_alu_no_carry(value)
             if count == 1:
                 self.flags.overflow = ((old_value & high_bit_mask) ^ (value & high_bit_mask)) == high_bit_mask
+                
+        elif sub_opcode == 0x07:
+            if bits == 8:
+                value, self.flags.carry = shift_arithmetic_right_8_bits(value, count)
+            else:
+                value, self.flags.carry = shift_arithmetic_right_16_bits(value, count)
+                
+            self.flags.set_from_alu_no_carry(value)
+            self._set_rm_bits(bits, rm_type, rm_value, value)
+            
         else:
             print sub_opcode
             assert 0
