@@ -427,6 +427,10 @@ class CPU(object):
             self._mov_sreg_rm16()
         elif opcode == 0x8C:
             self._mov_rm16_sreg()
+        elif opcode == 0xAA:
+            self.opcode_stosb()
+        elif opcode == 0xAB:
+            self.opcode_stosw()
         elif opcode == 0xAC:
             self.opcode_lodsb()
         elif opcode == 0xAD:
@@ -1138,6 +1142,16 @@ class CPU(object):
         self.bus.io_write_byte(port, value)
         
     # ********** String opcodes. **********
+    def opcode_stosb(self):
+        """ Write the value in AL to ES:DI and increments or decrements DI. """
+        self.bus.mem_write_byte(segment_offset_to_address(self.get_extra_segment(), self.regs.DI), self.regs.AL)
+        self.regs.DI += -1 if self.flags.direction else 1
+        
+    def opcode_stosw(self):
+        """ Write the word in AX to ES:DI and increments or decrements DI by 2. """
+        self.bus.mem_write_word(segment_offset_to_address(self.get_extra_segment(), self.regs.DI), self.regs.AX)
+        self.regs.DI += -2 if self.flags.direction else 2
+        
     def opcode_lodsb(self):
         """ Reads a byte from DS:SI into AL and increments or decrements SI. """
         self.regs.AL = self.read_data_byte(self.regs.SI)
@@ -1152,6 +1166,10 @@ class CPU(object):
     def get_data_segment(self):
         """ Helper function to return the effective data segment. """
         return self.regs.DS
+        
+    def get_extra_segment(self):
+        """ Helper function to return the effective extra segment. """
+        return self.regs.ES
         
     def write_data_word(self, offset, value):
         """ Write a word to data memory at the given offset.  Assume DS unless overridden by a prefix. """

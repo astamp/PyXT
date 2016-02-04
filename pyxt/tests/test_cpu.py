@@ -1812,3 +1812,86 @@ class SarOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AL, 0x0080)
         self.assertFalse(self.cpu.flags.carry)
         
+class StosOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_stosb_incrementing(self):
+        """
+        stosb
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AH = 0xFF
+        self.cpu.regs.AL = 0x77
+        self.load_code_string("AA F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x77) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AH, 0xFF) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.ES, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DI, 0x0005)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x77)
+        self.assertEqual(self.memory.mem_read_byte(21), 0x00) # Should be unmodified.
+        
+    def test_stosb_decrementing(self):
+        """
+        stosb
+        hlt
+        """
+        self.cpu.flags.direction = True
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AH = 0xFF
+        self.cpu.regs.AL = 0x77
+        self.load_code_string("AA F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x77) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AH, 0xFF) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.ES, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DI, 0x0003)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x77)
+        self.assertEqual(self.memory.mem_read_byte(21), 0x00) # Should be unmodified.
+        
+    def test_stosw_incrementing(self):
+        """
+        stosw
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AH = 0xFF
+        self.cpu.regs.AL = 0x77
+        self.load_code_string("AB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x77) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AH, 0xFF) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.ES, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DI, 0x0006)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x77)
+        self.assertEqual(self.memory.mem_read_byte(21), 0xFF)
+        self.assertEqual(self.memory.mem_read_byte(22), 0x00) # Should be unmodified.
+        
+    def test_stosw_decrementing(self):
+        """
+        stosw
+        hlt
+        """
+        self.cpu.flags.direction = True
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AH = 0xFF
+        self.cpu.regs.AL = 0x77
+        self.load_code_string("AB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x77) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AH, 0xFF) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.ES, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DI, 0x0002)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x77)
+        self.assertEqual(self.memory.mem_read_byte(21), 0xFF)
+        self.assertEqual(self.memory.mem_read_byte(22), 0x00) # Should be unmodified.
+        
