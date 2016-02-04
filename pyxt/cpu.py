@@ -290,6 +290,7 @@ class CPU(object):
         
         # Prefix flags.
         self.repeat_prefix = REPEAT_NONE
+        self.segment_override = None
         
     def install_bus(self, bus):
         """ Register the bus with the CPU. """
@@ -306,6 +307,7 @@ class CPU(object):
         """ Fetch and execute one instruction. """
         # Clear all prefixes.
         self.repeat_prefix = REPEAT_NONE
+        self.segment_override = None
         
         # Uncomment these lines for debugging, but they make the code slow if left on.
         
@@ -328,6 +330,8 @@ class CPU(object):
             # Configure flags based on the prefix.
             if opcode == 0xF3:
                 self.repeat_prefix = REPEAT_REP_REPZ
+            elif opcode == 0x26:
+                self.segment_override = "ES"
             else:
                 break
                 
@@ -1210,11 +1214,11 @@ class CPU(object):
     # ********** Memory access helpers. **********
     def get_data_segment(self):
         """ Helper function to return the effective data segment. """
-        return self.regs.DS
+        return self.regs[self.segment_override] if self.segment_override else self.regs.DS
         
     def get_extra_segment(self):
         """ Helper function to return the effective extra segment. """
-        return self.regs.ES
+        return self.regs[self.segment_override] if self.segment_override else self.regs.ES
         
     def write_data_word(self, offset, value):
         """ Write a word to data memory at the given offset.  Assume DS unless overridden by a prefix. """

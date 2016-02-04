@@ -2028,11 +2028,64 @@ class RepPrefixTests(BaseOpcodeAcceptanceTests):
         self.cpu.regs.BX = 0
         self.cpu.regs.CX = 2
         self.load_code_string("F3 43 AA F4")
-        self.assertEqual(self.run_to_halt(), 3) # Prefix counts for 1...
+        self.assertEqual(self.run_to_halt(), 3)
         self.assertEqual(self.cpu.regs.BX, 1) # Only one time.
         self.assertEqual(self.cpu.regs.DI, 5)
         self.assertEqual(self.cpu.regs.CX, 2) # Invalid opcode/prefix combination ignored.
         self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
         self.assertEqual(self.memory.mem_read_byte(20), 0xAA) # Only one time.
         self.assertEqual(self.memory.mem_read_byte(21), 0x00) # Should be unmodified.
+        
+class SegmentOverrideTests(BaseOpcodeAcceptanceTests):
+    def test_get_data_segment_with_override(self):
+        self.cpu.regs.DS = 0x1122
+        self.cpu.regs.ES = 0x3344
+        self.cpu.regs.CS = 0x5566
+        self.cpu.regs.SS = 0x7788
+        
+        self.cpu.segment_override = None
+        self.assertEqual(self.cpu.get_data_segment(), 0x1122)
+        
+        self.cpu.segment_override = "DS"
+        self.assertEqual(self.cpu.get_data_segment(), 0x1122)
+        self.cpu.segment_override = "ES"
+        self.assertEqual(self.cpu.get_data_segment(), 0x3344)
+        self.cpu.segment_override = "CS"
+        self.assertEqual(self.cpu.get_data_segment(), 0x5566)
+        self.cpu.segment_override = "SS"
+        self.assertEqual(self.cpu.get_data_segment(), 0x7788)
+        
+    def test_get_extra_segment_with_override(self):
+        self.cpu.regs.DS = 0x1122
+        self.cpu.regs.ES = 0x3344
+        self.cpu.regs.CS = 0x5566
+        self.cpu.regs.SS = 0x7788
+        
+        self.cpu.segment_override = None
+        self.assertEqual(self.cpu.get_extra_segment(), 0x3344)
+        
+        self.cpu.segment_override = "DS"
+        self.assertEqual(self.cpu.get_extra_segment(), 0x1122)
+        self.cpu.segment_override = "ES"
+        self.assertEqual(self.cpu.get_extra_segment(), 0x3344)
+        self.cpu.segment_override = "CS"
+        self.assertEqual(self.cpu.get_extra_segment(), 0x5566)
+        self.cpu.segment_override = "SS"
+        self.assertEqual(self.cpu.get_extra_segment(), 0x7788)
+        
+    def test_es_override(self):
+        """
+        mov [es:bx], al
+        mov [bx], ah
+        hlt
+        """
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.ES = 0x0002
+        self.cpu.regs.AH = 0x55
+        self.cpu.regs.AL = 0xAA
+        self.cpu.regs.BX = 0
+        self.load_code_string("26 88 07 88 27 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.memory.mem_read_byte(16), 0x55) # Normally uses DS.
+        self.assertEqual(self.memory.mem_read_byte(32), 0xAA) # Overridden to use ES.
         
