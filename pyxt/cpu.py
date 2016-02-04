@@ -38,6 +38,13 @@ UNKNOWN = 0
 ADDRESS = 1
 REGISTER = 2
 
+# Repeat prefixes.
+# REP is valid for: INS, OUTS, MOVS, LODS, STOS
+# REPZ, REPNZ are valid for: CMPS, SCAS
+REPEAT_NONE = 0
+REPEAT_REP_REPZ = 0xF3
+REPEAT_REPNZ = 0xF2
+
 BYTE_REG = {
     0x00 : "AL",
     0x01 : "CL",
@@ -99,6 +106,23 @@ def decode_seg_reg(value):
     """ Decode a segment register selector into the string register name. """
     return SEGMENT_REG[value & 0x03]
     
+# Decorators
+def supports_rep_prefix(func):
+    """ Decorator to implement the REP prefix which repeats while CX != 0. """
+    
+    def _repeated(self, *args):
+        """ Wrapper that implements REP. """
+        if self.repeat_prefix == REPEAT_REP_REPZ:
+            while self.regs.CX != 0:
+                # TODO: When interrupts are supported we will need to process them here.
+                self.regs.CX -= 1
+                func(self, *args)
+                
+        else:
+            func(self, *args)
+            
+    return _repeated
+
 # Classes
 class WordRegs(Structure):
     _fields_ = [
@@ -264,6 +288,9 @@ class CPU(object):
             0x05 : self._alu_ax_imm16,
         }
         
+        # Prefix flags.
+        self.repeat_prefix = REPEAT_NONE
+        
     def install_bus(self, bus):
         """ Register the bus with the CPU. """
         self.bus = bus
@@ -276,6 +303,10 @@ class CPU(object):
         return self.mem_read_byte(address)
         
     def fetch(self):
+        """ Fetch and execute one instruction. """
+        # Clear all prefixes.
+        self.repeat_prefix = REPEAT_NONE
+        
         # Uncomment these lines for debugging, but they make the code slow if left on.
         
         # if self.dump_enabled:
@@ -285,11 +316,21 @@ class CPU(object):
         # if self.should_break():
             # self.enter_debugger()
             
-        opcode = self.read_instruction_byte()
-        
-        # if self.dump_enabled:
-            # log.debug("Fetched opcode: 0x%02x", opcode)
+        # We could have multiple prefixes.
+        # TODO: There is probably a better way to do this than `while True'.
+        while True:
+            # Fetch an opcode or prefix.
+            opcode = self.read_instruction_byte()
             
+            # if self.dump_enabled:
+                # log.debug("Fetched opcode: 0x%02x", opcode)
+                
+            # Configure flags based on the prefix.
+            if opcode == 0xF3:
+                self.repeat_prefix = REPEAT_REP_REPZ
+            else:
+                break
+                
         if opcode == 0xF4:
             self._hlt()
         elif opcode & 0xF8 == 0x00 and opcode & 0x6 != 0x6:
@@ -1142,21 +1183,25 @@ class CPU(object):
         self.bus.io_write_byte(port, value)
         
     # ********** String opcodes. **********
+    @supports_rep_prefix
     def opcode_stosb(self):
         """ Write the value in AL to ES:DI and increments or decrements DI. """
         self.bus.mem_write_byte(segment_offset_to_address(self.get_extra_segment(), self.regs.DI), self.regs.AL)
         self.regs.DI += -1 if self.flags.direction else 1
         
+    @supports_rep_prefix
     def opcode_stosw(self):
         """ Write the word in AX to ES:DI and increments or decrements DI by 2. """
         self.bus.mem_write_word(segment_offset_to_address(self.get_extra_segment(), self.regs.DI), self.regs.AX)
         self.regs.DI += -2 if self.flags.direction else 2
         
+    @supports_rep_prefix
     def opcode_lodsb(self):
         """ Reads a byte from DS:SI into AL and increments or decrements SI. """
         self.regs.AL = self.read_data_byte(self.regs.SI)
         self.regs.SI += -1 if self.flags.direction else 1
         
+    @supports_rep_prefix
     def opcode_lodsw(self):
         """ Reads a word from DS:SI into AX and increments or decrements SI by 2. """
         self.regs.AX = self.read_data_word(self.regs.SI)

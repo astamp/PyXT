@@ -1895,3 +1895,144 @@ class StosOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(21), 0xFF)
         self.assertEqual(self.memory.mem_read_byte(22), 0x00) # Should be unmodified.
         
+class RepPrefixTests(BaseOpcodeAcceptanceTests):
+    def test_rep_stosb(self):
+        """
+        rep stosb
+        hlt
+        """
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 4
+        self.cpu.regs.AL = 0xAA
+        self.cpu.regs.CX = 3
+        self.load_code_string("F3 AA F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DI, 7)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0xAA)
+        self.assertEqual(self.memory.mem_read_byte(21), 0xAA)
+        self.assertEqual(self.memory.mem_read_byte(22), 0xAA)
+        self.assertEqual(self.memory.mem_read_byte(23), 0x00) # Should be unmodified.
+        
+    def test_rep_stosw(self):
+        """
+        rep stosw
+        hlt
+        """
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 4
+        self.cpu.regs.AX = 0xAA55
+        self.cpu.regs.CX = 2
+        self.load_code_string("F3 AB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DI, 8)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x55)
+        self.assertEqual(self.memory.mem_read_byte(21), 0xAA)
+        self.assertEqual(self.memory.mem_read_byte(22), 0x55)
+        self.assertEqual(self.memory.mem_read_byte(23), 0xAA)
+        self.assertEqual(self.memory.mem_read_byte(24), 0x00) # Should be unmodified.
+        
+    def test_rep_lodsb(self):
+        """
+        rep lodsb
+        hlt
+        """
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI = 4
+        self.cpu.regs.AX = 0x0000
+        self.cpu.regs.CX = 2
+        self.memory.mem_write_byte(19, 0xF0)
+        self.memory.mem_write_byte(20, 0x77)
+        self.memory.mem_write_byte(21, 0x0F)
+        self.load_code_string("F3 AC F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SI, 6)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AL, 0x0F) # It was the last one.
+        
+    def test_rep_lodsw(self):
+        """
+        rep lodsw
+        hlt
+        """
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI = 4
+        self.cpu.regs.AX = 0x0000
+        self.cpu.regs.CX = 3
+        self.memory.mem_write_byte(19, 0x11)
+        self.memory.mem_write_byte(20, 0x22)
+        self.memory.mem_write_byte(21, 0x33)
+        self.memory.mem_write_byte(22, 0x44)
+        self.memory.mem_write_byte(23, 0x55)
+        self.memory.mem_write_byte(24, 0x66)
+        self.memory.mem_write_byte(25, 0x77)
+        self.load_code_string("F3 AD F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SI, 10)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.cpu.regs.AX, 0x7766) # It was the last one.
+        
+    def test_rep_cancels_after_one(self):
+        """
+        rep stosb
+        stosb
+        hlt
+        """
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 4
+        self.cpu.regs.AL = 0xAA
+        self.cpu.regs.CX = 3
+        self.load_code_string("F3 AA AA F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.DI, 8)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0xAA) # Three from rep stosb.
+        self.assertEqual(self.memory.mem_read_byte(21), 0xAA)
+        self.assertEqual(self.memory.mem_read_byte(22), 0xAA)
+        self.assertEqual(self.memory.mem_read_byte(23), 0xAA) # One from the second stosb, shouldn't skip on CX == 0.
+        self.assertEqual(self.memory.mem_read_byte(24), 0x00) # Should be unmodified.
+        
+    def test_rep_skips_if_cx_equals_zero(self):
+        """
+        rep stosb
+        hlt
+        """
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 4
+        self.cpu.regs.AL = 0xAA
+        self.cpu.regs.CX = 0
+        self.load_code_string("F3 AA F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DI, 4)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(21), 0x00) # Should be unmodified.
+        
+    def test_rep_doesnt_hop_instructions_that_dont_support_it(self):
+        """
+        rep inc bx
+        stosb
+        hlt
+        """
+        # I'm not even sure why this assembles, it seems invalid.
+        # This crashes in a FreeDOS VM, so this test only exists so the behaviour is consistent.
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 4
+        self.cpu.regs.AL = 0xAA
+        self.cpu.regs.BX = 0
+        self.cpu.regs.CX = 2
+        self.load_code_string("F3 43 AA F4")
+        self.assertEqual(self.run_to_halt(), 3) # Prefix counts for 1...
+        self.assertEqual(self.cpu.regs.BX, 1) # Only one time.
+        self.assertEqual(self.cpu.regs.DI, 5)
+        self.assertEqual(self.cpu.regs.CX, 2) # Invalid opcode/prefix combination ignored.
+        self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0xAA) # Only one time.
+        self.assertEqual(self.memory.mem_read_byte(21), 0x00) # Should be unmodified.
+        
