@@ -2014,6 +2014,7 @@ class RepPrefixTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(20), 0x00) # Should be unmodified.
         self.assertEqual(self.memory.mem_read_byte(21), 0x00) # Should be unmodified.
         
+    @unittest.skip("The jury is still out on if this is useful...")
     def test_rep_doesnt_hop_instructions_that_dont_support_it(self):
         """
         rep inc bx
@@ -2035,6 +2036,25 @@ class RepPrefixTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
         self.assertEqual(self.memory.mem_read_byte(20), 0xAA) # Only one time.
         self.assertEqual(self.memory.mem_read_byte(21), 0x00) # Should be unmodified.
+        
+    def test_rep_halts_on_invalid_instruction(self):
+        """
+        rep inc bx
+        stosb
+        hlt
+        """
+        # I'm not even sure why this assembles, it seems invalid.
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 4
+        self.cpu.regs.AL = 0xAA
+        self.cpu.regs.BX = 0
+        self.cpu.regs.CX = 2
+        self.load_code_string("F3 43 AA F4")
+        self.assertEqual(self.run_to_halt(), 1)
+        self.assertEqual(self.cpu.regs.BX, 1) # Only one time.
+        self.assertEqual(self.cpu.regs.DI, 4) # We halted before executing this.
+        self.assertEqual(self.cpu.regs.CX, 2) # Invalid opcode/prefix combination ignored.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x00) # We halted before executing this.
         
 class SegmentOverrideTests(BaseOpcodeAcceptanceTests):
     def test_get_data_segment_with_override(self):

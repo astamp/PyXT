@@ -118,6 +118,9 @@ def supports_rep_prefix(func):
                 self.regs.CX -= 1
                 func(self, *args)
                 
+            # Clear the prefix so we can catch invalid combinations.
+            self.repeat_prefix = REPEAT_NONE
+            
         else:
             func(self, *args)
             
@@ -481,10 +484,23 @@ class CPU(object):
         elif opcode == 0xAD:
             self.opcode_lodsw()
         else:
-            self.dump_regs()
-            log.error("Invalid opcode: 0x%02x at CS:IP 0x%04x:0x%04x", opcode, self.regs.CS, self.regs.IP)
-            self._hlt()
+            self.signal_invalid_opcode(opcode, "Opcode not implemented.")
             
+        # The REP* prefixes will clear this after execution.  If it is still set at this point
+        # it means that someone tried to REP an instruction that doesn't support it.
+        if self.repeat_prefix != REPEAT_NONE:
+            self.signal_invalid_opcode(opcode, "Opcode doesn't support repeat prefix.")
+            
+    def signal_invalid_opcode(self, opcode, message = None):
+        """ Invalid opcode handler. """
+        self.dump_regs()
+        log.error("Invalid opcode: 0x%02x at CS:IP 0x%04x:0x%04x", opcode, self.regs.CS, self.regs.IP)
+        if self.repeat_prefix != REPEAT_NONE:
+            log.error("Repeat prefix was: 0x%02x", self.repeat_prefix)
+        if message is not None:
+            log.error(message)
+        self._hlt()
+        
     # ********** Opcode parameter helpers. **********
     def get_modrm_operands(self, size, decode_register = True):
         """ Returns register, rm_type, rm_value from a MODRM byte. """
