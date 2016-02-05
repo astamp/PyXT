@@ -1357,6 +1357,90 @@ class LoopOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertTrue(self.cpu.flags.sign)
         self.assertTrue(self.cpu.flags.carry)
         
+    def test_loopz_zero_set(self):
+        """
+        again:
+            loopz again
+        hlt
+        """
+        self.cpu.flags.zero = True
+        self.cpu.regs.CX = 3
+        self.load_code_string("E1 FE F4")
+        self.assertEqual(self.run_to_halt(), 4)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        
+    def test_loopz_zero_clear(self):
+        """
+        again:
+            loopz again
+        hlt
+        """
+        self.cpu.flags.zero = False
+        self.cpu.regs.CX = 3
+        self.load_code_string("E1 FE F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.CX, 2) # Still decremented this once.
+        
+    def test_loopz_does_not_modify_flags(self):
+        """
+        again:
+            loopz again
+        hlt
+        """
+        self.cpu.flags.zero = True
+        self.cpu.flags.sign = True
+        self.cpu.flags.carry = True
+        
+        self.cpu.regs.CX = 3
+        self.load_code_string("E1 FE F4")
+        self.assertEqual(self.run_to_halt(), 4)
+        
+        self.assertTrue(self.cpu.flags.zero)
+        self.assertTrue(self.cpu.flags.sign)
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_loopnz_zero_set(self):
+        """
+        again:
+            loopnz again
+        hlt
+        """
+        self.cpu.flags.zero = True
+        self.cpu.regs.CX = 3
+        self.load_code_string("E0 FE F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.CX, 2) # Still decremented this once.
+        
+    def test_loopnz_zero_clear(self):
+        """
+        again:
+            loopnz again
+        hlt
+        """
+        self.cpu.flags.zero = False
+        self.cpu.regs.CX = 3
+        self.load_code_string("E0 FE F4")
+        self.assertEqual(self.run_to_halt(), 4)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        
+    def test_loopnz_does_not_modify_flags(self):
+        """
+        again:
+            loopnz again
+        hlt
+        """
+        self.cpu.flags.zero = False
+        self.cpu.flags.sign = True
+        self.cpu.flags.carry = True
+        
+        self.cpu.regs.CX = 3
+        self.load_code_string("E0 FE F4")
+        self.assertEqual(self.run_to_halt(), 4)
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertTrue(self.cpu.flags.sign)
+        self.assertTrue(self.cpu.flags.carry)
+        
 class IOPortTester(Device):
     """ Device that maps to all ports for testing. """
     def __init__(self):

@@ -370,8 +370,12 @@ class CPU(object):
             self._jz()
         elif opcode == 0x75:
             self._jnz()
+        elif opcode == 0xE0:
+            self.opcode_loopnz()
+        elif opcode == 0xE1:
+            self.opcode_loopz()
         elif opcode == 0xE2:
-            self._loop()
+            self.opcode_loop()
         elif opcode == 0xE8:
             self._call()
         elif opcode == 0xC3:
@@ -796,8 +800,8 @@ class CPU(object):
         self.regs.IP = self.internal_pop()
         log.debug("RET back to 0x%04x", self.regs.IP)
         
-    def _loop(self):
-        """ Decrement CX and jump short if it is non-zero. """
+    def opcode_loop(self):
+        """ LOOP - Decrement CX and jump short if it is non-zero. """
         distance = self.get_byte_immediate()
         
         value = self.regs.CX - 1
@@ -806,6 +810,28 @@ class CPU(object):
         if value != 0:
             self.regs.IP += signed_byte(distance)
             # log.debug("LOOP incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
+            
+    def opcode_loopz(self):
+        """ LOOPZ/LOOPE - Decrement CX and jump short if it is non-zero and the zero flag is set. """
+        distance = self.get_byte_immediate()
+        
+        value = self.regs.CX - 1
+        self.regs.CX = value
+        
+        if value != 0 and self.flags.zero:
+            self.regs.IP += signed_byte(distance)
+            # log.debug("LOOPZ/LOOPE incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
+            
+    def opcode_loopnz(self):
+        """ LOOPNZ/LOOPNE - Decrement CX and jump short if it is non-zero and the zero flag is clear. """
+        distance = self.get_byte_immediate()
+        
+        value = self.regs.CX - 1
+        self.regs.CX = value
+        
+        if value != 0 and self.flags.zero is False:
+            self.regs.IP += signed_byte(distance)
+            # log.debug("LOOPNZ/LOOPNE incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     # ********** Arithmetic opcodes. **********
     def opcode_group_8x(self, opcode):
