@@ -335,6 +335,8 @@ class CPU(object):
                 self.repeat_prefix = REPEAT_REP_REPZ
             elif opcode == 0x26:
                 self.segment_override = "ES"
+            elif opcode == 0x2E:
+                self.segment_override = "CS"
             else:
                 break
                 

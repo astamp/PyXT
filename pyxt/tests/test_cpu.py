@@ -2249,6 +2249,21 @@ class SegmentOverrideTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(16), 0x55) # Normally uses DS.
         self.assertEqual(self.memory.mem_read_byte(32), 0xAA) # Overridden to use ES.
         
+    def test_cs_override(self):
+        """
+        mov [cs:bx], al
+        mov [bx], ah
+        hlt
+        """
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.AH = 0x55
+        self.cpu.regs.AL = 0xAA
+        self.cpu.regs.BX = 0
+        self.load_code_string("2E 88 07 88 27 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.memory.mem_read_byte(0), 0xAA) # Overridden to use CS.
+        self.assertEqual(self.memory.mem_read_byte(16), 0x55) # Normally uses DS.
+        
 class MovsOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_movsb_incrementing(self):
         """
