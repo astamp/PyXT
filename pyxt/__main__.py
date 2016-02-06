@@ -60,7 +60,8 @@ def main():
     bus.install_device(MDA_START_ADDRESS, mda_card)
     
     bus.install_device(None, DmaController(0x0000))
-    bus.install_device(None, ProgrammableInterruptController(0x00A0))
+    bus.install_device(None, ProgrammableInterruptController(0x020))
+    # TODO: NMI mask register at 0x0A0 on the XT.
     
     pit = ProgrammableIntervalTimer(0x0040)
     pit.channels[0].gate = True
@@ -78,9 +79,13 @@ def main():
         (cs, ip) = breakpoint.split(":")
         cpu.breakpoints.append((int(cs, 16), int(ip, 16)))
         
-    while not cpu.hlt:
-        pit.clock()
-        cpu.fetch()
+    try:
+        while not cpu.hlt:
+            pit.clock()
+            cpu.fetch()
+            
+    except Exception:
+        log.exception("Unhandled exception at CS:IP 0x%04x:0x%04x", cpu.regs.CS, cpu.regs.IP)
         
 if __name__ == "__main__":
     if os.environ.get("PYXT_PROFILING"):
