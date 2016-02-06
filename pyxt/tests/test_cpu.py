@@ -2140,6 +2140,62 @@ class RepPrefixTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.CX, 2) # Invalid opcode/prefix combination ignored.
         self.assertEqual(self.memory.mem_read_byte(20), 0x00) # We halted before executing this.
         
+    def test_rep_movsb(self):
+        """
+        rep movsb
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI = 0x0004
+        self.cpu.regs.ES = 0x0002
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.CX = 3
+        self.memory.mem_write_byte(19, 0x11)
+        self.memory.mem_write_byte(20, 0x22)
+        self.memory.mem_write_byte(21, 0x33)
+        self.memory.mem_write_byte(22, 0x44)
+        self.memory.mem_write_byte(23, 0x55)
+        self.load_code_string("F3 A4 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.cpu.regs.DI, 0x0007)
+        self.assertEqual(self.cpu.regs.DI, 0x0007)
+        self.assertEqual(self.memory.mem_read_byte(35), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(36), 0x22)
+        self.assertEqual(self.memory.mem_read_byte(37), 0x33)
+        self.assertEqual(self.memory.mem_read_byte(38), 0x44)
+        self.assertEqual(self.memory.mem_read_byte(39), 0x00) # Should be unmodified.
+        
+    def test_rep_movsw(self):
+        """
+        rep movsw
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI = 0x0004
+        self.cpu.regs.ES = 0x0002
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.CX = 2
+        self.memory.mem_write_byte(19, 0x11)
+        self.memory.mem_write_byte(20, 0x22)
+        self.memory.mem_write_byte(21, 0x33)
+        self.memory.mem_write_byte(22, 0x44)
+        self.memory.mem_write_byte(23, 0x55)
+        self.memory.mem_write_byte(24, 0x66)
+        self.load_code_string("F3 A5 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.cpu.regs.DI, 0x0008)
+        self.assertEqual(self.cpu.regs.DI, 0x0008)
+        self.assertEqual(self.memory.mem_read_byte(35), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(36), 0x22)
+        self.assertEqual(self.memory.mem_read_byte(37), 0x33)
+        self.assertEqual(self.memory.mem_read_byte(38), 0x44)
+        self.assertEqual(self.memory.mem_read_byte(39), 0x55)
+        self.assertEqual(self.memory.mem_read_byte(40), 0x00) # Should be unmodified.
+        
 class SegmentOverrideTests(BaseOpcodeAcceptanceTests):
     def test_get_data_segment_with_override(self):
         self.cpu.regs.DS = 0x1122
@@ -2192,4 +2248,109 @@ class SegmentOverrideTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 3)
         self.assertEqual(self.memory.mem_read_byte(16), 0x55) # Normally uses DS.
         self.assertEqual(self.memory.mem_read_byte(32), 0xAA) # Overridden to use ES.
+        
+class MovsOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_movsb_incrementing(self):
+        """
+        movsb
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI = 0x0004
+        self.cpu.regs.ES = 0x0002
+        self.cpu.regs.DI = 0x0004
+        self.memory.mem_write_byte(19, 0x11)
+        self.memory.mem_write_byte(20, 0x22)
+        self.memory.mem_write_byte(21, 0x33)
+        self.load_code_string("A4 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DS, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SI, 0x0005)
+        self.assertEqual(self.cpu.regs.ES, 0x0002) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DI, 0x0005)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x11) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x22) # Should be unmodified
+        self.assertEqual(self.memory.mem_read_byte(21), 0x33) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(35), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(36), 0x22)
+        self.assertEqual(self.memory.mem_read_byte(37), 0x00) # Should be unmodified.
+        
+    def test_movsb_decrementing(self):
+        """
+        movsb
+        hlt
+        """
+        self.cpu.flags.direction = True
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI = 0x0004
+        self.cpu.regs.ES = 0x0002
+        self.cpu.regs.DI = 0x0004
+        self.memory.mem_write_byte(19, 0x11)
+        self.memory.mem_write_byte(20, 0x22)
+        self.memory.mem_write_byte(21, 0x33)
+        self.load_code_string("A4 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DS, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SI, 0x0003)
+        self.assertEqual(self.cpu.regs.ES, 0x0002) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DI, 0x0003)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x11) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x22) # Should be unmodified
+        self.assertEqual(self.memory.mem_read_byte(21), 0x33) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(35), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(36), 0x22)
+        self.assertEqual(self.memory.mem_read_byte(37), 0x00) # Should be unmodified.
+        
+    def test_movsw_incrementing(self):
+        """
+        movsw
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI = 0x0004
+        self.cpu.regs.ES = 0x0002
+        self.cpu.regs.DI = 0x0004
+        self.memory.mem_write_byte(19, 0x11)
+        self.memory.mem_write_byte(20, 0x22)
+        self.memory.mem_write_byte(21, 0x33)
+        self.load_code_string("A5 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DS, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SI, 0x0006)
+        self.assertEqual(self.cpu.regs.ES, 0x0002) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DI, 0x0006)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x11) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x22) # Should be unmodified
+        self.assertEqual(self.memory.mem_read_byte(21), 0x33) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(35), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(36), 0x22)
+        self.assertEqual(self.memory.mem_read_byte(37), 0x33)
+        
+    def test_movsw_decrementing(self):
+        """
+        movsw
+        hlt
+        """
+        self.cpu.flags.direction = True
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI = 0x0004
+        self.cpu.regs.ES = 0x0002
+        self.cpu.regs.DI = 0x0004
+        self.memory.mem_write_byte(19, 0x11)
+        self.memory.mem_write_byte(20, 0x22)
+        self.memory.mem_write_byte(21, 0x33)
+        self.load_code_string("A5 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DS, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SI, 0x0002)
+        self.assertEqual(self.cpu.regs.ES, 0x0002) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DI, 0x0002)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x11) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x22) # Should be unmodified
+        self.assertEqual(self.memory.mem_read_byte(21), 0x33) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(35), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(36), 0x22)
+        self.assertEqual(self.memory.mem_read_byte(37), 0x33)
         

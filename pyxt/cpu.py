@@ -479,6 +479,10 @@ class CPU(object):
             self._mov_sreg_rm16()
         elif opcode == 0x8C:
             self._mov_rm16_sreg()
+        elif opcode == 0xA4:
+            self.opcode_movsb()
+        elif opcode == 0xA5:
+            self.opcode_movsw()
         elif opcode == 0xAA:
             self.opcode_stosb()
         elif opcode == 0xAB:
@@ -1253,6 +1257,26 @@ class CPU(object):
         """ Reads a word from DS:SI into AX and increments or decrements SI by 2. """
         self.regs.AX = self.read_data_word(self.regs.SI)
         self.regs.SI += -2 if self.flags.direction else 2
+        
+    @supports_rep_prefix
+    def opcode_movsb(self):
+        """ Reads a byte from DS:SI and writes it to ES:DI. """
+        self.bus.mem_write_byte(
+            segment_offset_to_address(self.get_extra_segment(), self.regs.DI),
+            self.read_data_byte(self.regs.SI),
+        )
+        self.regs.SI += -1 if self.flags.direction else 1
+        self.regs.DI += -1 if self.flags.direction else 1
+        
+    @supports_rep_prefix
+    def opcode_movsw(self):
+        """ Reads a word from DS:SI and writes it to ES:DI. """
+        self.bus.mem_write_word(
+            segment_offset_to_address(self.get_extra_segment(), self.regs.DI),
+            self.read_data_word(self.regs.SI),
+        )
+        self.regs.SI += -2 if self.flags.direction else 2
+        self.regs.DI += -2 if self.flags.direction else 2
         
     # ********** Memory access helpers. **********
     def get_data_segment(self):
