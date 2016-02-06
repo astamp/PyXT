@@ -23,6 +23,7 @@ class ProgrammableInterruptController(Device):
         self.trigger_mode = self.EDGE_TRIGGERED
         self.priorities = [0, 1, 2, 3, 4, 5, 6, 7]
         self.vector_base = 0x00
+        self.address_interval = 4
         self.i8086_8088_mode = False
         self.auto_eoi = False
         self.slave_mode_address = 7
@@ -50,8 +51,8 @@ class ProgrammableInterruptController(Device):
         """ Run a byte through the initialization state machine. """
         if self.icws_state == 1:
             self.icw4_needed = value & 0x01 == 0x01
-            self.cascade = value & 0x02 == 0x02
-            # TODO: Do we need call address interval for 8086 mode?
+            self.cascade = not (value & 0x02 == 0x02)
+            self.address_interval = 4 if value & 0x04 == 0x04 else 8
             self.trigger_mode = self.LEVEL_TRIGGERED if value & 0x04 == 0x04 else self.EDGE_TRIGGERED
             # TODO: No support for full MCS-80/8085 vector addresses.
             
@@ -91,24 +92,18 @@ class ProgrammableInterruptController(Device):
         interrupt = value & 0x07
         print "command = %r, interrupt = %r" % (command, interrupt)
         
-    # def io_read_byte(self, address):
-        # offset = address - self.base
-        # if offset == 0 or offset == 1 or offset == 2:
-            # return self.channels[offset]
-        # elif offset == 3:
-            # print "CONTROL REGISTER"
-        # else:
-            # raise ValueError("Bad offset to the 8253!!!")
+    def io_read_byte(self, address):
+        offset = address - self.base
+        if offset == 1:
+            return self.mask
+        else:
+            return 0
             
     def io_write_byte(self, address, value):
         offset = address - self.base
         if offset == 0 and value & 0x10 == 0x10:
             self.start_initialization_sequence()
-        # elif offset == 1:
-            # print "DATA REGISTER", value
-        # else:
-            # raise ValueError("Bad offset to the 8259!!!")
-        
+            
         if self.icws_state > 0:
             self.process_icws_byte(value)
         else:

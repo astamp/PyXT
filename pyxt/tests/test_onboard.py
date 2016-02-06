@@ -39,12 +39,22 @@ class PICTests(unittest.TestCase):
     def test_icw1_single_vs_cascade(self):
         self.obj.io_write_byte(0x00A0, 0x12)
         self.assertEqual(self.obj.icws_state, 2)
-        self.assertEqual(self.obj.cascade, True)
+        self.assertEqual(self.obj.cascade, False)
         
         # Setting bit 4 and address 0 should restart the init sequence.
         self.obj.io_write_byte(0x00A0, 0x10)
         self.assertEqual(self.obj.icws_state, 2)
-        self.assertEqual(self.obj.cascade, False)
+        self.assertEqual(self.obj.cascade, True)
+        
+    def test_icw1_address_interval(self):
+        self.obj.io_write_byte(0x00A0, 0x10)
+        self.assertEqual(self.obj.icws_state, 2)
+        self.assertEqual(self.obj.address_interval, 8)
+        
+        # Setting bit 4 and address 0 should restart the init sequence.
+        self.obj.io_write_byte(0x00A0, 0x14)
+        self.assertEqual(self.obj.icws_state, 2)
+        self.assertEqual(self.obj.address_interval, 4)
         
     def test_icw1_trigger_mode(self):
         self.obj.io_write_byte(0x00A0, 0x14)
@@ -63,29 +73,29 @@ class PICTests(unittest.TestCase):
         self.assertEqual(self.obj.vector_base, 0xF1)
         
     def test_icw2_skip_icw3_and_icw4(self):
-        self.obj.io_write_byte(0x00A0, 0x10)
+        self.obj.io_write_byte(0x00A0, 0x12)
         self.obj.io_write_byte(0x00A1, 0xFF)
         self.assertEqual(self.obj.icws_state, 0)
         
     def test_icw2_skip_icw3_not_icw4(self):
-        self.obj.io_write_byte(0x00A0, 0x11)
+        self.obj.io_write_byte(0x00A0, 0x13)
         self.obj.io_write_byte(0x00A1, 0xFF)
         self.assertEqual(self.obj.icws_state, 4)
         
     # The next 2 tests ensure the states transition in the proper priority.
     def test_icw2_to_icw3_and_icw4(self):
-        self.obj.io_write_byte(0x00A0, 0x13)
+        self.obj.io_write_byte(0x00A0, 0x11)
         self.obj.io_write_byte(0x00A1, 0xFF)
         self.assertEqual(self.obj.icws_state, 3)
         
     def test_icw2_to_icw3_skip_icw4(self):
-        self.obj.io_write_byte(0x00A0, 0x12)
+        self.obj.io_write_byte(0x00A0, 0x10)
         self.obj.io_write_byte(0x00A1, 0xFF)
         self.assertEqual(self.obj.icws_state, 3)
         
     # ***** ICW3 Tests *****
     def test_icw3_to_icw4(self):
-        self.obj.io_write_byte(0x00A0, 0x13)
+        self.obj.io_write_byte(0x00A0, 0x11)
         self.obj.io_write_byte(0x00A1, 0xFF)
         self.obj.io_write_byte(0x00A1, 0x00)
         self.assertEqual(self.obj.icws_state, 4)
@@ -110,7 +120,7 @@ class PICTests(unittest.TestCase):
         self.obj.io_write_byte(0x00A1, 0x00)
         self.assertEqual(self.obj.i8086_8088_mode, False)
         
-        self.obj.io_write_byte(0x00A0, 0x11) # Skip ICW3
+        self.obj.io_write_byte(0x00A0, 0x13) # Skip ICW3
         self.obj.io_write_byte(0x00A1, 0xFF)
         self.obj.io_write_byte(0x00A1, 0x01)
         self.assertEqual(self.obj.i8086_8088_mode, True)
@@ -121,18 +131,18 @@ class PICTests(unittest.TestCase):
         self.assertEqual(self.obj.i8086_8088_mode, False)
         
     def test_icw4_eoi_mode(self):
-        self.obj.io_write_byte(0x00A0, 0x11) # Skip ICW3
+        self.obj.io_write_byte(0x00A0, 0x13) # Skip ICW3
         self.obj.io_write_byte(0x00A1, 0xFF)
         self.obj.io_write_byte(0x00A1, 0x00)
         self.assertEqual(self.obj.auto_eoi, False)
         
-        self.obj.io_write_byte(0x00A0, 0x11) # Skip ICW3
+        self.obj.io_write_byte(0x00A0, 0x13) # Skip ICW3
         self.obj.io_write_byte(0x00A1, 0xFF)
         self.obj.io_write_byte(0x00A1, 0x02)
         self.assertEqual(self.obj.auto_eoi, True)
         
         # Ensure normal EOI when skipped.
-        self.obj.io_write_byte(0x00A0, 0x10) # Skip ICW3 and ICW4
+        self.obj.io_write_byte(0x00A0, 0x12) # Skip ICW3 and ICW4
         self.obj.io_write_byte(0x00A1, 0xFF)
         self.assertEqual(self.obj.auto_eoi, False)
         
