@@ -1192,6 +1192,7 @@ class CPU(object):
     def _hlt(self):
         log.critical("HLT encountered!")
         self.hlt = True
+        log.error("Game over at CS:IP 0x%04x:0x%04x", self.regs.CS, self.regs.IP)
         
     def _jmp_rel16(self):
         offset = signed_word(self.get_word_immediate())
