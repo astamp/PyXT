@@ -2439,3 +2439,30 @@ class PushOpcodeTests(BaseOpcodeAcceptanceTests):
         # SS is 0x0010 from the common setUp().
         self.assertEqual(self.memory.mem_read_word(0x001FE), 0x0010)
         
+class XchgOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_xchg_r8_rm8(self):
+        """
+        xchg al, [value]
+        hlt
+        value:
+            db 0xAA
+        """
+        self.cpu.regs.AL = 0x55
+        self.load_code_string("86 06 05 00 F4 AA")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.memory.mem_read_byte(0x05), 0x55)
+        self.assertEqual(self.cpu.regs.AL, 0xAA)
+        
+    def test_xchg_r16_rm16(self):
+        """
+        xchg ax, [value]
+        hlt
+        value:
+            dw 0xCAFE
+        """
+        self.cpu.regs.AX = 0xFACE
+        self.load_code_string("87 06 05 00 F4 FE CA")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0xFACE)
+        self.assertEqual(self.cpu.regs.AX, 0xCAFE)
+        

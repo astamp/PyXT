@@ -434,7 +434,9 @@ class CPU(object):
         elif opcode == 0xEB:
             self._jmp_rel8()
         elif opcode == 0x86:
-            self._xchg_r8_rm8()
+            self.opcode_xchg_r8_rm8()
+        elif opcode == 0x87:
+            self.opcode_xchg_r16_rm16()
         elif opcode == 0xFE:
             self.opcode_group_fe()
         elif opcode == 0xFF:
@@ -659,11 +661,18 @@ class CPU(object):
         segment_register, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
         self._set_rm16(rm_type, rm_value, self.regs[decode_seg_reg(segment_register)])
         
-    def _xchg_r8_rm8(self):
-        log.debug("XCHG r8 r/m8")
+    def opcode_xchg_r8_rm8(self):
+        """ Swap the contents of a byte register and memory location. """
         register, rm_type, rm_value = self.get_modrm_operands(8)
         temp = self._get_rm8(rm_type, rm_value)
         self._set_rm8(rm_type, rm_value, self.regs[register])
+        self.regs[register] = temp
+        
+    def opcode_xchg_r16_rm16(self):
+        """ Swap the contents of a word register and memory location. """
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        temp = self._get_rm16(rm_type, rm_value)
+        self._set_rm16(rm_type, rm_value, self.regs[register])
         self.regs[register] = temp
         
     def _xchg_r16_ax(self, opcode):
