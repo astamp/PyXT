@@ -419,6 +419,8 @@ class CPU(object):
             self._jns()
         elif opcode == 0x78:
             self._js()
+            
+        # FLAGS set/clear instructions.
         elif opcode == 0xF8:
             self._clc()
         elif opcode == 0xF9:
@@ -427,6 +429,11 @@ class CPU(object):
             self._cld()
         elif opcode == 0xFD:
             self._std()
+        elif opcode == 0xFA:
+            self.opcode_cli()
+        elif opcode == 0xFB:
+            self.opcode_sti()
+            
         elif opcode == 0x90:
             self._nop()
         elif opcode == 0xE9:
@@ -447,8 +454,6 @@ class CPU(object):
             self._mov_rm16_imm16()
         elif opcode == 0xEA:
             self._jmpf()
-        elif opcode == 0xFA:
-            self._cli()
         elif opcode == 0x9E:
             self._sahf()
         elif opcode == 0x9F:
@@ -1227,9 +1232,13 @@ class CPU(object):
         log.debug("CLD")
         self.flags.direction = False
         
-    def _cli(self):
-        log.info("CLI Disabling interrupts.")
+    def opcode_cli(self):
+        """ Disable interrupts. """
         self.flags.interrupt_enable = False
+        
+    def opcode_sti(self):
+        """ Enable interrupts. """
+        self.flags.interrupt_enable = True
         
     def _sahf(self):
         """ Copy AH into the lower byte of FLAGS (SF, ZF, AF, PF, CF). """

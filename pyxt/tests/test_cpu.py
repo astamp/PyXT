@@ -1327,6 +1327,27 @@ class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertFalse(self.cpu.flags.direction)
         
+    def test_sti(self):
+        """
+        sti
+        hlt
+        """
+        self.assertFalse(self.cpu.flags.interrupt_enable)
+        self.load_code_string("FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertTrue(self.cpu.flags.interrupt_enable)
+        
+    def test_cli(self):
+        """
+        cli
+        hlt
+        """
+        self.cpu.flags.interrupt_enable = True
+        self.assertTrue(self.cpu.flags.interrupt_enable)
+        self.load_code_string("FA F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertFalse(self.cpu.flags.interrupt_enable)
+        
 class LoopOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_loop(self):
         """
