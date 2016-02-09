@@ -2369,3 +2369,24 @@ class MovsOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(36), 0x22)
         self.assertEqual(self.memory.mem_read_byte(37), 0x33)
         
+class PushOpcodeTests(BaseOpcodeAcceptanceTests):
+    def setUp(self):
+        super(PushOpcodeTests, self).setUp()
+        
+        # SS:SP => 0010:0100 => 0x00200
+        self.cpu.regs.SS = 0x0010
+        self.cpu.regs.SP = 0x0100
+        
+    def test_push_rm16(self):
+        """
+        push word [value]
+        hlt
+        value:
+            dw 0xCAFE
+        """
+        self.load_code_string("FF 36 05 00 F4 FE CA")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x00FE)
+        self.assertEqual(self.memory.mem_read_word(0x001FE), 0xCAFE)
+        

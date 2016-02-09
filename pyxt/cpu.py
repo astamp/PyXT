@@ -436,9 +436,9 @@ class CPU(object):
         elif opcode == 0x86:
             self._xchg_r8_rm8()
         elif opcode == 0xFE:
-            self._inc_dec_rm8()
+            self.opcode_group_fe()
         elif opcode == 0xFF:
-            self._inc_dec_rm16()
+            self.opcode_group_ff()
         elif opcode == 0xC6:
             self._mov_rm8_imm8()
         elif opcode == 0xC7:
@@ -1078,31 +1078,43 @@ class CPU(object):
         self.flags.set_from_alu_no_carry(self.regs[dest])
         # log.debug("DEC'd %s to 0x%04x", dest, self.regs[dest])
         
-    def _inc_dec_rm8(self):
-        # log.debug("INC/DEC r/m8")
+    def opcode_group_fe(self):
+        """ Opcode group "2" for r/m8 which only has sub-opcodes 0 (INC) and 1 (DEC) defined. """
         sub_opcode, rm_type, rm_value = self.get_modrm_operands(8, decode_register = False)
         value = self._get_rm8(rm_type, rm_value)
-        if sub_opcode == 0:
+        
+        if sub_opcode == 0: # INC
             value += 1
-        elif sub_opcode == 1:
+            
+        elif sub_opcode == 1: # DEC
             value -= 1
+            
         else:
-            assert 0
+            assert sub_opcode == 0
+            
         self._set_rm8(rm_type, rm_value, value)
         self.flags.set_from_alu_no_carry(value)
         
-    def _inc_dec_rm16(self):
-        log.debug("INC/DEC r/m16")
+    def opcode_group_ff(self):
+        """ Opcode group "2" for r/m16. """
         sub_opcode, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
         value = self._get_rm16(rm_type, rm_value)
-        if sub_opcode == 0:
+        
+        if sub_opcode == 0: # INC
             value += 1
-        elif sub_opcode == 1:
+            self._set_rm16(rm_type, rm_value, value)
+            self.flags.set_from_alu_no_carry(value)
+            
+        elif sub_opcode == 1: # DEC
             value -= 1
+            self._set_rm16(rm_type, rm_value, value)
+            self.flags.set_from_alu_no_carry(value)
+            
+        elif sub_opcode == 6: # PUSH
+            self.internal_push(value)
+            
         else:
-            assert 0
-        self._set_rm16(rm_type, rm_value, value)
-        self.flags.set_from_alu_no_carry(value)
+            assert sub_opcode == 0
         
     # Shift opcodes.
     def opcode_group_rotate_and_shift(self, opcode):
