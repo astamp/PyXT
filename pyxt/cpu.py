@@ -493,6 +493,17 @@ class CPU(object):
             self.opcode_lodsb()
         elif opcode == 0xAD:
             self.opcode_lodsw()
+            
+        # PUSH segment registers.
+        elif opcode == 0x06:
+            self.internal_push(self.regs.ES)
+        elif opcode == 0x0E:
+            self.internal_push(self.regs.CS)
+        elif opcode == 0x16:
+            self.internal_push(self.regs.SS)
+        elif opcode == 0x1E:
+            self.internal_push(self.regs.DS)
+            
         else:
             self.signal_invalid_opcode(opcode, "Opcode not implemented.")
             

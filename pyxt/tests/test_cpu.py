@@ -2390,3 +2390,52 @@ class PushOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.SP, 0x00FE)
         self.assertEqual(self.memory.mem_read_word(0x001FE), 0xCAFE)
         
+    def test_push_es(self):
+        """
+        push es
+        hlt
+        """
+        self.cpu.regs.ES = 0x1234
+        self.load_code_string("06 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x00FE)
+        self.assertEqual(self.memory.mem_read_word(0x001FE), 0x1234)
+        
+    def test_push_cs(self):
+        """
+        push cs
+        hlt
+        """
+        self.memory.mem_write_word(0x001FE, 0x1234)
+        self.load_code_string("0E F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x00FE)
+        # CS is 0x0000 but it's where the code is running from, so we can't touch it.
+        self.assertEqual(self.memory.mem_read_word(0x001FE), 0x0000)
+        
+    def test_push_ds(self):
+        """
+        push ds
+        hlt
+        """
+        self.cpu.regs.DS = 0x5643
+        self.load_code_string("1E F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x00FE)
+        self.assertEqual(self.memory.mem_read_word(0x001FE), 0x5643)
+        
+    def test_push_ss(self):
+        """
+        push ss
+        hlt
+        """
+        self.load_code_string("16 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x00FE)
+        # SS is 0x0010 from the common setUp().
+        self.assertEqual(self.memory.mem_read_word(0x001FE), 0x0010)
+        
