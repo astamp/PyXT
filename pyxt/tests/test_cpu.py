@@ -2482,6 +2482,20 @@ class PopOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.SS, 0x0030)
         self.assertEqual(self.cpu.regs.SP, 0x0102)
         
+    def test_pop_rm16(self):
+        """
+        pop word [value]
+        hlt
+        value:
+            dw 0xCAFE
+        """
+        self.memory.mem_write_word(0x00200, 0xBEEF)
+        self.load_code_string("8F 06 05 00 F4 FE CA")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x0102)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0xBEEF)
+        
 class XchgOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_xchg_r8_rm8(self):
         """

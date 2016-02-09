@@ -514,6 +514,9 @@ class CPU(object):
         elif opcode == 0x1F:
             self.regs.DS = self.internal_pop()
             
+        elif opcode == 0x8F:
+            self.opcode_pop_rm16()
+            
         else:
             self.signal_invalid_opcode(opcode, "Opcode not implemented.")
             
@@ -703,6 +706,11 @@ class CPU(object):
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] = self.internal_pop()
         log.debug("POP'd 0x%04x into %s", self.regs[dest], dest)
+        
+    def opcode_pop_rm16(self):
+        """ Pop a word off of the stack and store it in an r/m16 destination. """
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        self._set_rm16(rm_type, rm_value, self.internal_pop())
         
     def internal_push(self, value):
         """ Decrement the stack pointer and push a word on to the stack. """
