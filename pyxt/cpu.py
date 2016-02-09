@@ -506,6 +506,14 @@ class CPU(object):
         elif opcode == 0x1E:
             self.internal_push(self.regs.DS)
             
+        # POP segment registers (except CS which is 0x0F).
+        elif opcode == 0x07:
+            self.regs.ES = self.internal_pop()
+        elif opcode == 0x17:
+            self.regs.SS = self.internal_pop()
+        elif opcode == 0x1F:
+            self.regs.DS = self.internal_pop()
+            
         else:
             self.signal_invalid_opcode(opcode, "Opcode not implemented.")
             

@@ -2439,6 +2439,49 @@ class PushOpcodeTests(BaseOpcodeAcceptanceTests):
         # SS is 0x0010 from the common setUp().
         self.assertEqual(self.memory.mem_read_word(0x001FE), 0x0010)
         
+class PopOpcodeTests(BaseOpcodeAcceptanceTests):
+    def setUp(self):
+        super(PopOpcodeTests, self).setUp()
+        
+        # SS:SP => 0010:0100 => 0x00200
+        self.cpu.regs.SS = 0x0010
+        self.cpu.regs.SP = 0x0100
+        
+    def test_pop_es(self):
+        """
+        pop es
+        hlt
+        """
+        self.memory.mem_write_word(0x00200, 0x1234)
+        self.load_code_string("07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x0102)
+        self.assertEqual(self.cpu.regs.ES, 0x1234)
+        
+    def test_pop_ds(self):
+        """
+        pop ds
+        hlt
+        """
+        self.memory.mem_write_word(0x00200, 0x9876)
+        self.load_code_string("1F F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x0102)
+        self.assertEqual(self.cpu.regs.DS, 0x9876)
+        
+    def test_pop_ss(self):
+        """
+        pop ss
+        hlt
+        """
+        self.memory.mem_write_word(0x00200, 0x0030)
+        self.load_code_string("17 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0030)
+        self.assertEqual(self.cpu.regs.SP, 0x0102)
+        
 class XchgOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_xchg_r8_rm8(self):
         """
