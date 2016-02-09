@@ -208,17 +208,34 @@ class FLAGS(object):
         self.direction = False
         self.overflow = False
         
-    def set_from_alu(self, value):
+    def set_from_alu_word(self, value):
         """ Set ZF, SF, CF, and PF based the result of an ALU operation. """
         self.zero = not value
         self.sign = value & 0x8000 == 0x8000
         self.carry = value & 0x10000 == 0x10000
         self.parity = (count_bits_fast(value & 0x00FF) % 2) == 0
         
-    def set_from_alu_no_carry(self, value):
+    def set_from_alu_no_carry_word(self, value):
         """ Set ZF, SF, and PF based the result of an ALU operation. """
         self.zero = not value
         self.sign = value & 0x8000 == 0x8000
+        self.parity = (count_bits_fast(value & 0x00FF) % 2) == 0
+        
+    # TODO: Remove these.
+    set_from_alu = set_from_alu_word
+    set_from_alu_no_carry = set_from_alu_no_carry_word
+    
+    def set_from_alu_byte(self, value):
+        """ Set ZF, SF, CF, and PF based the result of an ALU operation. """
+        self.zero = not value
+        self.sign = value & 0x80 == 0x80
+        self.carry = value & 0x100 == 0x100
+        self.parity = (count_bits_fast(value & 0x00FF) % 2) == 0
+        
+    def set_from_alu_no_carry_byte(self, value):
+        """ Set ZF, SF, and PF based the result of an ALU operation. """
+        self.zero = not value
+        self.sign = value & 0x80 == 0x80
         self.parity = (count_bits_fast(value & 0x00FF) % 2) == 0
         
     @property
@@ -488,6 +505,10 @@ class CPU(object):
             self._mov_sreg_rm16()
         elif opcode == 0x8C:
             self._mov_rm16_sreg()
+        elif opcode == 0xA8:
+            self.opcode_test_al_imm8()
+            
+        # String operations.
         elif opcode == 0xA4:
             self.opcode_movsb()
         elif opcode == 0xA5:
@@ -920,11 +941,12 @@ class CPU(object):
         else:
             assert 0
             
-        self.flags.set_from_alu(result)
         if set_value:
             if word_reg:
+                self.flags.set_from_alu_word(result)
                 self._set_rm16(rm_type, rm_value, result)
             else:
+                self.flags.set_from_alu_byte(result)
                 self._set_rm8(rm_type, rm_value, result)
                 
     # Bitwise opcodes.
@@ -933,7 +955,7 @@ class CPU(object):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 ^ op2
-        self.flags.set_from_alu(op1)
+        self.flags.set_from_alu_word(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _xor_r16_rm16(self):
@@ -941,7 +963,7 @@ class CPU(object):
         op1 = self.regs[register]
         op2 = self._get_rm16(rm_type, rm_value)
         op1 = op1 ^ op2
-        self.flags.set_from_alu(op1)
+        self.flags.set_from_alu_word(op1)
         self.regs[register] = op1 & 0xFFFF
         
     def _xor_r8_rm8(self):
@@ -949,13 +971,13 @@ class CPU(object):
         op1 = self._get_rm8(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 ^ op2
-        self.flags.set_from_alu(op1)
+        self.flags.set_from_alu_byte(op1)
         self._set_rm8(rm_type, rm_value, op1 & 0xFFFF)
         
     def _xor_al_imm8(self):
         log.info("XOR al imm8")
         value = self.regs.AL ^ self.get_byte_immediate()
-        self.flags.set_from_alu(value)
+        self.flags.set_from_alu_byte(value)
         self.regs.AL = value & 0xFF
         
     def opcode_group_or(self, opcode):
@@ -966,6 +988,11 @@ class CPU(object):
         """ Entry point for all AND opcodes. """
         self.alu_vector_table[opcode & 0x07](operator.and_)
         
+    def opcode_test_al_imm8(self):
+        """ AND al with imm8, update the flags, but don't store the value. """
+        value = self.regs.AL & self.get_byte_immediate()
+        self.flags.set_from_alu_byte(value)
+        
     # Generic ALU helper functions.
     def _alu_rm8_r8(self, operation):
         """ Generic r/m8 r8 ALU processor. """
@@ -973,7 +1000,7 @@ class CPU(object):
         op1 = self._get_rm8(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = operation(op1, op2)
-        self.flags.set_from_alu(op1)
+        self.flags.set_from_alu_byte(op1)
         self._set_rm8(rm_type, rm_value, op1 & 0xFF)
         
     def _alu_rm16_r16(self, operation):
@@ -982,7 +1009,7 @@ class CPU(object):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = operation(op1, op2)
-        self.flags.set_from_alu(op1)
+        self.flags.set_from_alu_word(op1)
         self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
         
     def _alu_r8_rm8(self, operation):
@@ -991,7 +1018,7 @@ class CPU(object):
         op1 = self.regs[register]
         op2 = self._get_rm8(rm_type, rm_value)
         op1 = operation(op1, op2)
-        self.flags.set_from_alu(op1)
+        self.flags.set_from_alu_byte(op1)
         self.regs[register] = op1 & 0xFF
         
     def _alu_r16_rm16(self, operation):
@@ -1000,19 +1027,19 @@ class CPU(object):
         op1 = self.regs[register]
         op2 = self._get_rm16(rm_type, rm_value)
         op1 = operation(op1, op2)
-        self.flags.set_from_alu(op1)
+        self.flags.set_from_alu_word(op1)
         self.regs[register] = op1 & 0xFFFF
         
     def _alu_al_imm8(self, operation):
         """ Generic al imm8 ALU processor. """
         value = operation(self.regs.AL, self.get_byte_immediate())
-        self.flags.set_from_alu(value)
+        self.flags.set_from_alu_byte(value)
         self.regs.AL = value & 0xFF
         
     def _alu_ax_imm16(self, operation):
         """ Generic ax imm16 ALU processor. """
         value = operation(self.regs.AX, self.get_word_immediate())
-        self.flags.set_from_alu(value)
+        self.flags.set_from_alu_word(value)
         self.regs.AX = value & 0xFFFF
         
     # Math opcodes.
@@ -1052,7 +1079,7 @@ class CPU(object):
         op1 = self._get_rm8(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 - op2
-        self.flags.set_from_alu(op1)
+        self.flags.set_from_alu_byte(op1)
         
     def opcode_cmp_rm16_r16(self):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
@@ -1060,7 +1087,7 @@ class CPU(object):
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = op1 - op2
-        self.flags.set_from_alu(op1)
+        self.flags.set_from_alu_word(op1)
         
     def opcode_cmp_r8_rm8(self):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
@@ -1068,7 +1095,7 @@ class CPU(object):
         op1 = self.regs[register]
         op2 = self._get_rm8(rm_type, rm_value)
         op1 = op1 - op2
-        self.flags.set_from_alu(op1)
+        self.flags.set_from_alu_byte(op1)
         
     def opcode_cmp_r16_rm16(self):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
@@ -1076,17 +1103,17 @@ class CPU(object):
         op1 = self.regs[register]
         op2 = self._get_rm16(rm_type, rm_value)
         op1 = op1 - op2
-        self.flags.set_from_alu(op1)
+        self.flags.set_from_alu_word(op1)
         
     def opcode_cmp_al_imm8(self):
         """ Subtract immediate byte from AL, update the flags, but don't store the value. """
         value = self.regs.AL - self.get_byte_immediate()
-        self.flags.set_from_alu(value)
+        self.flags.set_from_alu_byte(value)
         
     def opcode_cmp_ax_imm16(self):
         """ Subtract immediate word from AX, update the flags, but don't store the value. """
         value = self.regs.AX - self.get_word_immediate()
-        self.flags.set_from_alu(value)
+        self.flags.set_from_alu_word(value)
         
     def opcode_group_f6f7(self, opcode):
         """ "Group 1" byte and word instructions. """
@@ -1109,14 +1136,14 @@ class CPU(object):
         """ Handler for all INC [register] instructions. """
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] += 1
-        self.flags.set_from_alu_no_carry(self.regs[dest])
+        self.flags.set_from_alu_no_carry_word(self.regs[dest])
         # log.debug("INC'd %s to 0x%04x", dest, self.regs[dest])
         
     def opcode_group_dec(self, opcode):
         """ Handler for all DEC [register] instructions. """
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] -= 1
-        self.flags.set_from_alu_no_carry(self.regs[dest])
+        self.flags.set_from_alu_no_carry_word(self.regs[dest])
         # log.debug("DEC'd %s to 0x%04x", dest, self.regs[dest])
         
     def opcode_group_fe(self):
@@ -1134,7 +1161,7 @@ class CPU(object):
             assert sub_opcode == 0
             
         self._set_rm8(rm_type, rm_value, value)
-        self.flags.set_from_alu_no_carry(value)
+        self.flags.set_from_alu_no_carry_byte(value)
         
     def opcode_group_ff(self):
         """ Opcode group "2" for r/m16. """
@@ -1144,12 +1171,12 @@ class CPU(object):
         if sub_opcode == 0: # INC
             value += 1
             self._set_rm16(rm_type, rm_value, value)
-            self.flags.set_from_alu_no_carry(value)
+            self.flags.set_from_alu_no_carry_word(value)
             
         elif sub_opcode == 1: # DEC
             value -= 1
             self._set_rm16(rm_type, rm_value, value)
-            self.flags.set_from_alu_no_carry(value)
+            self.flags.set_from_alu_no_carry_word(value)
             
         elif sub_opcode == 6: # PUSH
             self.internal_push(value)

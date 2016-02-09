@@ -94,6 +94,107 @@ class FlagsRegisterTest(unittest.TestCase):
         self.flags.sign = False
         self.assertEqual(self.flags.value, 0)
         
+    def run_set_from_alu_test(self, func, value, zero, sign, carry, parity):
+        """ Execute func with value and check the flags, None is a don't care. """
+        func(value)
+        test_case = "%s(0x%x)" % (func.__name__, value)
+        
+        if zero is not None:
+            self.assertEqual(self.flags.zero, zero, test_case)
+            
+        if sign is not None:
+            self.assertEqual(self.flags.sign, sign, test_case)
+            
+        if carry is not None:
+            self.assertEqual(self.flags.carry, carry, test_case)
+            
+        if parity is not None:
+            self.assertEqual(self.flags.parity, parity, test_case)
+            
+    def test_set_from_alu_word(self):
+        data = [
+            # value,    zero,   sign,   carry,  parity  # Description
+            (0x0000,    True,   False,  False,  True),  # Zero
+            (0x8000,    False,  True,   False,  None),  # Sign
+            (0x10000,   False,  False,  True,   None),  # Carry
+            (0x0003,    False,  False,  False,  True),  # Even parity
+            (0x0007,    False,  False,  False,  False), # Odd parity
+            (0x0703,    False,  False,  False,  True),  # Parity only checks low byte
+        ]
+        
+        for args in data:
+            self.run_set_from_alu_test(self.flags.set_from_alu_word, *args)
+            
+    def test_set_from_alu_no_carry_word_previously_cleared(self):
+        data = [
+            # value,    zero,   sign,   carry,  parity  # Description
+            (0x0000,    True,   False,  False,  True),  # Zero
+            (0x8000,    False,  True,   False,  None),  # Sign
+            (0x10000,   False,  False,  False,  None),  # Carry NOT MODIFIED
+            (0x0003,    False,  False,  False,  True),  # Even parity
+            (0x0007,    False,  False,  False,  False), # Odd parity
+            (0x0703,    False,  False,  False,  True),  # Parity only checks low byte
+        ]
+        
+        for args in data:
+            self.run_set_from_alu_test(self.flags.set_from_alu_no_carry_word, *args)
+            
+    def test_set_from_alu_no_carry_word_previously_set(self):
+        data = [
+            # value,    zero,   sign,   carry,  parity  # Description
+            (0x0000,    True,   False,  True,  True),   # Zero
+            (0x8000,    False,  True,   True,  None),   # Sign
+            (0x10000,   False,  False,  True,  None),   # Carry NOT MODIFIED
+            (0x0003,    False,  False,  True,  True),   # Even parity
+            (0x0007,    False,  False,  True,  False),  # Odd parity
+            (0x0703,    False,  False,  True,  True),   # Parity only checks low byte
+        ]
+        
+        self.flags.carry = True
+        for args in data:
+            self.run_set_from_alu_test(self.flags.set_from_alu_no_carry_word, *args)
+            
+            
+    def test_set_from_alu_byte(self):
+        data = [
+            # value,    zero,   sign,   carry,  parity  # Description
+            (0x00,    True,   False,  False,  True),  # Zero
+            (0x80,    False,  True,   False,  None),  # Sign
+            (0x100,   False,  False,  True,   None),  # Carry
+            (0x03,    False,  False,  False,  True),  # Even parity
+            (0x07,    False,  False,  False,  False), # Odd parity
+        ]
+        
+        for args in data:
+            self.run_set_from_alu_test(self.flags.set_from_alu_byte, *args)
+            
+    def test_set_from_alu_no_carry_byte_previously_cleared(self):
+        data = [
+            # value,    zero,   sign,   carry,  parity  # Description
+            (0x00,    True,   False,  False,  True),  # Zero
+            (0x80,    False,  True,   False,  None),  # Sign
+            (0x100,   False,  False,  False,  None),  # Carry NOT MODIFIED
+            (0x03,    False,  False,  False,  True),  # Even parity
+            (0x07,    False,  False,  False,  False), # Odd parity
+        ]
+        
+        for args in data:
+            self.run_set_from_alu_test(self.flags.set_from_alu_no_carry_byte, *args)
+            
+    def test_set_from_alu_no_carry_byte_previously_set(self):
+        data = [
+            # value,    zero,   sign,   carry,  parity  # Description
+            (0x00,    True,   False,  True,  True),   # Zero
+            (0x80,    False,  True,   True,  None),   # Sign
+            (0x100,   False,  False,  True,  None),   # Carry NOT MODIFIED
+            (0x03,    False,  False,  True,  True),   # Even parity
+            (0x07,    False,  False,  True,  False),  # Odd parity
+        ]
+        
+        self.flags.carry = True
+        for args in data:
+            self.run_set_from_alu_test(self.flags.set_from_alu_no_carry_byte, *args)
+            
 class HelperFunctionTest(unittest.TestCase):
     def test_decode_seg_reg_normal(self):
         self.assertEqual(decode_seg_reg(0x00), "ES")
@@ -260,7 +361,7 @@ class BaseOpcodeAcceptanceTests(unittest.TestCase):
             self.cpu.fetch()
             instruction_count += 1
             if instruction_count > max_instructions:
-                self.fail("Runaway deetected, terminated after %d instructions." % max_instructions)
+                self.fail("Runaway detected, terminated after %d instructions." % max_instructions)
                 
         return instruction_count
         
@@ -1783,6 +1884,32 @@ class TestOpcodeTests(BaseOpcodeAcceptanceTests):
         """
         self.cpu.regs.BX = 0x8000
         self.load_code_string("F7 C3 FF 80 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertTrue(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_test_al_imm8_zero(self):
+        """
+        test al, 0x80
+        hlt
+        """
+        self.cpu.regs.AL = 0x7F
+        self.load_code_string("A8 80 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        
+        self.assertTrue(self.cpu.flags.zero)
+        self.assertFalse(self.cpu.flags.sign)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_test_al_imm8_nonzero(self):
+        """
+        test al, 0x80
+        hlt
+        """
+        self.cpu.regs.AL = 0xF0
+        self.load_code_string("A8 80 F4")
         self.assertEqual(self.run_to_halt(), 2)
         
         self.assertFalse(self.cpu.flags.zero)
