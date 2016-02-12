@@ -221,10 +221,6 @@ class FLAGS(object):
         self.sign = value & 0x8000 == 0x8000
         self.parity = (count_bits_fast(value & 0x00FF) % 2) == 0
         
-    # TODO: Remove these.
-    set_from_alu = set_from_alu_word
-    set_from_alu_no_carry = set_from_alu_no_carry_word
-    
     def set_from_alu_byte(self, value):
         """ Set ZF, SF, CF, and PF based the result of an ALU operation. """
         self.zero = not value
@@ -238,6 +234,19 @@ class FLAGS(object):
         self.sign = value & 0x80 == 0x80
         self.parity = (count_bits_fast(value & 0x00FF) % 2) == 0
         
+    def set_from_alu(self, value, bits = 16, carry = True):
+        """ Generic wrapper for set_from_alu_*. """
+        if bits == 8:
+            if carry:
+                self.set_from_alu_byte(value)
+            else:
+                self.set_from_alu_no_carry_byte(value)
+        else:
+            if carry:
+                self.set_from_alu_word(value)
+            else:
+                self.set_from_alu_no_carry_word(value)
+                
     @property
     def value(self):
         """ Return the FLAGS register as a word value. """
@@ -1117,17 +1126,13 @@ class CPU(object):
         
     def opcode_group_f6f7(self, opcode):
         """ "Group 1" byte and word instructions. """
-        word_reg = opcode == 0xF7
+        bits = 16 if opcode == 0xF7 else 8
+        sub_opcode, rm_type, rm_value = self.get_modrm_operands(bits, decode_register = False)
+        value = self._get_rm_bits(bits, rm_type, rm_value)
         
-        sub_opcode, rm_type, rm_value = self.get_modrm_operands(16 if word_reg else 8, decode_register = False)
-        
-        if word_reg:
-            value = self._get_rm16(rm_type, rm_value)
-        else:
-            value = self._get_rm8(rm_type, rm_value)
-            
         if sub_opcode == 0: # TEST
-            self.flags.set_from_alu(value & self.get_immediate(word_reg))
+            self.flags.set_from_alu(value & self.get_immediate(bits == 16), bits = 16, carry = True)
+            
         else:
             assert 0
         
@@ -1209,19 +1214,19 @@ class CPU(object):
             else:
                 value, self.flags.carry = rotate_left_16_bits(value, count)
                 
-            self.flags.set_from_alu_no_carry(value)
+            self.flags.set_from_alu(value, bits = bits, carry = False)
             self._set_rm_bits(bits, rm_type, rm_value, value)
             
         elif sub_opcode == 0x05:
             self.flags.carry = (value >> (count - 1)) & 0x01 == 0x01
             value = value >> count
-            self.flags.set_from_alu_no_carry(value)
+            self.flags.set_from_alu(value, bits = bits, carry = False)
             
         elif sub_opcode == 0x04:
             # 0x0010 << 12 => CF = True
             self.flags.carry = (value << count) & 0x10000 == 0x10000
             value = value << count
-            self.flags.set_from_alu_no_carry(value)
+            self.flags.set_from_alu(value, bits = bits, carry = False)
             if count == 1:
                 self.flags.overflow = ((old_value & high_bit_mask) ^ (value & high_bit_mask)) == high_bit_mask
                 
@@ -1231,7 +1236,7 @@ class CPU(object):
             else:
                 value, self.flags.carry = shift_arithmetic_right_16_bits(value, count)
                 
-            self.flags.set_from_alu_no_carry(value)
+            self.flags.set_from_alu(value, bits = bits, carry = False)
             self._set_rm_bits(bits, rm_type, rm_value, value)
             
         else:
