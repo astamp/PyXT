@@ -2692,3 +2692,87 @@ class NotOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.AX, 0x50FA)
         
+class ModRMTests(BaseOpcodeAcceptanceTests):
+    def setUp(self):
+        super(ModRMTests, self).setUp()
+        
+        # Set these up for testing.
+        self.cpu.regs.BX = 0x1000
+        self.cpu.regs.BP = 0x9000
+        self.cpu.regs.SI = 0x0200
+        self.cpu.regs.DI = 0x0A00
+        
+        # All of these tests will be either NOT or ADD instructions,
+        # so we move IP to 1 to skip past it.
+        self.cpu.regs.IP = 1
+        
+    def test_reg_field_word(self):
+        """ Test the register field for a word instruction. """
+        def run_test(code, expected):
+            # Reset IP to 1 so we can run multiple checks in the same test.
+            self.cpu.regs.IP = 1
+            self.load_code_string(code)
+            self.assertEqual((expected, ADDRESS, 0), self.cpu.get_modrm_operands(16))
+            
+        run_test("03 06 00 00", "AX") # add ax, [0x0000]
+        run_test("03 0E 00 00", "CX") # add cx, [0x0000]
+        run_test("03 16 00 00", "DX") # add dx, [0x0000]
+        run_test("03 1E 00 00", "BX") # add bx, [0x0000]
+        run_test("03 26 00 00", "SP") # add sp, [0x0000]
+        run_test("03 2E 00 00", "BP") # add bp, [0x0000]
+        run_test("03 36 00 00", "SI") # add si, [0x0000]
+        run_test("03 3E 00 00", "DI") # add di, [0x0000]
+        
+    def test_reg_field_byte(self):
+        """ Test the register field for a byte instruction. """
+        def run_test(code, expected):
+            # Reset IP to 1 so we can run multiple checks in the same test.
+            self.cpu.regs.IP = 1
+            self.load_code_string(code)
+            self.assertEqual((expected, ADDRESS, 0), self.cpu.get_modrm_operands(8))
+            
+        run_test("02 06 00 00", "AL") # add al, [0x0000]
+        run_test("02 0E 00 00", "CL") # add cl, [0x0000]
+        run_test("02 16 00 00", "DL") # add dl, [0x0000]
+        run_test("02 1E 00 00", "BL") # add bl, [0x0000]
+        run_test("02 26 00 00", "AH") # add ah, [0x0000]
+        run_test("02 2E 00 00", "CH") # add ch, [0x0000]
+        run_test("02 36 00 00", "DH") # add dh, [0x0000]
+        run_test("02 3E 00 00", "BH") # add bh, [0x0000]
+        
+    def test_mod_11_rm_is_word_reg(self):
+        """ Test the case where r/m is a second word register. """
+        def run_test(code, expected):
+            # Reset IP to 1 so we can run multiple checks in the same test.
+            self.cpu.regs.IP = 1
+            self.load_code_string(code)
+            # The 2 is for the NOT sub-opcode.
+            self.assertEqual((2, REGISTER, expected), self.cpu.get_modrm_operands(16, decode_register = False))
+            
+        run_test("F7 D0", "AX") # not ax
+        run_test("F7 D1", "CX") # not cx
+        run_test("F7 D2", "DX") # not dx
+        run_test("F7 D3", "BX") # not bx
+        run_test("F7 D4", "SP") # not sp
+        run_test("F7 D5", "BP") # not bp
+        run_test("F7 D6", "SI") # not si
+        run_test("F7 D7", "DI") # not di
+        
+    def test_mod_11_rm_is_byte_reg(self):
+        """ Test the case where r/m is a second byte register. """
+        def run_test(code, expected):
+            # Reset IP to 1 so we can run multiple checks in the same test.
+            self.cpu.regs.IP = 1
+            self.load_code_string(code)
+            # The 2 is for the NOT sub-opcode.
+            self.assertEqual((2, REGISTER, expected), self.cpu.get_modrm_operands(8, decode_register = False))
+            
+        run_test("F6 D0", "AL") # not al
+        run_test("F6 D1", "CL") # not cl
+        run_test("F6 D2", "DL") # not dl
+        run_test("F6 D3", "BL") # not bl
+        run_test("F6 D4", "AH") # not ah
+        run_test("F6 D5", "CH") # not ch
+        run_test("F6 D6", "DH") # not dh
+        run_test("F6 D7", "BH") # not bh
+        
