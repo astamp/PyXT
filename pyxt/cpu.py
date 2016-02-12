@@ -572,7 +572,11 @@ class CPU(object):
         
     # ********** Opcode parameter helpers. **********
     def get_modrm_operands(self, size, decode_register = True):
-        """ Returns register, rm_type, rm_value from a MODRM byte. """
+        """
+        Returns register, rm_type, rm_value from a MODRM byte.
+        
+        See: https://en.wikibooks.org/wiki/X86_Assembly/Machine_Language_Conversion
+        """
         register = None
         rm_type = UNKNOWN
         rm_value = None
@@ -592,31 +596,43 @@ class CPU(object):
         else:
             register = reg
             
+        # Mod 00, 01, 10 - r/m is address (calculated base + displacement).
         if mod in (0x00, 0x01, 0x02):
             rm_type = ADDRESS
+            
+            # Determine the calculated base.
             if rm == 0x00:
                 rm_value = self.regs.BX + self.regs.SI
             elif rm == 0x01:
                 rm_value = self.regs.BX + self.regs.DI
+            elif rm == 0x02:
+                rm_value = self.regs.BP + self.regs.SI
+            elif rm == 0x03:
+                rm_value = self.regs.BP + self.regs.DI
+            elif rm == 0x04:
+                rm_value = self.regs.SI
             elif rm == 0x05:
                 rm_value = self.regs.DI
             elif rm == 0x06:
+                # Mod 00 / r/m 110 is absolute address.
                 if mod == 0x00:
                     rm_value = self.get_word_immediate()
                 else:
-                    assert 0
+                    rm_value = self.regs.BP
             elif rm == 0x07:
                 rm_value = self.regs.BX
                 
+            # Determine the displacement.
             displacement = 0
-            if not (mod == 0x00 and rm == 0x06):
-                if mod == 0x01:
-                    displacement = sign_extend_byte_to_word(self.get_byte_immediate())
-                elif mod == 0x02:
-                    displacement = self.get_word_immediate()
-                
-            rm_value += displacement
+            if mod == 0x01:
+                displacement = sign_extend_byte_to_word(self.get_byte_immediate())
+            elif mod == 0x02:
+                displacement = self.get_word_immediate()
             
+            # Negative displacements do two's complement math, we need to mask this to 16 bits for it to work.
+            rm_value = (rm_value + displacement) & 0xFFFF
+            
+        # Mod 11 - r/m is a second register field.
         elif mod == 0x03:
             rm_type = REGISTER
             if size == 8:

@@ -338,13 +338,18 @@ class BaseOpcodeAcceptanceTests(unittest.TestCase):
         self.bus.install_device(0x0000, self.memory)
         
     def load_code_bytes(self, *args):
-        """ Load a program into the base memory. """
+        """ Load a program into the base memory, returning the number of bytes loaded. """
+        count = 0
+        
         for index, byte in enumerate(args):
             self.memory.mem_write_byte(index, byte)
+            count += 1
             
+        return count
+        
     def load_code_string(self, code):
-        """ Load a program into the base memory from a hex string. """
-        self.load_code_bytes(*[ord(byte) for byte in binascii.unhexlify(code.replace(" ", ""))])
+        """ Load a program into the base memory from a hex string, returning the number of bytes loaded. """
+        return self.load_code_bytes(*[ord(byte) for byte in binascii.unhexlify(code.replace(" ", ""))])
         
     def run_to_halt(self, max_instructions = 1000):
         """
@@ -2698,9 +2703,9 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
         
         # Set these up for testing.
         self.cpu.regs.BX = 0x1000
-        self.cpu.regs.BP = 0x9000
+        self.cpu.regs.BP = 0x8000
         self.cpu.regs.SI = 0x0200
-        self.cpu.regs.DI = 0x0A00
+        self.cpu.regs.DI = 0x0400
         
         # All of these tests will be either NOT or ADD instructions,
         # so we move IP to 1 to skip past it.
@@ -2712,7 +2717,7 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
             # Reset IP to 1 so we can run multiple checks in the same test.
             self.cpu.regs.IP = 1
             self.load_code_string(code)
-            self.assertEqual((expected, ADDRESS, 0), self.cpu.get_modrm_operands(16))
+            self.assertEqual(self.cpu.get_modrm_operands(16), (expected, ADDRESS, 0))
             
         run_test("03 06 00 00", "AX") # add ax, [0x0000]
         run_test("03 0E 00 00", "CX") # add cx, [0x0000]
@@ -2729,7 +2734,7 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
             # Reset IP to 1 so we can run multiple checks in the same test.
             self.cpu.regs.IP = 1
             self.load_code_string(code)
-            self.assertEqual((expected, ADDRESS, 0), self.cpu.get_modrm_operands(8))
+            self.assertEqual(self.cpu.get_modrm_operands(8), (expected, ADDRESS, 0))
             
         run_test("02 06 00 00", "AL") # add al, [0x0000]
         run_test("02 0E 00 00", "CL") # add cl, [0x0000]
@@ -2747,7 +2752,7 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
             self.cpu.regs.IP = 1
             self.load_code_string(code)
             # The 2 is for the NOT sub-opcode.
-            self.assertEqual((2, REGISTER, expected), self.cpu.get_modrm_operands(16, decode_register = False))
+            self.assertEqual(self.cpu.get_modrm_operands(16, decode_register = False), (2, REGISTER, expected))
             
         run_test("F7 D0", "AX") # not ax
         run_test("F7 D1", "CX") # not cx
@@ -2765,7 +2770,7 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
             self.cpu.regs.IP = 1
             self.load_code_string(code)
             # The 2 is for the NOT sub-opcode.
-            self.assertEqual((2, REGISTER, expected), self.cpu.get_modrm_operands(8, decode_register = False))
+            self.assertEqual(self.cpu.get_modrm_operands(8, decode_register = False), (2, REGISTER, expected))
             
         run_test("F6 D0", "AL") # not al
         run_test("F6 D1", "CL") # not cl
@@ -2775,4 +2780,71 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
         run_test("F6 D5", "CH") # not ch
         run_test("F6 D6", "DH") # not dh
         run_test("F6 D7", "BH") # not bh
+        
+    def run_address_test(self, code, expected_address):
+        """ Decode the ModRM field and check that the address matches. """
+        # Reset IP to 1 so we can run multiple checks in the same test.
+        self.cpu.regs.IP = 1
+        # Track the number of bytes loaded so we can check that IP is correct at the end.
+        expected_ip = self.load_code_string(code)
+        # We aren't doing register testing so we will just assume 16 bits and toss the register.
+        self.assertEqual(self.cpu.get_modrm_operands(16)[1:], (ADDRESS, expected_address))
+        # Ensure that IP matches the number of bytes loaded.
+        self.assertEqual(self.cpu.regs.IP, expected_ip)
+        
+    def test_mod_00_rm_110_absolute_address(self):
+        self.run_address_test("F7 16 43 56", 0x5643) # not word [0x5643]
+        self.run_address_test("F7 16 01 00", 0x0001) # not word [0x0001]
+        self.run_address_test("F7 16 00 00", 0x0000) # not word [0x0000]
+        
+    def test_mod_00_all_modes_no_displacement(self):
+        self.run_address_test("F7 10", 0x1200) # not word [bx + si]
+        self.run_address_test("F7 11", 0x1400) # not word [bx + di]
+        self.run_address_test("F7 12", 0x8200) # not word [bp + si]
+        self.run_address_test("F7 13", 0x8400) # not word [bp + di]
+        self.run_address_test("F7 14", 0x0200) # not word [si]
+        self.run_address_test("F7 15", 0x0400) # not word [di]
+        # This is not a mod 00 test, mod 00 rm 110 is handled above.
+        # self.run_address_test("F7 56 00", 0x8000) # not word [bp]
+        self.run_address_test("F7 17", 0x1000) # not word [bx]
+        
+    def test_mod_01_all_modes_byte_displacement(self):
+        self.run_address_test("F7 50 01", 0x1200 + 1) # not word [bx + si + 1]
+        self.run_address_test("F7 51 01", 0x1400 + 1) # not word [bx + di + 1]
+        self.run_address_test("F7 52 01", 0x8200 + 1) # not word [bp + si + 1]
+        self.run_address_test("F7 53 01", 0x8400 + 1) # not word [bp + di + 1]
+        self.run_address_test("F7 54 01", 0x0200 + 1) # not word [si + 1]
+        self.run_address_test("F7 55 01", 0x0400 + 1) # not word [di + 1]
+        self.run_address_test("F7 56 01", 0x8000 + 1) # not word [bp + 1]
+        self.run_address_test("F7 57 01", 0x1000 + 1) # not word [bx + 1]
+        
+    def test_mod_01_all_modes_byte_negative_displacement(self):
+        self.run_address_test("F7 50 FF", 0x1200 - 1) # not word [bx + si - 1]
+        self.run_address_test("F7 51 FF", 0x1400 - 1) # not word [bx + di - 1]
+        self.run_address_test("F7 52 FF", 0x8200 - 1) # not word [bp + si - 1]
+        self.run_address_test("F7 53 FF", 0x8400 - 1) # not word [bp + di - 1]
+        self.run_address_test("F7 54 FF", 0x0200 - 1) # not word [si - 1]
+        self.run_address_test("F7 55 FF", 0x0400 - 1) # not word [di - 1]
+        self.run_address_test("F7 56 FF", 0x8000 - 1) # not word [bp - 1]
+        self.run_address_test("F7 57 FF", 0x1000 - 1) # not word [bx - 1]
+        
+    def test_mod_10_all_modes_word_displacement(self):
+        self.run_address_test("F7 90 00 01", 0x1200 + 0x100) # not word [bx + si]
+        self.run_address_test("F7 91 00 01", 0x1400 + 0x100) # not word [bx + di]
+        self.run_address_test("F7 92 00 01", 0x8200 + 0x100) # not word [bp + si]
+        self.run_address_test("F7 93 00 01", 0x8400 + 0x100) # not word [bp + di]
+        self.run_address_test("F7 94 00 01", 0x0200 + 0x100) # not word [si]
+        self.run_address_test("F7 95 00 01", 0x0400 + 0x100) # not word [di]
+        self.run_address_test("F7 96 00 01", 0x8000 + 0x100) # not word [bp]
+        self.run_address_test("F7 97 00 01", 0x1000 + 0x100) # not word [bx]
+        
+    def test_mod_10_all_modes_word_negative_displacement(self):
+        self.run_address_test("F7 90 00 FF", 0x1200 - 0x100) # not word [bx + si]
+        self.run_address_test("F7 91 00 FF", 0x1400 - 0x100) # not word [bx + di]
+        self.run_address_test("F7 92 00 FF", 0x8200 - 0x100) # not word [bp + si]
+        self.run_address_test("F7 93 00 FF", 0x8400 - 0x100) # not word [bp + di]
+        self.run_address_test("F7 94 00 FF", 0x0200 - 0x100) # not word [si]
+        self.run_address_test("F7 95 00 FF", 0x0400 - 0x100) # not word [di]
+        self.run_address_test("F7 96 00 FF", 0x8000 - 0x100) # not word [bp]
+        self.run_address_test("F7 97 00 FF", 0x1000 - 0x100) # not word [bx]
         
