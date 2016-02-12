@@ -2671,3 +2671,24 @@ class XchgOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_word(0x05), 0xFACE)
         self.assertEqual(self.cpu.regs.AX, 0xCAFE)
         
+class NotOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_not_rm8(self):
+        """
+        not al
+        hlt
+        """
+        self.cpu.regs.AX = 0xAA50
+        self.load_code_string("F6 D0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xAAAF) # AH unmodified
+        
+    def test_not_rm16(self):
+        """
+        not ax
+        hlt
+        """
+        self.cpu.regs.AX = 0xAF05
+        self.load_code_string("F7 D0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x50FA)
+        

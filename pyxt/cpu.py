@@ -1133,7 +1133,12 @@ class CPU(object):
         if sub_opcode == 0: # TEST
             self.flags.set_from_alu(value & self.get_immediate(bits == 16), bits = 16, carry = True)
             
+        elif sub_opcode == 2: # NOT
+            value = ~value
+            self._set_rm_bits(bits, rm_type, rm_value, value)
+            
         else:
+            print sub_opcode
             assert 0
         
     # Inc/dec opcodes.
