@@ -552,6 +552,11 @@ class CPU(object):
         elif opcode == 0x8F:
             self.opcode_pop_rm16()
             
+        # ESCape opcodes (used to allow 8087 to access the bus).
+        # These decode a ModRM field but we toss it for now because we don't have an 8087.
+        elif opcode & 0xF8 == 0xD8:
+            _sub_opcode, _rm_type, _rm_value = self.get_modrm_operands(16, decode_register = False)
+            
         else:
             self.signal_invalid_opcode(opcode, "Opcode not implemented.")
             
