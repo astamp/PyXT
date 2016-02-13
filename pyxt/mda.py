@@ -70,11 +70,21 @@ class MonochromeDisplayAdapter(Device):
     def get_memory_size(self):
         return 4096
         
+    def mem_read_word(self, offset):
+        # TODO: Combine this into one operation for speed.
+        return (self.mem_read_byte(offset) | (self.mem_read_byte(offset + 1) << 8))
+        
     def mem_read_byte(self, offset):
         if offset >= MDA_RAM_SIZE:
             return 0x00
             
         return self.video_ram[offset]
+        
+    def mem_write_word(self, offset, value):
+        # 0xCAFE => 0:0xFE & 1:0xCA
+        # TODO: Combine this into one operation for speed.
+        self.mem_write_byte(offset, value & 0x00FF)
+        self.mem_write_byte(offset + 1, (value >> 8) & 0x00FF)
         
     def mem_write_byte(self, offset, value):
         if offset >= MDA_RAM_SIZE:
@@ -130,6 +140,10 @@ class MonochromeDisplayAdapter(Device):
             self.write_crt_data_register(self.data_reg_index, value)
             
         elif port == CONTROL_REG_PORT:
+            # The first time we see the enable bit, "reset" the MDA card.
+            if self.control_reg & CONTROL_REG_HIRES == 0x00 and value & CONTROL_REG_HIRES == CONTROL_REG_HIRES:
+                self.reset()
+                
             self.control_reg = value
             
 class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):

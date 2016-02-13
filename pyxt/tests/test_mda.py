@@ -8,6 +8,13 @@ class MDATests(unittest.TestCase):
         self.cg = CharacterGeneratorMock(width = 9, height = 14)
         self.mda = MonochromeDisplayAdapter(self.cg)
         
+        # Hijack reset so it doesn't call into Pygame during the tests.
+        self.reset_count = 0
+        self.mda.reset = self.reset_testable
+        
+    def reset_testable(self):
+        self.reset_count += 1
+        
     def test_ports_list(self):
         self.assertEqual(self.mda.get_ports_list(), [0x03B0, 0x03B1, 0x03B2, 0x03B3,
                                                      0x03B4, 0x03B5, 0x03B6, 0x03B7,
@@ -54,4 +61,42 @@ class MDATests(unittest.TestCase):
         
     def test_mem_read_byte_off_screen(self):
         self.assertEqual(self.mda.mem_read_byte(4000), 0x00)
+        
+    def test_reset_on_high_resolution_enable(self):
+        self.assertEqual(self.reset_count, 0)
+        
+        self.mda.io_write_byte(0x3B8, 0x01)
+        self.assertEqual(self.reset_count, 1)
+        
+        # Second write shouldn't call reset again.
+        self.mda.io_write_byte(0x3B8, 0x01)
+        self.assertEqual(self.reset_count, 1)
+        
+    def test_mem_write_word_at_top_left(self):
+        self.mda.mem_write_word(0x0000, 0x0841) # 'A' with intensity.
+        self.assertEqual(self.mda.video_ram[0x0000], 0x41)
+        self.assertEqual(self.mda.video_ram[0x0001], 0x08)
+        self.assertEqual(self.cg.last_blit, (None, (0, 0), 0x41, CHARGEN_ATTR_BRIGHT))
+        
+    def test_mem_write_word_at_bottom_right(self):
+        self.mda.mem_write_word(3998, 0x085A) # 'Z' with intensity.
+        self.assertEqual(self.mda.video_ram[3998], 0x5A)
+        self.assertEqual(self.mda.video_ram[3999], 0x08)
+        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0x5A, CHARGEN_ATTR_BRIGHT))
+        
+    def test_mem_write_word_at_bottom_right_just_past(self):
+        self.mda.mem_write_word(3999, 0xFF08) # 'Z' with intensity.
+        self.assertEqual(self.mda.video_ram[3998], 0x00) # Should be unmodified.
+        self.assertEqual(self.mda.video_ram[3999], 0x08)
+        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0x00, CHARGEN_ATTR_BRIGHT))
+        
+    def test_mem_read_word(self):
+        self.mda.video_ram[0x0000] = 0x41
+        self.mda.video_ram[0x0001] = 0x08
+        self.assertEqual(self.mda.mem_read_word(0x0000), 0x0841)
+        
+    def test_mem_read_word_just_past_the_end(self):
+        self.mda.video_ram[3998] = 0x12
+        self.mda.video_ram[3999] = 0x34
+        self.assertEqual(self.mda.mem_read_word(3999), 0x0034)
         
