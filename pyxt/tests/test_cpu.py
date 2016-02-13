@@ -1389,7 +1389,59 @@ class MovOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.BH, 0x12) # Should be unmodified.
         self.assertEqual(self.cpu.regs.BL, 0x5A)
-    
+        
+    def test_mov_al_moffs8(self):
+        """
+        mov al, [5643]
+        hlt
+        """
+        self.cpu.regs.AX = 0x1111
+        self.memory.mem_write_byte(5643, 0xA7)
+        self.load_code_string("A0 0B 16 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AH, 0x11) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AL, 0xA7)
+        self.assertEqual(self.memory.mem_read_byte(5643), 0xA7) # Should be unmodified.
+        
+    def test_mov_ax_moffs16(self):
+        """
+        mov ax, [5643]
+        hlt
+        """
+        self.cpu.regs.AX = 0x1111
+        self.memory.mem_write_word(5643, 0xDADA)
+        self.load_code_string("A1 0B 16 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xDADA)
+        self.assertEqual(self.memory.mem_read_word(5643), 0xDADA) # Should be unmodified.
+        
+    def test_mov_moffs8_al(self):
+        """
+        mov [5643], al
+        hlt
+        """
+        self.cpu.regs.AX = 0x1234
+        self.load_code_string("A2 0B 16 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x1234) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(5642), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(5643), 0x34)
+        self.assertEqual(self.memory.mem_read_byte(5644), 0x00) # Should be unmodified.
+        
+    def test_mov_moffs16_ax(self):
+        """
+        mov [5643], ax
+        hlt
+        """
+        self.cpu.regs.AX = 0x1234
+        self.load_code_string("A3 0B 16 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x1234) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(5642), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(5643), 0x34)
+        self.assertEqual(self.memory.mem_read_byte(5644), 0x12)
+        self.assertEqual(self.memory.mem_read_byte(5645), 0x00) # Should be unmodified.
+        
 class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_stc(self):
         """

@@ -408,6 +408,8 @@ class CPU(object):
             self._call()
         elif opcode == 0xC3:
             self._ret()
+            
+        # MOV instructions.
         elif opcode & 0xF0 == 0xB0:
             self._mov_imm_to_reg(opcode)
         elif opcode == 0x8B:
@@ -418,6 +420,23 @@ class CPU(object):
             self._mov_reg16_to_rm16() # BAD NAME
         elif opcode == 0x8A:
             self.opcode_mov_r8_rm8()
+        elif opcode == 0xC6:
+            self._mov_rm8_imm8()
+        elif opcode == 0xC7:
+            self._mov_rm16_imm16()
+        elif opcode == 0x8E:
+            self._mov_sreg_rm16()
+        elif opcode == 0x8C:
+            self._mov_rm16_sreg()
+        elif opcode == 0xA0:
+            self.opcode_mov_al_moffs8()
+        elif opcode == 0xA1:
+            self.opcode_mov_ax_moffs16()
+        elif opcode == 0xA2:
+            self.opcode_mov_moffs8_al()
+        elif opcode == 0xA3:
+            self.opcode_mov_moffs16_ax()
+            
         elif opcode == 0x31:
             self._xor_rm16_r16()
         elif opcode == 0x72:
@@ -474,10 +493,6 @@ class CPU(object):
             self.opcode_group_fe()
         elif opcode == 0xFF:
             self.opcode_group_ff()
-        elif opcode == 0xC6:
-            self._mov_rm8_imm8()
-        elif opcode == 0xC7:
-            self._mov_rm16_imm16()
         elif opcode == 0xEA:
             self._jmpf()
         elif opcode == 0x9E:
@@ -510,10 +525,6 @@ class CPU(object):
             self._xor_al_imm8()
         elif opcode == 0x33:
             self._xor_r16_rm16()
-        elif opcode == 0x8E:
-            self._mov_sreg_rm16()
-        elif opcode == 0x8C:
-            self._mov_rm16_sreg()
         elif opcode == 0xA8:
             self.opcode_test_al_imm8()
             
@@ -727,6 +738,22 @@ class CPU(object):
         log.debug("MOV r/m16 Sreg")
         segment_register, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
         self._set_rm16(rm_type, rm_value, self.regs[decode_seg_reg(segment_register)])
+        
+    def opcode_mov_al_moffs8(self):
+        """ Load a byte from DS:offset into AL. """
+        self.regs.AL = self.bus.mem_read_byte(self.get_word_immediate())
+        
+    def opcode_mov_ax_moffs16(self):
+        """ Load a word from DS:offset into AX. """
+        self.regs.AX = self.bus.mem_read_word(self.get_word_immediate())
+        
+    def opcode_mov_moffs8_al(self):
+        """ Load a byte from AL into DS:offset. """
+        self.bus.mem_write_byte(self.get_word_immediate(), self.regs.AL)
+        
+    def opcode_mov_moffs16_ax(self):
+        """ Load a word from AX into DS:offset. """
+        self.bus.mem_write_word(self.get_word_immediate(), self.regs.AX)
         
     def opcode_xchg_r8_rm8(self):
         """ Swap the contents of a byte register and memory location. """
