@@ -12,6 +12,7 @@ from optparse import OptionParser
 # PyXT imports
 from pyxt.constants import SIXTY_FOUR_KB, BIOS_LOCATION
 from pyxt.cpu import CPU
+from pyxt.debugger import Debugger
 from pyxt.bus import SystemBus
 from pyxt.memory import RAM, ROM
 from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MDA_START_ADDRESS
@@ -75,16 +76,20 @@ def main():
     cpu = CPU()
     cpu.install_bus(bus)
     
+    debugger = Debugger(cpu, bus)
     for breakpoint in args:
         (cs, ip) = breakpoint.split(":")
-        cpu.breakpoints.append((int(cs, 16), int(ip, 16)))
+        debugger.breakpoints.append((int(cs, 16), int(ip, 16)))
         
+    cpu_or_debugger = debugger if options.debug else cpu
+    
     try:
         while not cpu.hlt:
             pit.clock()
-            cpu.fetch()
+            cpu_or_debugger.fetch()
             
     except Exception:
+        debugger.dump_all(logging.ERROR)
         log.exception("Unhandled exception at CS:IP 0x%04x:0x%04x", cpu.regs.CS, cpu.regs.IP)
         
 if __name__ == "__main__":

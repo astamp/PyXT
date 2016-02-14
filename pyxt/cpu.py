@@ -3,8 +3,6 @@ pyxt.cpu - 8088-ish CPU module for PyXT.
 """
 
 # Standard library imports
-import re
-import sys
 import struct
 import operator
 from ctypes import Structure, Union, c_ushort, c_ubyte
@@ -20,8 +18,6 @@ log.addHandler(logging.NullHandler())
 
 # Constants
 WORD, LOW, HIGH = range(3)
-
-GDB_EXAMINE_REGEX = re.compile("^x\\/(\\d+)([xduotacfs])([bwd])$")
 
 MOD_MASK = 0xC0
 MOD_SHIFT = 6
@@ -291,12 +287,6 @@ class CPU(object):
         # System bus for memory and I/O access.
         self.bus = None
         
-        # Internal debugging system. (TODO: Move this elsewhere)
-        self.breakpoints = []
-        self.single_step = False
-        self.debugger_shortcut = []
-        self.dump_enabled = False
-        
         # CPU halt flag.
         self.hlt = False
         
@@ -338,24 +328,12 @@ class CPU(object):
         self.repeat_prefix = REPEAT_NONE
         self.segment_override = None
         
-        # Uncomment these lines for debugging, but they make the code slow if left on.
-        
-        # if self.dump_enabled:
-            # log.debug("")
-            # self.dump_regs()
-            
-        # if self.should_break():
-            # self.enter_debugger()
-            
         # We could have multiple prefixes.
         # TODO: There is probably a better way to do this than `while True'.
         while True:
             # Fetch an opcode or prefix.
             opcode = self.read_instruction_byte()
             
-            # if self.dump_enabled:
-                # log.debug("Fetched opcode: 0x%02x", opcode)
-                
             # Configure flags based on the prefix.
             if opcode == 0xF3:
                 self.repeat_prefix = REPEAT_REP_REPZ
@@ -578,13 +556,14 @@ class CPU(object):
             
     def signal_invalid_opcode(self, opcode, message = None):
         """ Invalid opcode handler. """
-        self.dump_regs()
         log.error("Invalid opcode: 0x%02x at CS:IP 0x%04x:0x%04x", opcode, self.regs.CS, self.regs.IP)
         if self.repeat_prefix != REPEAT_NONE:
             log.error("Repeat prefix was: 0x%02x", self.repeat_prefix)
         if message is not None:
             log.error(message)
-        self._hlt()
+            
+        # Throw an unhandled exception so we print the register contents.
+        raise RuntimeError
         
     # ********** Opcode parameter helpers. **********
     def get_modrm_operands(self, size, decode_register = True):
@@ -1491,96 +1470,3 @@ class CPU(object):
         else:
             return self._set_rm16(rm_type, rm_value, value)
             
-    # ********** Debugger functions. **********
-    def dump_regs(self):
-        regs = ("AX", "BX", "CX", "DX")
-        log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
-        regs = ("IP", "SP", "SI", "DI")
-        log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
-        regs = ("CS", "SS", "DS", "ES")
-        log.debug("  ".join(["%s = 0x%04x" % (reg, self.regs[reg]) for reg in regs]))
-        log.debug("BP = 0x%04x, cf=%d, zf=%d, sf=%d, df=%d", self.regs.BP, self.flags.carry, self.flags.zero, self.flags.sign, self.flags.direction)
-    def should_break(self):
-        return self.single_step or (self.regs.CS, self.regs.IP) in self.breakpoints
-        
-    def enter_debugger(self):
-        while True:
-            if len(self.debugger_shortcut) != 0:
-                print "[%s] >" % self.debugger_shortcut,
-            else:
-                print ">",
-            cmd = raw_input().lower().split()
-            
-            if len(cmd) == 0 and len(self.debugger_shortcut) != 0:
-                cmd = self.debugger_shortcut
-                print "Using: %s" % " ".join(cmd)
-            else:
-                self.debugger_shortcut = cmd
-                
-            if len(cmd) == 0:
-                continue
-                
-            if len(cmd) == 1 and cmd[0] in ("continue", "c"):
-                self.single_step = False
-                break
-                
-            elif len(cmd) == 1 and cmd[0] in ("step", "s"):
-                self.single_step = True
-                break
-                
-            elif len(cmd) == 1 and cmd[0] in ("quit", "q"):
-                sys.exit(0)
-                
-            elif len(cmd) >= 1 and cmd[0] == "set":
-                if len(cmd) == 2 and cmd[1] == "dump":
-                    self.dump_enabled = True
-                
-            elif len(cmd) >= 1 and cmd[0] == "clear":
-                if len(cmd) == 2 and cmd[1] == "dump":
-                    self.dump_enabled = False
-                
-            elif len(cmd) >= 1 and cmd[0][0] == "x":
-                if len(cmd[0]) > 1:
-                    match = GDB_EXAMINE_REGEX.match(cmd[0])
-                    if match is not None:
-                        count = int(match.group(1))
-                        format = match.group(2)
-                        unit = match.group(3)
-                else:
-                    count = 1
-                    format = "x"
-                    unit = "w"
-                    
-                if len(cmd) >= 2:
-                    address = int(cmd[1], 0)
-                else:
-                    print "you need an address"
-                    continue
-                    
-                readable = ""
-                unit_size_hex = 8
-                if unit == "b":
-                    unit_size_hex = 2
-                    ending_address = address + count
-                    data = [self.mem_read_byte(x) for x in xrange(address, ending_address)]
-                    readable = "".join([chr(x) if x > 0x20 and x < 0x7F else "." for x in data])
-                elif unit == "w":
-                    unit_size_hex = 4
-                    ending_address = address + (count * 2)
-                    data = [self._read_word_from_ram(x) for x in xrange(address, ending_address, 2)]
-                else:
-                    print "invalid unit: %r" % unit
-                    
-                self.debugger_shortcut[1] = "0x%08x" % ending_address
-                
-                if format == "x":
-                    format = "%0*x"
-                else:
-                    print "invalid format: %r" % format
-                    continue
-                    
-                print "0x%08x:" % address, " ".join([(format % (unit_size_hex, item)) for item in data]), readable
-                
-            else:
-                print "i don't know what %r is." % " ".join(cmd)
-                
