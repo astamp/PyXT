@@ -741,19 +741,19 @@ class CPU(object):
         
     def opcode_mov_al_moffs8(self):
         """ Load a byte from DS:offset into AL. """
-        self.regs.AL = self.bus.mem_read_byte(self.get_word_immediate())
+        self.regs.AL = self.read_data_byte(self.get_word_immediate())
         
     def opcode_mov_ax_moffs16(self):
         """ Load a word from DS:offset into AX. """
-        self.regs.AX = self.bus.mem_read_word(self.get_word_immediate())
+        self.regs.AX = self.read_data_word(self.get_word_immediate())
         
     def opcode_mov_moffs8_al(self):
         """ Load a byte from AL into DS:offset. """
-        self.bus.mem_write_byte(self.get_word_immediate(), self.regs.AL)
+        self.write_data_byte(self.get_word_immediate(), self.regs.AL)
         
     def opcode_mov_moffs16_ax(self):
         """ Load a word from AX into DS:offset. """
-        self.bus.mem_write_word(self.get_word_immediate(), self.regs.AX)
+        self.write_data_word(self.get_word_immediate(), self.regs.AX)
         
     def opcode_xchg_r8_rm8(self):
         """ Swap the contents of a byte register and memory location. """
