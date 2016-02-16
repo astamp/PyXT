@@ -388,6 +388,10 @@ class CPU(object):
         elif opcode == 0xC3:
             self._ret()
             
+        # Interrupt instructions.
+        elif opcode == 0xCD:
+            self.opcode_int()
+            
         # MOV instructions.
         elif opcode & 0xF0 == 0xB0:
             self._mov_imm_to_reg(opcode)
@@ -886,6 +890,19 @@ class CPU(object):
         else:
             log.debug("JO was skipped.")
             
+    # ********** Interrupt opcodes. **********
+    def opcode_int(self):
+        """ Jump to the specified interrupt vector, saving FLAGS, CS, and IP. """
+        interrupt = self.get_byte_immediate()
+        self.internal_push(self.flags.value)
+        self.flags.trap = False
+        self.flags.interrupt_enable = False
+        self.internal_push(self.regs.CS)
+        self.regs.CS = self.bus.mem_read_word((interrupt * 4) + 2)
+        self.internal_push(self.regs.IP)
+        self.regs.IP = self.bus.mem_read_word(interrupt * 4)
+        log.debug("INT %02xh to CS:IP 0x%04x:0x%04x", interrupt, self.regs.CS, self.regs.IP)
+        
     # ********** Fancy jump opcodes. **********
     def _jmpf(self):
         # This may look silly, but you can't modify IP or CS while reading the JUMP FAR parameters.

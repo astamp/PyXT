@@ -2908,3 +2908,63 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
         self.run_address_test("F7 96 00 FF", 0x8000 - 0x100) # not word [bp]
         self.run_address_test("F7 97 00 FF", 0x1000 - 0x100) # not word [bx]
         
+class IntOpcodeTests(BaseOpcodeAcceptanceTests):
+    def setUp(self):
+        super(IntOpcodeTests, self).setUp()
+        
+        # We need to leave room at the beginning of RAM for the vector table.
+        self.cpu.regs.CS = 0x0040
+        self.cpu.regs.SS = 0x0100
+        self.cpu.regs.SP = 0x0100
+        self.cpu.regs.DS = 0x0040
+        self.cpu.regs.ES = 0x0040
+        
+    def test_int_acceptance_test(self):
+        """
+        ; Fill in the interrupt vector table.
+        TIMES 32 dw 0x0000
+        dw 0x0004
+        dw 0x0050
+        TIMES (0x400 - ($ - $$)) db 0x00
+
+        ; Real code starts at CS:IP 0040:0000.
+        int 0x10
+
+        ; Halts all the way to the interrupt handler.
+        TIMES (0x504 - ($ - $$)) hlt
+
+        ; Interrupt handler at CS:IP 0050:0004
+        int10h:
+            mov bx, 0x5643
+            hlt
+        """
+        # This is a ton of code, this fills in the relevant parts.
+        self.memory.mem_write_byte(0x40, 0x04)
+        self.memory.mem_write_byte(0x42, 0x50)
+        
+        self.memory.mem_write_byte(0x400, 0xCD)
+        self.memory.mem_write_byte(0x401, 0x10)
+        for offset in xrange(0x402, 0x504):
+            self.memory.mem_write_byte(offset, 0xF4)
+            
+        self.memory.mem_write_byte(0x504, 0xBB)
+        self.memory.mem_write_byte(0x505, 0x43)
+        self.memory.mem_write_byte(0x506, 0x56)
+        self.memory.mem_write_byte(0x507, 0xF4)
+        
+        # Actually run the tests.
+        self.cpu.flags.trap = True
+        self.cpu.flags.interrupt_enable = True
+        self.cpu.flags.carry = True
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.CS, 0x0050)
+        self.assertEqual(self.cpu.regs.IP, 0x0008) # One past the hlt.
+        self.assertFalse(self.cpu.flags.interrupt_enable) # Should be cleared.
+        self.assertFalse(self.cpu.flags.trap) # Should be cleared.
+        self.assertTrue(self.cpu.flags.carry) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.BX, 0x5643)
+        self.assertEqual(self.cpu.regs.SP, 0xFA)
+        self.assertEqual(self.memory.mem_read_word(0x10FE), 0x0301) # Should contain original FLAGS.
+        self.assertEqual(self.memory.mem_read_word(0x10FC), 0x0040) # Should contain original CS.
+        self.assertEqual(self.memory.mem_read_word(0x10FA), 0x0002) # Should contain original IP.
+    
