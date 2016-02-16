@@ -2339,11 +2339,19 @@ class RepPrefixTests(BaseOpcodeAcceptanceTests):
         self.cpu.regs.BX = 0
         self.cpu.regs.CX = 2
         self.load_code_string("F3 43 AA F4")
-        self.assertEqual(self.run_to_halt(), 1)
-        self.assertEqual(self.cpu.regs.BX, 1) # Only one time.
-        self.assertEqual(self.cpu.regs.DI, 4) # We halted before executing this.
-        self.assertEqual(self.cpu.regs.CX, 2) # Invalid opcode/prefix combination ignored.
-        self.assertEqual(self.memory.mem_read_byte(20), 0x00) # We halted before executing this.
+        
+        with self.assertRaises(InvalidOpcodeException) as context:
+            self.run_to_halt()
+            
+        self.assertEqual(context.exception.opcode, 0x43)
+        self.assertEqual(context.exception.cs, 0x0000)
+        self.assertEqual(context.exception.ip, 0x0002) # Updated to point at the next instruction.
+        
+        # self.assertEqual(self.run_to_halt(), 1)
+        # self.assertEqual(self.cpu.regs.BX, 1) # Only one time.
+        # self.assertEqual(self.cpu.regs.DI, 4) # We halted before executing this.
+        # self.assertEqual(self.cpu.regs.CX, 2) # Invalid opcode/prefix combination ignored.
+        # self.assertEqual(self.memory.mem_read_byte(20), 0x00) # We halted before executing this.
         
     def test_rep_movsb(self):
         """

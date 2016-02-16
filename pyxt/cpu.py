@@ -8,6 +8,7 @@ import operator
 from ctypes import Structure, Union, c_ushort, c_ubyte
 
 # PyXT imports
+from pyxt.exceptions import InvalidOpcodeException
 from pyxt.helpers import count_bits_fast, segment_offset_to_address, rotate_left_8_bits, rotate_left_16_bits
 from pyxt.helpers import shift_arithmetic_right_8_bits, shift_arithmetic_right_16_bits
 
@@ -563,7 +564,7 @@ class CPU(object):
             log.error(message)
             
         # Throw an unhandled exception so we print the register contents.
-        raise RuntimeError
+        raise InvalidOpcodeException(opcode, self.regs.CS, self.regs.IP)
         
     # ********** Opcode parameter helpers. **********
     def get_modrm_operands(self, size, decode_register = True):
