@@ -618,8 +618,12 @@ class CPU(object):
                 rm_value = self.regs.BX + self.regs.DI
             elif rm == 0x02:
                 rm_value = self.regs.BP + self.regs.SI
+                if self.segment_override is None:
+                    self.segment_override = "SS"
             elif rm == 0x03:
                 rm_value = self.regs.BP + self.regs.DI
+                if self.segment_override is None:
+                    self.segment_override = "SS"
             elif rm == 0x04:
                 rm_value = self.regs.SI
             elif rm == 0x05:
@@ -630,6 +634,8 @@ class CPU(object):
                     rm_value = self.get_word_immediate()
                 else:
                     rm_value = self.regs.BP
+                    if self.segment_override is None:
+                        self.segment_override = "SS"
             elif rm == 0x07:
                 rm_value = self.regs.BX
                 

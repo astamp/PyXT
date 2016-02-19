@@ -3039,16 +3039,20 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
         run_test("F6 D6", "DH") # not dh
         run_test("F6 D7", "BH") # not bh
         
-    def run_address_test(self, code, expected_address):
+    def run_address_test(self, code, expected_address, segment_override = None):
         """ Decode the ModRM field and check that the address matches. """
         # Reset IP to 1 so we can run multiple checks in the same test.
         self.cpu.regs.IP = 1
+        # Reset segment override to None so we don't affect subsequent tests.
+        self.cpu.segment_override = None
         # Track the number of bytes loaded so we can check that IP is correct at the end.
         expected_ip = self.load_code_string(code)
         # We aren't doing register testing so we will just assume 16 bits and toss the register.
         self.assertEqual(self.cpu.get_modrm_operands(16)[1:], (ADDRESS, expected_address))
         # Ensure that IP matches the number of bytes loaded.
         self.assertEqual(self.cpu.regs.IP, expected_ip)
+        # Ensure any segment override is expected.
+        self.assertEqual(self.cpu.segment_override, segment_override)
         
     def test_mod_00_rm_110_absolute_address(self):
         self.run_address_test("F7 16 43 56", 0x5643) # not word [0x5643]
@@ -3058,8 +3062,8 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
     def test_mod_00_all_modes_no_displacement(self):
         self.run_address_test("F7 10", 0x1200) # not word [bx + si]
         self.run_address_test("F7 11", 0x1400) # not word [bx + di]
-        self.run_address_test("F7 12", 0x8200) # not word [bp + si]
-        self.run_address_test("F7 13", 0x8400) # not word [bp + di]
+        self.run_address_test("F7 12", 0x8200, "SS") # not word [bp + si]
+        self.run_address_test("F7 13", 0x8400, "SS") # not word [bp + di]
         self.run_address_test("F7 14", 0x0200) # not word [si]
         self.run_address_test("F7 15", 0x0400) # not word [di]
         # This is not a mod 00 test, mod 00 rm 110 is handled above.
@@ -3069,42 +3073,54 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
     def test_mod_01_all_modes_byte_displacement(self):
         self.run_address_test("F7 50 01", 0x1200 + 1) # not word [bx + si + 1]
         self.run_address_test("F7 51 01", 0x1400 + 1) # not word [bx + di + 1]
-        self.run_address_test("F7 52 01", 0x8200 + 1) # not word [bp + si + 1]
-        self.run_address_test("F7 53 01", 0x8400 + 1) # not word [bp + di + 1]
+        self.run_address_test("F7 52 01", 0x8200 + 1, "SS") # not word [bp + si + 1]
+        self.run_address_test("F7 53 01", 0x8400 + 1, "SS") # not word [bp + di + 1]
         self.run_address_test("F7 54 01", 0x0200 + 1) # not word [si + 1]
         self.run_address_test("F7 55 01", 0x0400 + 1) # not word [di + 1]
-        self.run_address_test("F7 56 01", 0x8000 + 1) # not word [bp + 1]
+        self.run_address_test("F7 56 01", 0x8000 + 1, "SS") # not word [bp + 1]
         self.run_address_test("F7 57 01", 0x1000 + 1) # not word [bx + 1]
         
     def test_mod_01_all_modes_byte_negative_displacement(self):
         self.run_address_test("F7 50 FF", 0x1200 - 1) # not word [bx + si - 1]
         self.run_address_test("F7 51 FF", 0x1400 - 1) # not word [bx + di - 1]
-        self.run_address_test("F7 52 FF", 0x8200 - 1) # not word [bp + si - 1]
-        self.run_address_test("F7 53 FF", 0x8400 - 1) # not word [bp + di - 1]
+        self.run_address_test("F7 52 FF", 0x8200 - 1, "SS") # not word [bp + si - 1]
+        self.run_address_test("F7 53 FF", 0x8400 - 1, "SS") # not word [bp + di - 1]
         self.run_address_test("F7 54 FF", 0x0200 - 1) # not word [si - 1]
         self.run_address_test("F7 55 FF", 0x0400 - 1) # not word [di - 1]
-        self.run_address_test("F7 56 FF", 0x8000 - 1) # not word [bp - 1]
+        self.run_address_test("F7 56 FF", 0x8000 - 1, "SS") # not word [bp - 1]
         self.run_address_test("F7 57 FF", 0x1000 - 1) # not word [bx - 1]
         
     def test_mod_10_all_modes_word_displacement(self):
         self.run_address_test("F7 90 00 01", 0x1200 + 0x100) # not word [bx + si]
         self.run_address_test("F7 91 00 01", 0x1400 + 0x100) # not word [bx + di]
-        self.run_address_test("F7 92 00 01", 0x8200 + 0x100) # not word [bp + si]
-        self.run_address_test("F7 93 00 01", 0x8400 + 0x100) # not word [bp + di]
+        self.run_address_test("F7 92 00 01", 0x8200 + 0x100, "SS") # not word [bp + si]
+        self.run_address_test("F7 93 00 01", 0x8400 + 0x100, "SS") # not word [bp + di]
         self.run_address_test("F7 94 00 01", 0x0200 + 0x100) # not word [si]
         self.run_address_test("F7 95 00 01", 0x0400 + 0x100) # not word [di]
-        self.run_address_test("F7 96 00 01", 0x8000 + 0x100) # not word [bp]
+        self.run_address_test("F7 96 00 01", 0x8000 + 0x100, "SS") # not word [bp]
         self.run_address_test("F7 97 00 01", 0x1000 + 0x100) # not word [bx]
         
     def test_mod_10_all_modes_word_negative_displacement(self):
         self.run_address_test("F7 90 00 FF", 0x1200 - 0x100) # not word [bx + si]
         self.run_address_test("F7 91 00 FF", 0x1400 - 0x100) # not word [bx + di]
-        self.run_address_test("F7 92 00 FF", 0x8200 - 0x100) # not word [bp + si]
-        self.run_address_test("F7 93 00 FF", 0x8400 - 0x100) # not word [bp + di]
+        self.run_address_test("F7 92 00 FF", 0x8200 - 0x100, "SS") # not word [bp + si]
+        self.run_address_test("F7 93 00 FF", 0x8400 - 0x100, "SS") # not word [bp + di]
         self.run_address_test("F7 94 00 FF", 0x0200 - 0x100) # not word [si]
         self.run_address_test("F7 95 00 FF", 0x0400 - 0x100) # not word [di]
-        self.run_address_test("F7 96 00 FF", 0x8000 - 0x100) # not word [bp]
+        self.run_address_test("F7 96 00 FF", 0x8000 - 0x100, "SS") # not word [bp]
         self.run_address_test("F7 97 00 FF", 0x1000 - 0x100) # not word [bx]
+        
+    def test_bp_doesnt_override_existing_override(self):
+        """
+        mov ax, [ds:bp]
+        hlt
+        """
+        self.cpu.regs.BP = 0x0100
+        self.cpu.regs.DS = 0x0030
+        self.memory.mem_write_word(0x0400, 0xCAFE)
+        self.load_code_string("3E 8B 46 00 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xCAFE)
         
 class IntOpcodeTests(BaseOpcodeAcceptanceTests):
     def setUp(self):
@@ -3162,7 +3178,7 @@ class IntOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertTrue(self.cpu.flags.carry) # Should be unmodified.
         self.assertEqual(self.cpu.regs.BX, 0x5643)
         self.assertEqual(self.cpu.regs.SP, 0xFA)
-        self.assertEqual(self.memory.mem_read_word(0x10FE), 0x0301) # Should contain original FLAGS.
+        self.assertEqual(self.memory.mem_read_word(0x10FE), 0xF301) # Should contain original FLAGS.
         self.assertEqual(self.memory.mem_read_word(0x10FC), 0x0040) # Should contain original CS.
         self.assertEqual(self.memory.mem_read_word(0x10FA), 0x0002) # Should contain original IP.
     
