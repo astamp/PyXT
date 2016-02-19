@@ -31,7 +31,7 @@ class FlagsRegisterTest(unittest.TestCase):
         self.flags = FLAGS()
         
     def test_initialized_to_zero(self):
-        self.assertEqual(self.flags.value, 0)
+        self.assertEqual(self.flags.value & 0x0FFF, 0)
         
     # Property tests.
     def test_carry_flag_property_get(self):
@@ -40,11 +40,11 @@ class FlagsRegisterTest(unittest.TestCase):
         self.assertTrue(self.flags.carry)
         
     def test_carry_flag_property_set(self):
-        self.assertEqual(self.flags.value, 0)
+        self.assertEqual(self.flags.value & 0x0FFF, 0)
         self.flags.carry = True
-        self.assertEqual(self.flags.value, FLAGS.CARRY)
+        self.assertEqual(self.flags.value & 0x0FFF, FLAGS.CARRY)
         self.flags.carry = False
-        self.assertEqual(self.flags.value, 0)
+        self.assertEqual(self.flags.value & 0x0FFF, 0)
         
     def test_parity_flag_property_get(self):
         self.assertFalse(self.flags.parity)
@@ -52,11 +52,11 @@ class FlagsRegisterTest(unittest.TestCase):
         self.assertTrue(self.flags.parity)
         
     def test_parity_flag_property_set(self):
-        self.assertEqual(self.flags.value, 0)
+        self.assertEqual(self.flags.value & 0x0FFF, 0)
         self.flags.parity = True
-        self.assertEqual(self.flags.value, FLAGS.PARITY)
+        self.assertEqual(self.flags.value & 0x0FFF, FLAGS.PARITY)
         self.flags.parity = False
-        self.assertEqual(self.flags.value, 0)
+        self.assertEqual(self.flags.value & 0x0FFF, 0)
         
     def test_adjust_flag_property_get(self):
         self.assertFalse(self.flags.adjust)
@@ -64,11 +64,11 @@ class FlagsRegisterTest(unittest.TestCase):
         self.assertTrue(self.flags.adjust)
         
     def test_adjust_flag_property_set(self):
-        self.assertEqual(self.flags.value, 0)
+        self.assertEqual(self.flags.value & 0x0FFF, 0)
         self.flags.adjust = True
-        self.assertEqual(self.flags.value, FLAGS.ADJUST)
+        self.assertEqual(self.flags.value & 0x0FFF, FLAGS.ADJUST)
         self.flags.adjust = False
-        self.assertEqual(self.flags.value, 0)
+        self.assertEqual(self.flags.value & 0x0FFF, 0)
         
     def test_zero_flag_property_get(self):
         self.assertFalse(self.flags.zero)
@@ -76,11 +76,11 @@ class FlagsRegisterTest(unittest.TestCase):
         self.assertTrue(self.flags.zero)
         
     def test_zero_flag_property_set(self):
-        self.assertEqual(self.flags.value, 0)
+        self.assertEqual(self.flags.value & 0x0FFF, 0)
         self.flags.zero = True
-        self.assertEqual(self.flags.value, FLAGS.ZERO)
+        self.assertEqual(self.flags.value & 0x0FFF, FLAGS.ZERO)
         self.flags.zero = False
-        self.assertEqual(self.flags.value, 0)
+        self.assertEqual(self.flags.value & 0x0FFF, 0)
         
     def test_sign_flag_property_get(self):
         self.assertFalse(self.flags.sign)
@@ -88,11 +88,11 @@ class FlagsRegisterTest(unittest.TestCase):
         self.assertTrue(self.flags.sign)
         
     def test_sign_flag_property_set(self):
-        self.assertEqual(self.flags.value, 0)
+        self.assertEqual(self.flags.value & 0x0FFF, 0)
         self.flags.sign = True
-        self.assertEqual(self.flags.value, FLAGS.SIGN)
+        self.assertEqual(self.flags.value & 0x0FFF, FLAGS.SIGN)
         self.flags.sign = False
-        self.assertEqual(self.flags.value, 0)
+        self.assertEqual(self.flags.value & 0x0FFF, 0)
         
     def run_set_from_alu_test(self, func, value, zero, sign, carry, parity):
         """ Execute func with value and check the flags, None is a don't care. """
@@ -208,6 +208,13 @@ class FlagsRegisterTest(unittest.TestCase):
         # And only changed those flags.
         changed_flags = original_flags ^ self.flags.value
         self.assertEqual(changed_flags, FLAGS.CARRY | FLAGS.OVERFLOW)
+        
+    def test_808x_reserved_bits(self):
+        # Try to clear all flags.
+        self.flags.value = 0x0000
+        
+        # These should not be able to be cleared:
+        self.assertEqual(self.flags.value, FLAGS.RESERVED_4 | FLAGS.NESTED | FLAGS.IOPL_1 | FLAGS.IOPL_0)
         
 class HelperFunctionTest(unittest.TestCase):
     def test_decode_seg_reg_normal(self):

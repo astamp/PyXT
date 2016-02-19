@@ -189,10 +189,13 @@ class FLAGS(object):
     DIRECTION =   0x0400
     OVERFLOW =    0x0800
     
-    IOPL_1 =      0x1000
-    IOPL_2 =      0x2000
+    IOPL_0 =      0x1000
+    IOPL_1 =      0x2000
     NESTED =      0x4000
     RESERVED_4 =  0x8000
+    
+    # These bits are always set in an 8086/8088.
+    ALWAYS_ON_808x = RESERVED_4 | NESTED | IOPL_1 | IOPL_0
     
     def __init__(self):
         self.carry = False
@@ -251,7 +254,7 @@ class FLAGS(object):
     @property
     def value(self):
         """ Return the FLAGS register as a word value. """
-        value = self.BLANK
+        value = self.ALWAYS_ON_808x
         
         if self.carry:
             value |= self.CARRY
