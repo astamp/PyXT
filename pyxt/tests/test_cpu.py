@@ -384,6 +384,57 @@ class BaseOpcodeAcceptanceTests(unittest.TestCase):
                 
         return instruction_count
         
+    def assert_flags(self, flags):
+        """ Pass in a string of oditszapc asserting the lowercase are clear and the uppercase are set. """
+        for char in flags:
+            if char == "o":
+                self.assertFalse(self.cpu.flags.overflow)
+            elif char == "O":
+                self.assertTrue(self.cpu.flags.overflow)
+                
+            elif char == "d":
+                self.assertFalse(self.cpu.flags.direction)
+            elif char == "D":
+                self.assertTrue(self.cpu.flags.direction)
+                
+            elif char == "i":
+                self.assertFalse(self.cpu.flags.interrupt_enable)
+            elif char == "I":
+                self.assertTrue(self.cpu.flags.interrupt_enable)
+                
+            elif char == "t":
+                self.assertFalse(self.cpu.flags.trap)
+            elif char == "T":
+                self.assertTrue(self.cpu.flags.trap)
+                
+            elif char == "s":
+                self.assertFalse(self.cpu.flags.sign)
+            elif char == "S":
+                self.assertTrue(self.cpu.flags.sign)
+                
+            elif char == "z":
+                self.assertFalse(self.cpu.flags.zero)
+            elif char == "Z":
+                self.assertTrue(self.cpu.flags.zero)
+                
+            elif char == "a":
+                self.assertFalse(self.cpu.flags.adjust)
+            elif char == "A":
+                self.assertTrue(self.cpu.flags.adjust)
+                
+            elif char == "p":
+                self.assertFalse(self.cpu.flags.parity)
+            elif char == "P":
+                self.assertTrue(self.cpu.flags.parity)
+                
+            elif char == "c":
+                self.assertFalse(self.cpu.flags.carry)
+            elif char == "C":
+                self.assertTrue(self.cpu.flags.carry)
+                
+            else:
+                self.fail("Invalid char for FLAGS: %r" % char)
+                
 class AddOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_add_rm8_r8(self):
         """
@@ -399,6 +450,7 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 7)
         self.assertEqual(self.memory.mem_read_byte(0x05), 8)
+        self.assert_flags("oszpc") # ODITSZAPC
         
     def test_add_rm16_r16(self):
         """
@@ -412,6 +464,7 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 7)
         self.assertEqual(self.memory.mem_read_word(0x05), 0x0106)
+        self.assert_flags("oszPc") # ODITSZAPC
         
     def test_add_r8_rm8(self):
         """
@@ -427,6 +480,7 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 29)
         self.assertEqual(self.memory.mem_read_byte(0x05), 22)
+        self.assert_flags("oszPc") # ODITSZAPC
         
     def test_add_r16_rm16(self):
         """
@@ -440,6 +494,7 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 0x0106)
         self.assertEqual(self.memory.mem_read_word(0x05), 0xFF)
+        self.assert_flags("oszPc") # ODITSZAPC
         
     def test_add_al_imm8(self):
         """
@@ -452,6 +507,7 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 14)
+        self.assert_flags("oszpc") # ODITSZAPC
         
     def test_add_ax_imm16(self):
         """
@@ -462,6 +518,95 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("05 AE 08 F4")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 3456)
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_add_overflow_8_bit(self):
+        """
+        add al, 100
+        hlt
+        """
+        self.cpu.regs.AL = 100
+        self.load_code_string("04 64 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 200)
+        self.assert_flags("OSzpc") # ODITSZAPC
+        
+    def test_add_underflow_8_bit(self):
+        """
+        add al, -100
+        hlt
+        """
+        self.cpu.regs.AL = -100
+        self.load_code_string("04 9C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 56) # -200
+        self.assert_flags("OszpC") # ODITSZAPC
+        
+    def test_add_positive_no_overflow_8_bit(self):
+        """
+        add al, 100
+        hlt
+        """
+        self.cpu.regs.AL = 10
+        self.load_code_string("04 64 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 110)
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_add_negative_no_underflow_8_bit(self):
+        """
+        add al, -100
+        hlt
+        """
+        self.cpu.regs.AL = -10
+        self.load_code_string("04 9C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 146) # -110
+        self.assert_flags("oSzpC") # ODITSZAPC
+        
+    def test_add_overflow_16_bit(self):
+        """
+        add ax, 20000
+        hlt
+        """
+        self.cpu.regs.AX = 20000
+        self.load_code_string("05 20 4E F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 40000)
+        self.assert_flags("OSzpc") # ODITSZAPC
+        
+    def test_add_underflow_16_bit(self):
+        """
+        add ax, -20000
+        hlt
+        """
+        self.cpu.regs.AX = -20000
+        self.load_code_string("05 E0 B1 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 25536) # -40000
+        self.assert_flags("OszPC") # ODITSZAPC
+        
+    def test_add_positive_no_overflow_16_bit(self):
+        """
+        add ax, 20000
+        hlt
+        """
+        self.cpu.regs.AX = 10000
+        self.load_code_string("05 20 4E F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 30000)
+        self.assert_flags("oszPc") # ODITSZAPC
+        
+    def test_add_negative_no_underflow_16_bit(self):
+        """
+        add ax, -20000
+        hlt
+        """
+        self.cpu.regs.AX = -10000
+        self.load_code_string("05 E0 B1 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 35536) # -30000
+        self.assert_flags("oSzpC") # ODITSZAPC
         
 class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_adc_operator_carry_clear(self):

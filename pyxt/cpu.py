@@ -1103,7 +1103,19 @@ class CPU(object):
     # Math opcodes.
     def opcode_group_add(self, opcode):
         """ Entry point for all ADD opcodes. """
-        self.alu_vector_table[opcode & 0x07](operator.add)
+        self.alu_vector_table[opcode & 0x07](self.operator_add_16 if opcode & 0x01 else self.operator_add_8)
+        
+    def operator_add_8(self, operand_a, operand_b):
+        """ Implements the 8-bit add operation with overflow support. """
+        result = operand_a + operand_b
+        self.flags.overflow = operand_a & 0x80 == operand_b & 0x80 and operand_a & 0x80 != result & 0x80
+        return result
+        
+    def operator_add_16(self, operand_a, operand_b):
+        """ Implements the 16-bit add operation with overflow support. """
+        result = operand_a + operand_b
+        self.flags.overflow = operand_a & 0x8000 == operand_b & 0x8000 and operand_a & 0x8000 != result & 0x8000
+        return result
         
     def opcode_group_sub(self, opcode):
         """ Entry point for all SUB opcodes. """
