@@ -2643,6 +2643,38 @@ class SegmentOverrideTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(0), 0xAA) # Overridden to use CS.
         self.assertEqual(self.memory.mem_read_byte(16), 0x55) # Normally uses DS.
         
+    def test_ds_override(self):
+        """
+        ds stosb
+        mov al, 0x55
+        stosb
+        hlt
+        """
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.ES = 0x0002
+        self.cpu.regs.DI = 0x0000
+        self.cpu.regs.AL = 0xAA
+        self.load_code_string("3E AA B0 55 AA F4")
+        self.assertEqual(self.run_to_halt(), 4)
+        self.assertEqual(self.memory.mem_read_byte(32 + 1), 0x55) # Normally uses ES.
+        self.assertEqual(self.memory.mem_read_byte(16 + 0), 0xAA) # Overridden to use DS.
+        
+    def test_ss_override(self):
+        """
+        mov [ss:bx], al
+        mov [bx], ah
+        hlt
+        """
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SS = 0x0002
+        self.cpu.regs.AH = 0x55
+        self.cpu.regs.AL = 0xAA
+        self.cpu.regs.BX = 0
+        self.load_code_string("36 88 07 88 27 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.memory.mem_read_byte(16), 0x55) # Normally uses DS.
+        self.assertEqual(self.memory.mem_read_byte(32), 0xAA) # Overridden to use SS.
+        
 class MovsOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_movsb_incrementing(self):
         """

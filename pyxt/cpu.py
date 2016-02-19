@@ -349,6 +349,10 @@ class CPU(object):
                 self.segment_override = "ES"
             elif opcode == 0x2E:
                 self.segment_override = "CS"
+            elif opcode == 0x36:
+                self.segment_override = "SS"
+            elif opcode == 0x3E:
+                self.segment_override = "DS"
             else:
                 break
                 
