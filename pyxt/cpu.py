@@ -244,6 +244,10 @@ class FLAGS(object):
             else:
                 self.set_from_alu_no_carry_word(value)
                 
+    def clear_logical(self):
+        """ The carry and overflow flags are cleared after a logical ALU operation. """
+        self.carry = self.overflow = False
+        
     @property
     def value(self):
         """ Return the FLAGS register as a word value. """

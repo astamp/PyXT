@@ -195,6 +195,20 @@ class FlagsRegisterTest(unittest.TestCase):
         for args in data:
             self.run_set_from_alu_test(self.flags.set_from_alu_no_carry_byte, *args)
             
+    def test_clear_logical(self):
+        # Not all can be set.
+        self.flags.value = 0xFFFF
+        original_flags = self.flags.value
+        
+        self.flags.clear_logical()
+        # Make sure it does what it says.
+        self.assertFalse(self.flags.carry)
+        self.assertFalse(self.flags.overflow)
+        
+        # And only changed those flags.
+        changed_flags = original_flags ^ self.flags.value
+        self.assertEqual(changed_flags, FLAGS.CARRY | FLAGS.OVERFLOW)
+        
 class HelperFunctionTest(unittest.TestCase):
     def test_decode_seg_reg_normal(self):
         self.assertEqual(decode_seg_reg(0x00), "ES")
