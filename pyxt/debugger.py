@@ -62,6 +62,12 @@ class Debugger(object):
             self.cpu.flags.sign, self.cpu.flags.direction,
         )
         
+    def dump_stack(self, depth):
+        """ Dump the stack. """
+        for temp_sp in xrange(self.cpu.regs.SP, self.cpu.regs.SP + (depth * 2), 2):
+            value = self.bus.mem_read_word(segment_offset_to_address(self.cpu.regs.SS, temp_sp))
+            log.debug("SP=%04x: %04x", temp_sp, value)
+            
     def should_break(self):
         """ Return True if we should break now. """
         return self.single_step or (self.cpu.regs.CS, self.cpu.regs.IP) in self.breakpoints
@@ -101,6 +107,9 @@ class Debugger(object):
                 
             elif len(cmd) == 1 and cmd[0] in ("dump", "d"):
                 self.dump_all()
+                
+            elif len(cmd) == 2 and cmd[0] in ("stack", "st"):
+                self.dump_stack(int(cmd[1]))
                 
             elif len(cmd) >= 1 and cmd[0] == "set":
                 self.debugger_shortcut = []
