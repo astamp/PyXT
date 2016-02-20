@@ -76,7 +76,13 @@ class Debugger(object):
         """ Return at CS:IP, but do not increment IP. """
         return self.bus.mem_read_byte(segment_offset_to_address(self.cpu.regs.CS, self.cpu.regs.IP))
         
+    def break_signal(self, signum, frame):
+        """ Control-C handler to enter single-step mode. """
+        print "Control-C"
+        self.single_step = True
+        
     def enter_debugger(self):
+        """ Interactive debugger menu. """
         while True:
             print "\nNext instruction: 0x%02x" % self.peek_instruction_byte()
             if len(self.debugger_shortcut) != 0:
