@@ -3182,3 +3182,34 @@ class IntOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_word(0x10FC), 0x0040) # Should contain original CS.
         self.assertEqual(self.memory.mem_read_word(0x10FA), 0x0002) # Should contain original IP.
     
+class JmpOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_jmp_r16(self):
+        """
+        jmp ax
+        hlt
+        inc bx
+        hlt
+        """
+        self.cpu.regs.AX = 0x0003 # After first HLT.
+        self.cpu.regs.SP = 0x0100
+        self.load_code_string("FF E0 F4 43 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AX, 0x0003) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.BX, 0x0001) # Should have been incremented.
+        self.assertEqual(self.cpu.regs.SP, 0x0100) # Should be unmodified.
+        
+    def test_jmp_m16(self):
+        """
+        jmp [value]
+        hlt
+        dec bx
+        hlt
+        value:
+            dw 5
+        """
+        self.cpu.regs.SP = 0x0100
+        self.load_code_string("FF 26 07 00 F4 4B F4 05 00")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.BX, 0xFFFF) # Should have been decremented.
+        self.assertEqual(self.cpu.regs.SP, 0x0100) # Should be unmodified.
+        
