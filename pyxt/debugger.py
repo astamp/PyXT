@@ -76,7 +76,7 @@ class Debugger(object):
         """ Return at CS:IP, but do not increment IP. """
         return self.bus.mem_read_byte(segment_offset_to_address(self.cpu.regs.CS, self.cpu.regs.IP))
         
-    def break_signal(self, signum, frame):
+    def break_signal(self, _signum, _frame):
         """ Control-C handler to enter single-step mode. """
         print "Control-C"
         self.single_step = True
