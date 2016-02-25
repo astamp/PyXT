@@ -164,6 +164,40 @@ class UnionRegs(Union):
         ("h", ByteRegs),
     ]
     
+    def __init__(self):
+        Union.__init__(self)
+        
+        # These are all initialized to zero by ctypes but this is done so PyLint isn't confused.
+        # pylint: disable=invalid-name
+        self.AX = 0x0000
+        self.AH = 0x00
+        self.AL = 0x00
+        
+        self.BX = 0x0000
+        self.BH = 0x00
+        self.BL = 0x00
+        
+        self.CX = 0x0000
+        self.CH = 0x00
+        self.CL = 0x00
+        
+        self.DX = 0x0000
+        self.DH = 0x00
+        self.DL = 0x00
+        
+        self.SI = 0x0000
+        self.DI = 0x0000
+        
+        self.ES = 0x0000
+        self.CS = 0xFFFF # This is so we hit the reset vector at power up.
+        self.SS = 0x0000
+        self.DS = 0x0000
+        
+        self.IP = 0x0000
+        self.BP = 0x0000
+        self.SP = 0x0000
+        # pylint: enable=invalid-name
+    
     def __getitem__(self, key):
         return getattr(self, key)
         
@@ -303,7 +337,6 @@ class CPU(object):
         
         # Normal registers.
         self.regs = UnionRegs()
-        self.regs.CS = 0xFFFF
         
         # ALU vector table.
         self.alu_vector_table = {

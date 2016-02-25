@@ -233,7 +233,7 @@ class UnionRegsTest(unittest.TestCase):
     def setUp(self):
         self.regs = UnionRegs()
         
-    def test_initialized_to_zero(self):
+    def test_initial_values(self):
         self.assertEqual(self.regs.AX, 0)
         self.assertEqual(self.regs.BX, 0)
         self.assertEqual(self.regs.CX, 0)
@@ -246,7 +246,7 @@ class UnionRegsTest(unittest.TestCase):
         
         self.assertEqual(self.regs.IP, 0)
         
-        self.assertEqual(self.regs.CS, 0)
+        self.assertEqual(self.regs.CS, 0xFFFF)
         self.assertEqual(self.regs.DS, 0)
         self.assertEqual(self.regs.ES, 0)
         self.assertEqual(self.regs.SS, 0)
