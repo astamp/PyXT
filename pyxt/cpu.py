@@ -523,6 +523,10 @@ class CPU(object):
             self._xor_r16_rm16()
         elif opcode == 0xA8:
             self.opcode_test_al_imm8()
+        elif opcode == 0xC4:
+            self.opcode_les()
+        elif opcode == 0xC5:
+            self.opcode_lds()
             
         # String operations.
         elif opcode == 0xA4:
@@ -778,6 +782,28 @@ class CPU(object):
         temp = self.regs[dest]
         self.regs[dest] = self.regs.AX
         self.regs.AX = temp
+        
+    def opcode_les(self):
+        """ Load ES:r16 with the far pointer from r/m16. """
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        assert rm_type == ADDRESS
+        
+        offset = self._get_rm16(rm_type, rm_value)
+        segment = self._get_rm16(rm_type, rm_value + 2)
+        
+        self.regs[register] = offset
+        self.regs.ES = segment
+        
+    def opcode_lds(self):
+        """ Load DS:r16 with the far pointer from r/m16. """
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        assert rm_type == ADDRESS
+        
+        offset = self._get_rm16(rm_type, rm_value)
+        segment = self._get_rm16(rm_type, rm_value + 2)
+        
+        self.regs[register] = offset
+        self.regs.DS = segment
         
     # ********** Stack opcodes. **********
     def opcode_group_push(self, opcode):

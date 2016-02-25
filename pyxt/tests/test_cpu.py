@@ -3233,3 +3233,58 @@ class IretOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.SP, 0x0106)
         self.assertTrue(self.cpu.flags.carry)
         
+class FarPointerOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_les_di(self):
+        """
+        les di, [value]
+        hlt
+        value:
+            dw 0xCAFE
+            dw 0xFACE
+        """
+        self.load_code_string("C4 3E 05 00 F4 FE CA CE FA")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.ES, 0xFACE)
+        self.assertEqual(self.cpu.regs.DI, 0xCAFE)
+        
+    def test_les_other_register(self):
+        """
+        les ax, [value]
+        hlt
+        value:
+            dw 0xCAFE
+            dw 0xFACE
+        """
+        self.load_code_string("C4 06 05 00 F4 FE CA CE FA")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.ES, 0xFACE)
+        self.assertEqual(self.cpu.regs.DI, 0x0000) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AX, 0xCAFE)
+        
+    def test_lds_si(self):
+        """
+        lds si, [value]
+        hlt
+        value:
+            dw 0xCAFE
+            dw 0xFACE
+        """
+        self.load_code_string("C5 36 05 00 F4 FE CA CE FA")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DS, 0xFACE)
+        self.assertEqual(self.cpu.regs.SI, 0xCAFE)
+        
+    def test_lds_other_register(self):
+        """
+        lds ax, [value]
+        hlt
+        value:
+            dw 0xCAFE
+            dw 0xFACE
+        """
+        self.load_code_string("C5 06 05 00 F4 FE CA CE FA")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DS, 0xFACE)
+        self.assertEqual(self.cpu.regs.SI, 0x0000) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AX, 0xCAFE)
+        
