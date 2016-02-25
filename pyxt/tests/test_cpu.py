@@ -3213,3 +3213,23 @@ class JmpOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.BX, 0xFFFF) # Should have been decremented.
         self.assertEqual(self.cpu.regs.SP, 0x0100) # Should be unmodified.
         
+class IretOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_iret(self):
+        """
+        iret
+        TIMES (0x12 - ($ - $$)) hlt
+        inc bx
+        hlt
+        """
+        self.cpu.regs.SS = 0x0000
+        self.cpu.regs.SP = 0x0100
+        self.memory.mem_write_word(0x0100, 0x0002) # IP
+        self.memory.mem_write_word(0x0102, 0x0001) # CS
+        self.memory.mem_write_word(0x0104, 0x0001) # FLAGS - Carry set.
+        self.cpu.flags.carry = False
+        self.load_code_string("CF F4 F4 F4 F4 F4 F4 F4 F4 F4 F4 F4 F4 F4 F4 F4 F4 F4 43 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.BX, 1)
+        self.assertEqual(self.cpu.regs.SP, 0x0106)
+        self.assertTrue(self.cpu.flags.carry)
+        

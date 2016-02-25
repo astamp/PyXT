@@ -402,6 +402,8 @@ class CPU(object):
         # Interrupt instructions.
         elif opcode == 0xCD:
             self.opcode_int()
+        elif opcode == 0xCF:
+            self.opcode_iret()
             
         # MOV instructions.
         elif opcode & 0xF0 == 0xB0:
@@ -919,6 +921,12 @@ class CPU(object):
         self.internal_push(self.regs.IP)
         self.regs.IP = self.bus.mem_read_word(interrupt * 4)
         log.debug("INT %02xh to CS:IP 0x%04x:0x%04x", interrupt, self.regs.CS, self.regs.IP)
+        
+    def opcode_iret(self):
+        """ Return from interrupt, restoring IP, CS, and FLAGS. """
+        self.regs.IP = self.internal_pop()
+        self.regs.CS = self.internal_pop()
+        self.flags.value = self.internal_pop()
         
     # ********** Fancy jump opcodes. **********
     def _jmpf(self):
