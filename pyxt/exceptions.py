@@ -16,7 +16,7 @@ class PyXTException(Exception):
     
 class InvalidOpcodeException(PyXTException):
     """ Exception raised when an invalid opcode is encountered. """
-    def __init__(self, opcode, cs, ip, prefixes = None):
+    def __init__(self, opcode, cs, ip):
         super(InvalidOpcodeException, self).__init__()
         self.opcode = opcode
         self.cs = cs
