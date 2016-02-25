@@ -43,9 +43,9 @@ class CharacterGeneratorBIOS(CharacterGenerator):
     CHAR_HEIGHT_PIXELS = 8
     
     def __init__(self, bios_file):
-        self.font_data = pygame.Surface((8 * self.RESIDENT_CHARS, 8))
+        self.font_data = pygame.Surface((8 * self.RESIDENT_CHARS, 8)) # pylint: disable=too-many-function-args
         self.font_data.fill(EGA_BLACK)
-        pix = pygame.PixelArray(self.font_data)
+        pix = pygame.PixelArray(self.font_data) # pylint: disable=too-many-function-args
         
         with open(bios_file, "rb") as fileptr:
             fileptr.seek(self.FONT_OFFSET)
