@@ -22,6 +22,9 @@ def XTScanCode(value):
     return ScanCode((value, ), (value | 0x80, ))
     
 PYGAME_KEY_TO_XT_SCANCODES = {
+    # Pylint cannot infer the constants from Pygame.
+    # pylint: disable=undefined-variable
+    
     # First row, left to right across the keyboard.
     K_F1 : XTScanCode(0x3B),
     K_F2 : XTScanCode(0x3C),
@@ -117,6 +120,8 @@ PYGAME_KEY_TO_XT_SCANCODES = {
     K_KP0 : XTScanCode(0x52),
     K_KP_PERIOD : XTScanCode(0x53),
     # K_KP_PLUS already on third row.
+    
+    # pylint: enable=undefined-variable
 }
 
 assert len(PYGAME_KEY_TO_XT_SCANCODES) == 83
