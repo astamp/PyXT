@@ -2234,9 +2234,9 @@ class SarOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0x2000)
         self.assertFalse(self.cpu.flags.carry)
         
-    def test_sar_rm8_1_negative(self):
+    def test_sar_rm16_1_negative(self):
         """
-        sar al, 1
+        sar ax, 1
         hlt
         """
         self.cpu.regs.AX = 0x8000
@@ -2245,9 +2245,9 @@ class SarOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0xC000)
         self.assertFalse(self.cpu.flags.carry)
         
-    def test_sar_rm8_1_shift_out(self):
+    def test_sar_rm16_1_shift_out(self):
         """
-        sar al, 1
+        sar ax, 1
         hlt
         """
         self.cpu.regs.AX = 0x0001
@@ -2256,9 +2256,9 @@ class SarOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0x0000)
         self.assertTrue(self.cpu.flags.carry)
         
-    def test_sar_rm8_1_cross_byte(self):
+    def test_sar_rm16_1_cross_byte(self):
         """
-        sar al, 1
+        sar ax, 1
         hlt
         """
         self.cpu.regs.AX = 0x0100
