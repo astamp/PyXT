@@ -639,6 +639,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 7)
         self.assertEqual(self.memory.mem_read_byte(0x05), 8)
+        self.assert_flags("oszpc") # ODITSZAPC
         
     def test_adc_rm8_r8_carry_set(self):
         """
@@ -655,6 +656,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 7)
         self.assertEqual(self.memory.mem_read_byte(0x05), 9)
+        self.assert_flags("oszPc") # ODITSZAPC
         
     def test_adc_rm16_r16_carry_clear(self):
         """
@@ -668,6 +670,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 7)
         self.assertEqual(self.memory.mem_read_word(0x05), 0x0106)
+        self.assert_flags("oszPc") # ODITSZAPC
         
     def test_adc_rm16_r16_carry_set(self):
         """
@@ -682,6 +685,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 7)
         self.assertEqual(self.memory.mem_read_word(0x05), 0x0107)
+        self.assert_flags("oszpc") # ODITSZAPC
         
     def test_adc_r8_rm8_carry_clear(self):
         """
@@ -697,6 +701,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 29)
         self.assertEqual(self.memory.mem_read_byte(0x05), 22)
+        self.assert_flags("oszPc") # ODITSZAPC
         
     def test_adc_r8_rm8_carry_set(self):
         """
@@ -713,6 +718,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 30)
         self.assertEqual(self.memory.mem_read_byte(0x05), 22)
+        self.assert_flags("oszPc") # ODITSZAPC
         
     def test_adc_r16_rm16_carry_clear(self):
         """
@@ -726,6 +732,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 0x0106)
         self.assertEqual(self.memory.mem_read_word(0x05), 0xFF)
+        self.assert_flags("oszPc") # ODITSZAPC
         
     def test_adc_r16_rm16_carry_set(self):
         """
@@ -740,6 +747,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 0x0107)
         self.assertEqual(self.memory.mem_read_word(0x05), 0xFF)
+        self.assert_flags("oszpc") # ODITSZAPC
         
     def test_adc_al_imm8_carry_clear(self):
         """
@@ -752,6 +760,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 14)
+        self.assert_flags("oszpc") # ODITSZAPC
         
     def test_adc_al_imm8_carry_set(self):
         """
@@ -765,6 +774,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AH"], 0xA5) # Should be unmodified.
         self.assertEqual(self.cpu.regs["AL"], 15)
+        self.assert_flags("oszPc") # ODITSZAPC
         
     def test_adc_ax_imm16_carry_clear(self):
         """
@@ -775,6 +785,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("15 AE 08 F4")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 3456)
+        self.assert_flags("oszpc") # ODITSZAPC
         
     def test_adc_ax_imm16_carry_set(self):
         """
@@ -786,6 +797,7 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("15 AE 08 F4")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs["AX"], 3457)
+        self.assert_flags("oszPc") # ODITSZAPC
         
 class SubOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_sub_rm8_r8(self):
@@ -3288,3 +3300,42 @@ class FarPointerOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.SI, 0x0000) # Should be unmodified.
         self.assertEqual(self.cpu.regs.AX, 0xCAFE)
         
+class OperatorOverflowTests(unittest.TestCase):
+    """ http://teaching.idallen.com/dat2343/10f/notes/040_overflow.txt """
+    def setUp(self):
+        self.cpu = CPU()
+        
+    def run_overflow_test(self, func, op1, op2, result, expected_overflow):
+        self.assertEqual(func(op1, op2), result)
+        self.assertEqual(self.cpu.flags.overflow, expected_overflow)
+        
+    def test_add_8_bit(self):
+        data = [
+            # op1,  op2,    result, expected_overflow
+            (50,    50,     100,    False), # + + +
+            (100,   100,    200,    True),  # + + - OVERFLOW
+            (50,    -25,    25,     False), # + - +
+            (50,    -100,   -50,    False), # + - -
+            (-50,   100,    50,     False), # - + +
+            (-50,   25,     -25,    False), # - + -
+            (-100,  -100,   -200,   True),  # - - + OVERFLOW
+            (-50,   -50,    -100,   False), # - - -
+        ]
+        for args in data:
+            self.run_overflow_test(self.cpu.operator_add_8, *args)
+            
+    def test_add_16_bit(self):
+        data = [
+            # op1,  op2,    result, expected_overflow
+            (10000, 20000,  30000,  False), # + + +
+            (20000, 20000,  40000,  True),  # + + - OVERFLOW
+            (20000, -10000, 10000,  False), # + - +
+            (10000, -20000, -10000, False), # + - -
+            (-10000, 20000, 10000,  False), # - + +
+            (-20000, 10000, -10000, False), # - + -
+            (-20000, -20000, -40000, True), # - - + OVERFLOW
+            (-10000, -20000, -30000, False), # - - -
+        ]
+        for args in data:
+            self.run_overflow_test(self.cpu.operator_add_16, *args)
+            
