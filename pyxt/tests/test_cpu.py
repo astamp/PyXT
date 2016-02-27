@@ -803,6 +803,94 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs["AX"], 3457)
         self.assert_flags("oszPc") # ODITSZAPC
         
+    def test_adc_overflow_8_bit(self):
+        """
+        adc al, 100
+        hlt
+        """
+        self.cpu.regs.AL = 100
+        self.load_code_string("14 64 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 200)
+        self.assert_flags("OSzpc") # ODITSZAPC
+        
+    def test_adc_underflow_8_bit(self):
+        """
+        adc al, -100
+        hlt
+        """
+        self.cpu.regs.AL = -100
+        self.load_code_string("14 9C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 56) # -200
+        self.assert_flags("OszpC") # ODITSZAPC
+        
+    def test_adc_positive_no_overflow_8_bit(self):
+        """
+        adc al, 100
+        hlt
+        """
+        self.cpu.regs.AL = 10
+        self.load_code_string("14 64 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 110)
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_adc_negative_no_underflow_8_bit(self):
+        """
+        adc al, -100
+        hlt
+        """
+        self.cpu.regs.AL = -10
+        self.load_code_string("14 9C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 146) # -110
+        self.assert_flags("oSzpC") # ODITSZAPC
+        
+    def test_adc_overflow_16_bit(self):
+        """
+        adc ax, 20000
+        hlt
+        """
+        self.cpu.regs.AX = 20000
+        self.load_code_string("15 20 4E F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 40000)
+        self.assert_flags("OSzpc") # ODITSZAPC
+        
+    def test_adc_underflow_16_bit(self):
+        """
+        adc ax, -20000
+        hlt
+        """
+        self.cpu.regs.AX = -20000
+        self.load_code_string("15 E0 B1 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 25536) # -40000
+        self.assert_flags("OszPC") # ODITSZAPC
+        
+    def test_adc_positive_no_overflow_16_bit(self):
+        """
+        adc ax, 20000
+        hlt
+        """
+        self.cpu.regs.AX = 10000
+        self.load_code_string("15 20 4E F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 30000)
+        self.assert_flags("oszPc") # ODITSZAPC
+        
+    def test_adc_negative_no_underflow_16_bit(self):
+        """
+        adc ax, -20000
+        hlt
+        """
+        self.cpu.regs.AX = -10000
+        self.load_code_string("15 E0 B1 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 35536) # -30000
+        self.assert_flags("oSzpC") # ODITSZAPC
+        
 class SubOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_sub_rm8_r8(self):
         """
