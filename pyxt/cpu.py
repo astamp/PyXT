@@ -72,14 +72,6 @@ SEGMENT_REG = {
 }
 
 # Functions
-def word_to_bytes_le(word):
-    assert word >= 0 and word <= 0xFFFF
-    return (word & 0x00FF), ((word & 0xFF00) >> 8)
-    
-def bytes_to_word_le(data):
-    assert len(data) == 2
-    return ((data[1] & 0xFF) << 8) | (data[0] & 0xFF)
-    
 SIGNED_WORD = struct.Struct("<h")
 UNSIGNED_WORD = struct.Struct("<H")
 SIGNED_BYTE = struct.Struct("<b")
