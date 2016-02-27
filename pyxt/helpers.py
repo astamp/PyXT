@@ -126,3 +126,9 @@ def shift_arithmetic_right_16_bits(value, count):
         
     return value, carry
     
+def sign_extend_byte_to_word(value):
+    """ Sign extend a byte value to a word. """
+    value = value & 0x00FF
+    if value & 0x80:
+        value |= 0xFF00
+    return value

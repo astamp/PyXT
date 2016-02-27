@@ -192,3 +192,13 @@ class ShiftArithmeticRightTests(unittest.TestCase):
         self.assertEqual(shift_arithmetic_right_16_bits(0x8000, 22), (0xFFFF, True))
         self.assertEqual(shift_arithmetic_right_16_bits(0x4000, 22), (0x0000, False))
         
+class SignExtendByteToWordTests(unittest.TestCase):
+    def test_positive(self):
+        self.assertEqual(sign_extend_byte_to_word(0x7F), 0x007F)
+        
+    def test_negative(self):
+        self.assertEqual(sign_extend_byte_to_word(0x80), 0xFF80)
+        
+    def test_word_input_masked_to_byte(self):
+        self.assertEqual(sign_extend_byte_to_word(0xFF7F), 0x007F)
+        

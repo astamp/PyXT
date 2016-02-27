@@ -10,7 +10,7 @@ from ctypes import Structure, Union, c_ushort, c_ubyte
 # PyXT imports
 from pyxt.exceptions import InvalidOpcodeException
 from pyxt.helpers import count_bits_fast, segment_offset_to_address, rotate_left_8_bits, rotate_left_16_bits
-from pyxt.helpers import shift_arithmetic_right_8_bits, shift_arithmetic_right_16_bits
+from pyxt.helpers import shift_arithmetic_right_8_bits, shift_arithmetic_right_16_bits, sign_extend_byte_to_word
 
 # Logging setup
 import logging
@@ -72,12 +72,6 @@ SEGMENT_REG = {
 }
 
 # Functions
-def sign_extend_byte_to_word(value):
-    value = value & 0x00FF
-    if value & 0x80:
-        value |= 0xFF00
-    return value
-    
 def word_to_bytes_le(word):
     assert word >= 0 and word <= 0xFFFF
     return (word & 0x00FF), ((word & 0xFF00) >> 8)
