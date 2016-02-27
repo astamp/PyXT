@@ -3373,3 +3373,33 @@ class OperatorOverflowTests(unittest.TestCase):
         for args in data:
             self.run_overflow_test(self.cpu.operator_adc_16, *args)
             
+    def test_sub_8_bit(self):
+        data = [
+            # op1,  op2,    result, expected_overflow
+            (100,   50,     50,     False), # + + +
+            (50,    100,    -50,    False), # + + -
+            (50,    -25,    75,     False), # + - +
+            (50,    -100,   150,    True),  # + - - OVERFLOW
+            (-50,   100,    -150,   True),  # - + + OVERFLOW
+            (-50,   25,     -75,    False), # - + -
+            (-50,   -100,   50,     False), # - - +
+            (-50,   -25,    -25,    False), # - - -
+        ]
+        for args in data:
+            self.run_overflow_test(self.cpu.operator_sub_8, *args)
+            
+    def test_sub_16_bit(self):
+        data = [
+            # op1,  op2,    result, expected_overflow
+            (30000, 20000,  10000 , False), # + + +
+            (20000, 30000,  -10000, False), # + + -
+            (20000, -10000, 30000,  False), # + - +
+            (20000, -20000, 40000,  True),  # + - - OVERFLOW
+            (-20000, 20000, -40000, True),  # - + + OVERFLOW
+            (-20000, 10000, -30000, False), # - + -
+            (-10000, -20000, 10000, False), # - - +
+            (-20000, -10000, -10000, False), # - - -
+        ]
+        for args in data:
+            self.run_overflow_test(self.cpu.operator_sub_16, *args)
+            

@@ -1166,7 +1166,7 @@ class CPU(object):
         self.flags.set_from_alu_word(value)
         self.regs.AX = value & 0xFFFF
         
-    # Math opcodes.
+    # ADD
     def opcode_group_add(self, opcode):
         """ Entry point for all ADD opcodes. """
         self.alu_vector_table[opcode & 0x07](self.operator_add_16 if opcode & 0x01 else self.operator_add_8)
@@ -1183,10 +1183,24 @@ class CPU(object):
         self.flags.overflow = operand_a & 0x8000 == operand_b & 0x8000 and operand_a & 0x8000 != result & 0x8000
         return result
         
+    # SUB
     def opcode_group_sub(self, opcode):
         """ Entry point for all SUB opcodes. """
-        self.alu_vector_table[opcode & 0x07](operator.sub)
+        self.alu_vector_table[opcode & 0x07](self.operator_sub_16 if opcode & 0x01 else self.operator_sub_8)
         
+    def operator_sub_8(self, operand_a, operand_b):
+        """ Implements the 8-bit sub operation with overflow support. """
+        result = operand_a - operand_b
+        self.flags.overflow = operand_a & 0x80 != operand_b & 0x80 and operand_b & 0x80 == result & 0x80
+        return result
+        
+    def operator_sub_16(self, operand_a, operand_b):
+        """ Implements the 16-bit sub operation with overflow support. """
+        result = operand_a - operand_b
+        self.flags.overflow = operand_a & 0x8000 != operand_b & 0x8000 and operand_b & 0x8000 == result & 0x8000
+        return result
+        
+    # SBB
     def operator_sbb(self, operand_a, operand_b):
         """ Implements the SBB operator which subtracts an extra 1 if CF is set. """
         result = operand_a - operand_b
@@ -1198,6 +1212,7 @@ class CPU(object):
         """ Entry point for all SBB opcodes. """
         self.alu_vector_table[opcode & 0x07](self.operator_sbb)
         
+    # ADC
     def operator_adc_8(self, operand_a, operand_b):
         """ Implements the 8-bit ADC operator which adds an extra 1 if CF is set. """
         result = operand_a + operand_b
@@ -1218,6 +1233,7 @@ class CPU(object):
         """ Entry point for all ADC opcodes. """
         self.alu_vector_table[opcode & 0x07](self.operator_adc_16 if opcode & 0x01 else self.operator_adc_8)
         
+    # CMP
     def opcode_cmp_rm8_r8(self):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
         register, rm_type, rm_value = self.get_modrm_operands(8)
