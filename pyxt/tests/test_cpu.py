@@ -618,12 +618,16 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
 class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_adc_operator_carry_clear(self):
         self.assertFalse(self.cpu.flags.carry)
-        self.assertEqual(self.cpu.operator_adc(7, 5), 12)
+        self.assertEqual(self.cpu.operator_adc_8(7, 5), 12)
+        self.assertFalse(self.cpu.flags.carry)
+        self.assertEqual(self.cpu.operator_adc_16(7, 5), 12)
         
     def test_adc_operator_carry_set(self):
         self.cpu.flags.carry = True
         self.assertTrue(self.cpu.flags.carry)
-        self.assertEqual(self.cpu.operator_adc(7, 5), 13)
+        self.assertEqual(self.cpu.operator_adc_8(7, 5), 13)
+        self.assertTrue(self.cpu.flags.carry)
+        self.assertEqual(self.cpu.operator_adc_16(7, 5), 13)
         
     def test_adc_rm8_r8_carry_clear(self):
         """
@@ -3338,4 +3342,34 @@ class OperatorOverflowTests(unittest.TestCase):
         ]
         for args in data:
             self.run_overflow_test(self.cpu.operator_add_16, *args)
+            
+    def test_adc_8_bit(self):
+        data = [
+            # op1,  op2,    result, expected_overflow
+            (50,    50,     100,    False), # + + +
+            (100,   100,    200,    True),  # + + - OVERFLOW
+            (50,    -25,    25,     False), # + - +
+            (50,    -100,   -50,    False), # + - -
+            (-50,   100,    50,     False), # - + +
+            (-50,   25,     -25,    False), # - + -
+            (-100,  -100,   -200,   True),  # - - + OVERFLOW
+            (-50,   -50,    -100,   False), # - - -
+        ]
+        for args in data:
+            self.run_overflow_test(self.cpu.operator_adc_8, *args)
+            
+    def test_adc_16_bit(self):
+        data = [
+            # op1,  op2,    result, expected_overflow
+            (10000, 20000,  30000,  False), # + + +
+            (20000, 20000,  40000,  True),  # + + - OVERFLOW
+            (20000, -10000, 10000,  False), # + - +
+            (10000, -20000, -10000, False), # + - -
+            (-10000, 20000, 10000,  False), # - + +
+            (-20000, 10000, -10000, False), # - + -
+            (-20000, -20000, -40000, True), # - - + OVERFLOW
+            (-10000, -20000, -30000, False), # - - -
+        ]
+        for args in data:
+            self.run_overflow_test(self.cpu.operator_adc_16, *args)
             
