@@ -124,7 +124,7 @@ class MonochromeDisplayAdapter(Device):
         
     def io_read_byte(self, port):
         if port in DATA_REG_ACCESS_PORTS:
-            return self.read_crt_data_register(self.data_reg_index)
+            return 0x00 # self.read_crt_data_register(self.data_reg_index)
             
         elif port == CONTROL_REG_PORT:
             return self.control_reg
@@ -137,7 +137,7 @@ class MonochromeDisplayAdapter(Device):
             self.data_reg_index = value
             
         elif port in DATA_REG_ACCESS_PORTS:
-            self.write_crt_data_register(self.data_reg_index, value)
+            pass # self.write_crt_data_register(self.data_reg_index, value)
             
         elif port == CONTROL_REG_PORT:
             # The first time we see the enable bit, "reset" the MDA card.
