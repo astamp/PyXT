@@ -885,12 +885,16 @@ class SubOpcodeTests(BaseOpcodeAcceptanceTests):
 class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_sbb_operator_carry_clear(self):
         self.assertFalse(self.cpu.flags.carry)
-        self.assertEqual(self.cpu.operator_sbb(7, 5), 2)
+        self.assertEqual(self.cpu.operator_sbb_8(7, 5), 2)
+        self.assertFalse(self.cpu.flags.carry)
+        self.assertEqual(self.cpu.operator_sbb_16(7, 5), 2)
         
     def test_sbb_operator_carry_set(self):
         self.cpu.flags.carry = True
         self.assertTrue(self.cpu.flags.carry)
-        self.assertEqual(self.cpu.operator_sbb(7, 5), 1)
+        self.assertEqual(self.cpu.operator_sbb_8(7, 5), 1)
+        self.assertTrue(self.cpu.flags.carry)
+        self.assertEqual(self.cpu.operator_sbb_16(7, 5), 1)
         
     def test_sbb_rm8_r8_carry_clear(self):
         """
@@ -3402,4 +3406,34 @@ class OperatorOverflowTests(unittest.TestCase):
         ]
         for args in data:
             self.run_overflow_test(self.cpu.operator_sub_16, *args)
+            
+    def test_sbb_8_bit(self):
+        data = [
+            # op1,  op2,    result, expected_overflow
+            (100,   50,     50,     False), # + + +
+            (50,    100,    -50,    False), # + + -
+            (50,    -25,    75,     False), # + - +
+            (50,    -100,   150,    True),  # + - - OVERFLOW
+            (-50,   100,    -150,   True),  # - + + OVERFLOW
+            (-50,   25,     -75,    False), # - + -
+            (-50,   -100,   50,     False), # - - +
+            (-50,   -25,    -25,    False), # - - -
+        ]
+        for args in data:
+            self.run_overflow_test(self.cpu.operator_sbb_8, *args)
+            
+    def test_sbb_16_bit(self):
+        data = [
+            # op1,  op2,    result, expected_overflow
+            (30000, 20000,  10000 , False), # + + +
+            (20000, 30000,  -10000, False), # + + -
+            (20000, -10000, 30000,  False), # + - +
+            (20000, -20000, 40000,  True),  # + - - OVERFLOW
+            (-20000, 20000, -40000, True),  # - + + OVERFLOW
+            (-20000, 10000, -30000, False), # - + -
+            (-10000, -20000, 10000, False), # - - +
+            (-20000, -10000, -10000, False), # - - -
+        ]
+        for args in data:
+            self.run_overflow_test(self.cpu.operator_sbb_16, *args)
             

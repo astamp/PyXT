@@ -1201,16 +1201,25 @@ class CPU(object):
         return result
         
     # SBB
-    def operator_sbb(self, operand_a, operand_b):
-        """ Implements the SBB operator which subtracts an extra 1 if CF is set. """
+    def operator_sbb_8(self, operand_a, operand_b):
+        """ Implements the 8-bit SBB operator which subtracts an extra 1 if CF is set. """
         result = operand_a - operand_b
         if self.flags.carry:
             result -= 1
+        self.flags.overflow = operand_a & 0x80 != operand_b & 0x80 and operand_b & 0x80 == result & 0x80
+        return result
+        
+    def operator_sbb_16(self, operand_a, operand_b):
+        """ Implements the 16-bit SBB operator which subtracts an extra 1 if CF is set. """
+        result = operand_a - operand_b
+        if self.flags.carry:
+            result -= 1
+        self.flags.overflow = operand_a & 0x8000 != operand_b & 0x8000 and operand_b & 0x8000 == result & 0x8000
         return result
         
     def opcode_group_sbb(self, opcode):
         """ Entry point for all SBB opcodes. """
-        self.alu_vector_table[opcode & 0x07](self.operator_sbb)
+        self.alu_vector_table[opcode & 0x07](self.operator_sbb_16 if opcode & 0x01 else self.operator_sbb_8)
         
     # ADC
     def operator_adc_8(self, operand_a, operand_b):
