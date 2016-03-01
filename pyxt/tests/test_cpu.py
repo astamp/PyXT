@@ -1637,6 +1637,98 @@ class CmpOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertTrue(self.cpu.flags.sign)
         self.assertTrue(self.cpu.flags.carry)
         
+    def test_cmp_overflow_8_bit(self):
+        """
+        cmp al, -100
+        hlt
+        """
+        self.cpu.regs.AL = 100
+        self.load_code_string("3C 9C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 100) # Should be unmodified.
+        self.assert_flags("OSzpC") # ODITSZAPC
+        
+    def test_cmp_underflow_8_bit(self):
+        """
+        cmp al, 100
+        hlt
+        """
+        self.cpu.regs.AL = -100
+        self.load_code_string("3C 64 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 156) # -100 Should be unmodified.
+        self.assert_flags("Oszpc") # ODITSZAPC
+        
+    def test_cmp_negative_no_overflow_8_bit(self):
+        """
+        cmp al, -100
+        hlt
+        """
+        self.cpu.regs.AL = 10
+        self.load_code_string("3C 9C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 10) # Should be unmodified.
+        self.assert_flags("oszpC") # ODITSZAPC
+        # Note sure why carry is set above, but DEBUG.COM confirms...
+        
+    def test_cmp_positive_no_underflow_8_bit(self):
+        """
+        cmp al, 100
+        hlt
+        """
+        self.cpu.regs.AL = -10
+        self.load_code_string("3C 64 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 246) # -10 Should be unmodified.
+        self.assert_flags("oSzpc") # ODITSZAPC
+        # Note sure why carry is clear above, but DEBUG.COM confirms...
+        
+    def test_cmp_overflow_16_bit(self):
+        """
+        cmp ax, -20000
+        hlt
+        """
+        self.cpu.regs.AX = 20000
+        self.load_code_string("3D E0 B1 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 20000) # Should be unmodified.
+        self.assert_flags("OSzpC") # ODITSZAPC
+        
+    def test_cmp_underflow_16_bit(self):
+        """
+        cmp ax, 20000
+        hlt
+        """
+        self.cpu.regs.AX = -20000
+        self.load_code_string("3D 20 4E F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 45536) # -20000 Should be unmodified.
+        self.assert_flags("OszPc") # ODITSZAPC
+        
+    def test_cmp_negative_no_overflow_16_bit(self):
+        """
+        cmp ax, -10000
+        hlt
+        """
+        self.cpu.regs.AX = 20000
+        self.load_code_string("3D F0 D8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 20000) # Should be unmodified.
+        self.assert_flags("oszPC") # ODITSZAPC
+        # Note sure why carry is set above, but DEBUG.COM confirms...
+        
+    def test_cmp_positive_no_underflow_16_bit(self):
+        """
+        cmp ax, 10000
+        hlt
+        """
+        self.cpu.regs.AX = -20000
+        self.load_code_string("3D 10 27 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 45536) # -20000 Should be unmodified.
+        self.assert_flags("oSzpc") # ODITSZAPC
+        # Note sure why carry is clear above, but DEBUG.COM confirms...
+        
 class OrOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_or_rm8_r8(self):
         """

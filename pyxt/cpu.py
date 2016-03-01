@@ -1248,42 +1248,42 @@ class CPU(object):
         register, rm_type, rm_value = self.get_modrm_operands(8)
         op1 = self._get_rm8(rm_type, rm_value)
         op2 = self.regs[register]
-        op1 = op1 - op2
-        self.flags.set_from_alu_byte(op1)
+        result = self.operator_sub_8(op1, op2)
+        self.flags.set_from_alu_byte(result)
         
     def opcode_cmp_rm16_r16(self):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
-        op1 = op1 - op2
-        self.flags.set_from_alu_word(op1)
+        result = self.operator_sub_16(op1, op2)
+        self.flags.set_from_alu_word(result)
         
     def opcode_cmp_r8_rm8(self):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
         register, rm_type, rm_value = self.get_modrm_operands(8)
         op1 = self.regs[register]
         op2 = self._get_rm8(rm_type, rm_value)
-        op1 = op1 - op2
-        self.flags.set_from_alu_byte(op1)
+        result = self.operator_sub_8(op1, op2)
+        self.flags.set_from_alu_byte(result)
         
     def opcode_cmp_r16_rm16(self):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self.regs[register]
         op2 = self._get_rm16(rm_type, rm_value)
-        op1 = op1 - op2
-        self.flags.set_from_alu_word(op1)
+        result = self.operator_sub_16(op1, op2)
+        self.flags.set_from_alu_word(result)
         
     def opcode_cmp_al_imm8(self):
         """ Subtract immediate byte from AL, update the flags, but don't store the value. """
-        value = self.regs.AL - self.get_byte_immediate()
-        self.flags.set_from_alu_byte(value)
+        result = self.operator_sub_8(self.regs.AL, self.get_byte_immediate())
+        self.flags.set_from_alu_byte(result)
         
     def opcode_cmp_ax_imm16(self):
         """ Subtract immediate word from AX, update the flags, but don't store the value. """
-        value = self.regs.AX - self.get_word_immediate()
-        self.flags.set_from_alu_word(value)
+        result = self.operator_sub_16(self.regs.AX, self.get_word_immediate())
+        self.flags.set_from_alu_word(result)
         
     def opcode_group_f6f7(self, opcode):
         """ "Group 1" byte and word instructions. """
