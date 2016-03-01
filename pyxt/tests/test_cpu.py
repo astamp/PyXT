@@ -970,6 +970,98 @@ class SubOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.AX, 3421)
         
+    def test_sub_overflow_8_bit(self):
+        """
+        sub al, -100
+        hlt
+        """
+        self.cpu.regs.AL = 100
+        self.load_code_string("2C 9C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 200)
+        self.assert_flags("OSzpC") # ODITSZAPC
+        
+    def test_sub_underflow_8_bit(self):
+        """
+        sub al, 100
+        hlt
+        """
+        self.cpu.regs.AL = -100
+        self.load_code_string("2C 64 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 56) # -200
+        self.assert_flags("Oszpc") # ODITSZAPC
+        
+    def test_sub_negative_no_overflow_8_bit(self):
+        """
+        sub al, -100
+        hlt
+        """
+        self.cpu.regs.AL = 10
+        self.load_code_string("2C 9C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 110)
+        self.assert_flags("oszpC") # ODITSZAPC
+        # Note sure why carry is set above, but DEBUG.COM confirms...
+        
+    def test_sub_positive_no_underflow_8_bit(self):
+        """
+        sub al, 100
+        hlt
+        """
+        self.cpu.regs.AL = -10
+        self.load_code_string("2C 64 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 146) # -110
+        self.assert_flags("oSzpc") # ODITSZAPC
+        # Note sure why carry is clear above, but DEBUG.COM confirms...
+        
+    def test_sub_overflow_16_bit(self):
+        """
+        sub ax, -20000
+        hlt
+        """
+        self.cpu.regs.AX = 20000
+        self.load_code_string("2D E0 B1 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 40000)
+        self.assert_flags("OSzpC") # ODITSZAPC
+        
+    def test_sub_underflow_16_bit(self):
+        """
+        sub ax, 20000
+        hlt
+        """
+        self.cpu.regs.AX = -20000
+        self.load_code_string("2D 20 4E F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 25536) # -40000
+        self.assert_flags("OszPc") # ODITSZAPC
+        
+    def test_sub_negative_no_overflow_16_bit(self):
+        """
+        sub ax, -10000
+        hlt
+        """
+        self.cpu.regs.AX = 20000
+        self.load_code_string("2D F0 D8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 30000)
+        self.assert_flags("oszPC") # ODITSZAPC
+        # Note sure why carry is set above, but DEBUG.COM confirms...
+        
+    def test_sub_positive_no_underflow_16_bit(self):
+        """
+        sub ax, 10000
+        hlt
+        """
+        self.cpu.regs.AX = -20000
+        self.load_code_string("2D 10 27 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 35536) # -30000
+        self.assert_flags("oSzpc") # ODITSZAPC
+        # Note sure why carry is clear above, but DEBUG.COM confirms...
+        
 class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_sbb_operator_carry_clear(self):
         self.assertFalse(self.cpu.flags.carry)
@@ -1145,6 +1237,98 @@ class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("1D AE 08 F4")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.AX, 3420)
+        
+    def test_sbb_overflow_8_bit(self):
+        """
+        sbb al, -100
+        hlt
+        """
+        self.cpu.regs.AL = 100
+        self.load_code_string("1C 9C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 200)
+        self.assert_flags("OSzpC") # ODITSZAPC
+        
+    def test_sbb_underflow_8_bit(self):
+        """
+        sbb al, 100
+        hlt
+        """
+        self.cpu.regs.AL = -100
+        self.load_code_string("1C 64 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 56) # -200
+        self.assert_flags("Oszpc") # ODITSZAPC
+        
+    def test_sbb_negative_no_overflow_8_bit(self):
+        """
+        sbb al, -100
+        hlt
+        """
+        self.cpu.regs.AL = 10
+        self.load_code_string("1C 9C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 110)
+        self.assert_flags("oszpC") # ODITSZAPC
+        # Note sure why carry is set above, but DEBUG.COM confirms...
+        
+    def test_sbb_positive_no_underflow_8_bit(self):
+        """
+        sbb al, 100
+        hlt
+        """
+        self.cpu.regs.AL = -10
+        self.load_code_string("1C 64 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 146) # -110
+        self.assert_flags("oSzpc") # ODITSZAPC
+        # Note sure why carry is clear above, but DEBUG.COM confirms...
+        
+    def test_sbb_overflow_16_bit(self):
+        """
+        sbb ax, -20000
+        hlt
+        """
+        self.cpu.regs.AX = 20000
+        self.load_code_string("1D E0 B1 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 40000)
+        self.assert_flags("OSzpC") # ODITSZAPC
+        
+    def test_sbb_underflow_16_bit(self):
+        """
+        sbb ax, 20000
+        hlt
+        """
+        self.cpu.regs.AX = -20000
+        self.load_code_string("1D 20 4E F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 25536) # -40000
+        self.assert_flags("OszPc") # ODITSZAPC
+        
+    def test_sbb_negative_no_overflow_16_bit(self):
+        """
+        sbb ax, -10000
+        hlt
+        """
+        self.cpu.regs.AX = 20000
+        self.load_code_string("1D F0 D8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 30000)
+        self.assert_flags("oszPC") # ODITSZAPC
+        # Note sure why carry is set above, but DEBUG.COM confirms...
+        
+    def test_sbb_positive_no_underflow_16_bit(self):
+        """
+        sbb ax, 10000
+        hlt
+        """
+        self.cpu.regs.AX = -20000
+        self.load_code_string("1D 10 27 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 35536) # -30000
+        self.assert_flags("oSzpc") # ODITSZAPC
+        # Note sure why carry is clear above, but DEBUG.COM confirms...
         
 class CmpOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_cmp_rm8_r8_none(self):
