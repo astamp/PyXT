@@ -372,14 +372,14 @@ class BaseOpcodeAcceptanceTests(unittest.TestCase):
         """ Load a program into the base memory from a hex string, returning the number of bytes loaded. """
         return self.load_code_bytes(*[ord(byte) for byte in binascii.unhexlify(code.replace(" ", ""))])
         
-    def run_to_halt(self, max_instructions = 1000):
+    def run_to_halt(self, max_instructions = 1000, starting_ip = 0):
         """
         Run the CPU until it halts, returning the number of instructions executed.
         
         If it runs for more than max_instructions the test immediately fails.
         """
         # Reset these in case there are multiple runs in the same test.
-        self.cpu.regs.IP = 0
+        self.cpu.regs.IP = starting_ip
         self.cpu.hlt = False
         
         instruction_count = 0
@@ -3824,3 +3824,64 @@ class OperatorOverflowTests(unittest.TestCase):
         for args in data:
             self.run_overflow_test(self.cpu.operator_sbb_16, *args)
             
+class JlOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_jump_taken_only_overflow_set(self):
+        """
+        jl location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.overflow = True
+        self.load_code_string("7C 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
+    def test_jump_taken_only_sign_set(self):
+        """
+        jl location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.sign = True
+        self.load_code_string("7C 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
+    def test_jump_not_taken_both_clear(self):
+        """
+        jl location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.load_code_string("7C 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0)
+        
+    def test_jump_not_taken_both_set(self):
+        """
+        jl location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.sign = True
+        self.cpu.flags.overflow = True
+        self.load_code_string("7C 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0)
+        
+    def test_jump_can_be_backward(self):
+        """
+        location: inc ax
+        hlt
+        jl location
+        hlt
+        """
+        self.cpu.flags.sign = True
+        self.load_code_string("40 F4 7C FC F4")
+        self.assertEqual(self.run_to_halt(starting_ip = 0x0002), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        

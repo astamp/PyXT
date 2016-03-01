@@ -526,6 +526,8 @@ class CPU(object):
             self._jno()
         elif opcode == 0x70:
             self._jo()
+        elif opcode == 0x7C:
+            self.opcode_jl()
         elif opcode == 0x32:
             self._xor_r8_rm8()
         elif opcode == 0xE4:
@@ -953,6 +955,13 @@ class CPU(object):
             log.debug("JO incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
         else:
             log.debug("JO was skipped.")
+            
+    def opcode_jl(self):
+        """ Jump short if the sign flag is not equal to the overflow flag. """
+        distance = self.get_byte_immediate()
+        if self.flags.sign != self.flags.overflow:
+            self.regs.IP += signed_byte(distance)
+            log.debug("JL by %d to CS:IP %04x:%04x", distance, self.regs.CS, self.regs.IP)
             
     # ********** Interrupt opcodes. **********
     def opcode_int(self):
