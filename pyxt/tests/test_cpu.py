@@ -1808,6 +1808,17 @@ class OrOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.AX, 0xCAFE)
         
+    def test_or_clears_carry_overflow(self):
+        """
+        or al, 0x07
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.flags.overflow = True
+        self.load_code_string("0C 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assert_flags("oszpc") # ODITSZAPC
+        
 class AndOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_and_rm8_r8(self):
         """
@@ -1886,6 +1897,18 @@ class AndOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("25 0F F0 F4")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.AX, 0xB00F)
+        
+    def test_and_clears_carry_overflow(self):
+        """
+        and al, 0x07
+        hlt
+        """
+        self.cpu.regs.AL = 0x02
+        self.cpu.flags.carry = True
+        self.cpu.flags.overflow = True
+        self.load_code_string("24 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assert_flags("oszpc") # ODITSZAPC
         
 class MovOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_mov_sreg_rm16(self):

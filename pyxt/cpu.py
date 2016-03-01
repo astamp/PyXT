@@ -1107,10 +1107,12 @@ class CPU(object):
     def opcode_group_or(self, opcode):
         """ Entry point for all OR opcodes. """
         self.alu_vector_table[opcode & 0x07](operator.or_)
+        self.flags.clear_logical()
         
     def opcode_group_and(self, opcode):
         """ Entry point for all AND opcodes. """
         self.alu_vector_table[opcode & 0x07](operator.and_)
+        self.flags.clear_logical()
         
     def opcode_test_al_imm8(self):
         """ AND al with imm8, update the flags, but don't store the value. """
