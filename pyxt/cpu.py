@@ -548,6 +548,8 @@ class CPU(object):
             self.opcode_les()
         elif opcode == 0xC5:
             self.opcode_lds()
+        elif opcode == 0x98:
+            self.opcode_cbw()
             
         # String operations.
         elif opcode == 0xA4:
@@ -1295,6 +1297,10 @@ class CPU(object):
         """ Subtract immediate word from AX, update the flags, but don't store the value. """
         result = self.operator_sub_16(self.regs.AX, self.get_word_immediate())
         self.flags.set_from_alu_word(result)
+        
+    def opcode_cbw(self):
+        """ Sign extends the byte in AL to a word in AX. """
+        self.regs.AX = sign_extend_byte_to_word(self.regs.AL)
         
     def opcode_group_f6f7(self, opcode):
         """ "Group 1" byte and word instructions. """

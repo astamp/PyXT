@@ -3885,3 +3885,37 @@ class JlOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(starting_ip = 0x0002), 3)
         self.assertEqual(self.cpu.regs.AL, 1)
         
+class CbwOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_cbw_zero(self):
+        """
+        cbw
+        hlt
+        """
+        self.cpu.regs.AH = 0xAA
+        self.cpu.regs.AL = 0x00
+        self.load_code_string("98 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0000)
+        
+    def test_cbw_positive(self):
+        """
+        cbw
+        hlt
+        """
+        self.cpu.regs.AH = 0xAA
+        self.cpu.regs.AL = 0x72
+        self.load_code_string("98 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0072)
+        
+    def test_cbw_negative(self):
+        """
+        cbw
+        hlt
+        """
+        self.cpu.regs.AH = 0xAA
+        self.cpu.regs.AL = 0x80
+        self.load_code_string("98 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xFF80)
+        
