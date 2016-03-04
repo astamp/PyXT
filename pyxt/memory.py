@@ -18,17 +18,21 @@ class RAM(Device): # pylint:disable=abstract-method
         super(RAM, self).__init__(**kwargs)
         self.contents = array.array("B", (0,) * size)
         
+        # Inline these calls directly to the array object for speed.
+        self.mem_read_byte = self.contents.__getitem__
+        self.mem_write_byte = self.contents.__setitem__
+        
     def __repr__(self):
         return "<%s(size=0x%x)>" % (self.__class__.__name__, len(self.contents))
         
-    def mem_read_byte(self, offset):
-        return self.contents[offset]
+    # def mem_read_byte(self, offset):
+        # return self.contents[offset]
         
     def mem_read_word(self, offset):
         return bytes_to_word((self.contents[offset], self.contents[offset + 1]))
         
-    def mem_write_byte(self, offset, value):
-        self.contents[offset] = value
+    # def mem_write_byte(self, offset, value):
+        # self.contents[offset] = value
         
     def mem_write_word(self, offset, value):
         self.contents[offset], self.contents[offset + 1] = word_to_bytes(value)
