@@ -56,10 +56,16 @@ class Debugger(object):
         """ Dump the CPU FLAGS register to the log. """
         log.log(
             level,
-            "FLAGS= 0x%04x cf=%d, zf=%d, sf=%d, df=%d",
-            self.cpu.flags.value,
-            self.cpu.flags.carry, self.cpu.flags.zero,
-            self.cpu.flags.sign, self.cpu.flags.direction,
+            "FLAGS= 0x%04x [%s%s%s%s%s%s%s%s%s]", self.cpu.flags.value,
+            "O" if self.cpu.flags.overflow else "o",
+            "D" if self.cpu.flags.direction else "d",
+            "I" if self.cpu.flags.interrupt_enable else "i",
+            "T" if self.cpu.flags.trap else "t",
+            "S" if self.cpu.flags.sign else "s",
+            "Z" if self.cpu.flags.zero else "z",
+            "A" if self.cpu.flags.adjust else "a",
+            "P" if self.cpu.flags.parity else "p",
+            "C" if self.cpu.flags.carry else "c",
         )
         
     def dump_stack(self, depth):
