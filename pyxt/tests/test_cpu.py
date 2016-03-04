@@ -3919,3 +3919,68 @@ class CbwOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.AX, 0xFF80)
         
+class MulOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_mul_al_rm8_small(self):
+        """
+        mul byte [value]
+        hlt
+        value:
+            db 25
+        """
+        self.cpu.flags.carry = True
+        self.cpu.flags.overflow = True
+        self.cpu.regs.AH = 0xA5 # Should be ignored.
+        self.cpu.regs.AL = 7
+        self.load_code_string("F6 26 05 00 F4 19")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x00AF) # 175
+        self.assertFalse(self.cpu.flags.carry)
+        self.assertFalse(self.cpu.flags.overflow)
+        
+    def test_mul_al_rm8_large(self):
+        """
+        mul byte [value]
+        hlt
+        value:
+            db 25
+        """
+        self.cpu.regs.AH = 0xA5 # Should be ignored.
+        self.cpu.regs.AL = 0xFF
+        self.load_code_string("F6 26 05 00 F4 19")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x18E7) # 6375
+        self.assertTrue(self.cpu.flags.carry)
+        self.assertTrue(self.cpu.flags.overflow)
+        
+    def test_mul_ax_rm16_small(self):
+        """
+        mul word [value]
+        hlt
+        value:
+            dw 25
+        """
+        self.cpu.flags.carry = True
+        self.cpu.flags.overflow = True
+        self.cpu.regs.AX = 400
+        self.load_code_string("F7 26 05 00 F4 19 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x2710) # 10000
+        self.assertEqual(self.cpu.regs.DX, 0x0000)
+        self.assertFalse(self.cpu.flags.carry)
+        self.assertFalse(self.cpu.flags.overflow)
+        
+    def test_mul_ax_rm16_large(self):
+        """
+        mul word [value]
+        hlt
+        value:
+            dw 25
+        """
+        self.cpu.regs.AX = 0xFFFF
+        self.load_code_string("F7 26 05 00 F4 19 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xFFE7) # 1638375
+        self.assertEqual(self.cpu.regs.DX, 0x0018)
+        self.assertTrue(self.cpu.flags.carry)
+        self.assertTrue(self.cpu.flags.overflow)
+        

@@ -1315,6 +1315,16 @@ class CPU(object):
             value = ~value
             self._set_rm_bits(bits, rm_type, rm_value, value)
             
+        elif sub_opcode == 4: # MUL
+            if bits == 16:
+                value = self.regs.AX * value
+                self.regs.DX = (value & 0xFFFF0000) >> 16
+                self.regs.AX = value & 0x0000FFFF
+                self.flags.carry = self.flags.overflow = self.regs.DX != 0
+            else:
+                self.regs.AX = self.regs.AL * value
+                self.flags.carry = self.flags.overflow = self.regs.AH != 0
+                
         else:
             print sub_opcode
             assert 0
