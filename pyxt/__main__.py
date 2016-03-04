@@ -82,7 +82,8 @@ def main():
         (cs, ip) = breakpoint.split(":")
         debugger.breakpoints.append((int(cs, 16), int(ip, 16)))
         
-    signal.signal(signal.SIGINT, debugger.break_signal)
+    if options.debug:
+        signal.signal(signal.SIGINT, debugger.break_signal)
     
     cpu_or_debugger = debugger if options.debug else cpu
     
