@@ -1071,19 +1071,23 @@ class CPU(object):
         elif sub_opcode == 0x05:
             result = value - immediate
         elif sub_opcode == 0x07:
-            result = value - immediate
+            if word_reg:
+                result = self.operator_sub_16(value, immediate)
+            else:
+                result = self.operator_sub_8(value, immediate)
             set_value = False
         else:
             assert 0
             
-        if set_value:
-            if word_reg:
-                self.flags.set_from_alu_word(result)
+        if word_reg:
+            self.flags.set_from_alu_word(result)
+            if set_value:
                 self._set_rm16(rm_type, rm_value, result)
-            else:
-                self.flags.set_from_alu_byte(result)
+        else:
+            self.flags.set_from_alu_byte(result)
+            if set_value:
                 self._set_rm8(rm_type, rm_value, result)
-                
+            
     # Bitwise opcodes.
     def _xor_rm16_r16(self):
         register, rm_type, rm_value = self.get_modrm_operands(16)

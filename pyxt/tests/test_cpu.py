@@ -1729,6 +1729,97 @@ class CmpOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assert_flags("oSzpc") # ODITSZAPC
         # Note sure why carry is clear above, but DEBUG.COM confirms...
         
+        
+    def test_rm8_imm8_none(self):
+        """
+        cmp dl, 0x10
+        hlt
+        """
+        self.cpu.regs.DL = 0x70
+        self.load_code_string("80 FA 10 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DL, 0x70) # Should be unmodified.
+        self.assert_flags("oszPc")
+        
+    def test_rm8_imm8_zero(self):
+        """
+        cmp dl, 0x10
+        hlt
+        """
+        self.cpu.regs.DL = 0x10
+        self.load_code_string("80 FA 10 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DL, 0x10) # Should be unmodified.
+        self.assert_flags("osZPc")
+        
+    def test_rm8_imm8_sign_carry(self):
+        """
+        cmp dl, 0x10
+        hlt
+        """
+        self.cpu.regs.DL = 0x0F
+        self.load_code_string("80 FA 10 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DL, 0x0F) # Should be unmodified.
+        self.assert_flags("oSzPC")
+        
+    # Not testing all cases with 8x just one to make sure it's connected.
+    def test_rm8_imm8_overflow(self):
+        """
+        cmp dl, -100
+        hlt
+        """
+        self.cpu.regs.DL = 100
+        self.load_code_string("80 FA 9C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DL, 100) # Should be unmodified.
+        self.assert_flags("OSzpC")
+        
+    def test_rm16_imm16_none(self):
+        """
+        cmp dx, 0x1000
+        hlt
+        """
+        self.cpu.regs.DX = 0x7000
+        self.load_code_string("81 FA 00 10 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DX, 0x7000) # Should be unmodified.
+        self.assert_flags("oszPc")
+        
+    def test_rm16_imm16_zero(self):
+        """
+        cmp dx, 0x1000
+        hlt
+        """
+        self.cpu.regs.DX = 0x1000
+        self.load_code_string("81 FA 00 10 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DX, 0x1000) # Should be unmodified.
+        self.assert_flags("osZPc")
+        
+    def test_rm16_imm16_sign_carry(self):
+        """
+        cmp dx, 0x1000
+        hlt
+        """
+        self.cpu.regs.DX = 0x0FFF
+        self.load_code_string("81 FA 00 10 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DX, 0x0FFF) # Should be unmodified.
+        self.assert_flags("oSzPC")
+        
+    # Not testing all cases with 8x just one to make sure it's connected.
+    def test_rm16_imm16_overflow(self):
+        """
+        cmp dx, -20000
+        hlt
+        """
+        self.cpu.regs.DX = 20000
+        self.load_code_string("81 FA E0 B1 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DX, 20000) # Should be unmodified.
+        self.assert_flags("OSzpC")
+        
 class OrOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_or_rm8_r8(self):
         """
