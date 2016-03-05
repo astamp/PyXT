@@ -116,7 +116,7 @@ class FlagsRegisterTest(unittest.TestCase):
             # value,    zero,   sign,   carry,  parity  # Description
             (0x0000,    True,   False,  False,  True),  # Zero
             (0x8000,    False,  True,   False,  None),  # Sign
-            (0x10000,   False,  False,  True,   None),  # Carry
+            (0x10000,   True,   False,  True,   None),  # Carry
             (0x0003,    False,  False,  False,  True),  # Even parity
             (0x0007,    False,  False,  False,  False), # Odd parity
             (0x0703,    False,  False,  False,  True),  # Parity only checks low byte
@@ -130,7 +130,7 @@ class FlagsRegisterTest(unittest.TestCase):
             # value,    zero,   sign,   carry,  parity  # Description
             (0x0000,    True,   False,  False,  True),  # Zero
             (0x8000,    False,  True,   False,  None),  # Sign
-            (0x10000,   False,  False,  False,  None),  # Carry NOT MODIFIED
+            (0x10000,   True,   False,  False,  None),  # Carry NOT MODIFIED
             (0x0003,    False,  False,  False,  True),  # Even parity
             (0x0007,    False,  False,  False,  False), # Odd parity
             (0x0703,    False,  False,  False,  True),  # Parity only checks low byte
@@ -144,7 +144,7 @@ class FlagsRegisterTest(unittest.TestCase):
             # value,    zero,   sign,   carry,  parity  # Description
             (0x0000,    True,   False,  True,  True),   # Zero
             (0x8000,    False,  True,   True,  None),   # Sign
-            (0x10000,   False,  False,  True,  None),   # Carry NOT MODIFIED
+            (0x10000,   True,   False,  True,  None),   # Carry NOT MODIFIED
             (0x0003,    False,  False,  True,  True),   # Even parity
             (0x0007,    False,  False,  True,  False),  # Odd parity
             (0x0703,    False,  False,  True,  True),   # Parity only checks low byte
@@ -160,7 +160,7 @@ class FlagsRegisterTest(unittest.TestCase):
             # value,    zero,   sign,   carry,  parity  # Description
             (0x00,    True,   False,  False,  True),  # Zero
             (0x80,    False,  True,   False,  None),  # Sign
-            (0x100,   False,  False,  True,   None),  # Carry
+            (0x100,   True,   False,  True,   None),  # Carry
             (0x03,    False,  False,  False,  True),  # Even parity
             (0x07,    False,  False,  False,  False), # Odd parity
         ]
@@ -173,7 +173,7 @@ class FlagsRegisterTest(unittest.TestCase):
             # value,    zero,   sign,   carry,  parity  # Description
             (0x00,    True,   False,  False,  True),  # Zero
             (0x80,    False,  True,   False,  None),  # Sign
-            (0x100,   False,  False,  False,  None),  # Carry NOT MODIFIED
+            (0x100,   True,   False,  False,  None),  # Carry NOT MODIFIED
             (0x03,    False,  False,  False,  True),  # Even parity
             (0x07,    False,  False,  False,  False), # Odd parity
         ]
@@ -186,7 +186,7 @@ class FlagsRegisterTest(unittest.TestCase):
             # value,    zero,   sign,   carry,  parity  # Description
             (0x00,    True,   False,  True,  True),   # Zero
             (0x80,    False,  True,   True,  None),   # Sign
-            (0x100,   False,  False,  True,  None),   # Carry NOT MODIFIED
+            (0x100,   True,   False,  True,  None),   # Carry NOT MODIFIED
             (0x03,    False,  False,  True,  True),   # Even parity
             (0x07,    False,  False,  True,  False),  # Odd parity
         ]

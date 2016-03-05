@@ -230,27 +230,27 @@ class FLAGS(object):
         
     def set_from_alu_word(self, value):
         """ Set ZF, SF, CF, and PF based the result of an ALU operation. """
-        self.zero = not value
+        self.zero = not (value & 0xFFFF)
         self.sign = value & 0x8000 == 0x8000
         self.carry = value & 0x10000 == 0x10000
         self.parity = (count_bits_fast(value & 0x00FF) % 2) == 0
         
     def set_from_alu_no_carry_word(self, value):
         """ Set ZF, SF, and PF based the result of an ALU operation. """
-        self.zero = not value
+        self.zero = not (value & 0xFFFF)
         self.sign = value & 0x8000 == 0x8000
         self.parity = (count_bits_fast(value & 0x00FF) % 2) == 0
         
     def set_from_alu_byte(self, value):
         """ Set ZF, SF, CF, and PF based the result of an ALU operation. """
-        self.zero = not value
+        self.zero = not (value & 0xFF)
         self.sign = value & 0x80 == 0x80
         self.carry = value & 0x100 == 0x100
         self.parity = (count_bits_fast(value & 0x00FF) % 2) == 0
         
     def set_from_alu_no_carry_byte(self, value):
         """ Set ZF, SF, and PF based the result of an ALU operation. """
-        self.zero = not value
+        self.zero = not (value & 0xFF)
         self.sign = value & 0x80 == 0x80
         self.parity = (count_bits_fast(value & 0x00FF) % 2) == 0
         
