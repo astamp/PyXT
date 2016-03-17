@@ -68,6 +68,7 @@ def main():
     pit = ProgrammableIntervalTimer(0x0040)
     pit.channels[0].gate = True
     pit.channels[1].gate = True
+    pit.channels[2].gate = True
     bus.install_device(None, pit)
     
     print "\nSYSTEM BUS:"
