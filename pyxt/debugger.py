@@ -56,7 +56,7 @@ class Debugger(object):
         """ Dump the CPU FLAGS register to the log. """
         log.log(
             level,
-            "FLAGS= 0x%04x [%s%s%s%s%s%s%s%s%s]", self.cpu.flags.value,
+            "FLAGS = 0x%04x [%s%s%s%s%s%s%s%s%s]", self.cpu.flags.value,
             "O" if self.cpu.flags.overflow else "o",
             "D" if self.cpu.flags.direction else "d",
             "I" if self.cpu.flags.interrupt_enable else "i",
@@ -97,85 +97,111 @@ class Debugger(object):
                 print ">",
             cmd = raw_input().lower().split()
             
-            if len(cmd) == 0 and len(self.debugger_shortcut) != 0:
-                cmd = self.debugger_shortcut
-                print "Using: %s" % " ".join(cmd)
+            try:
+                resume = self.process_command(cmd)
+                if resume:
+                    break
+            except Exception as err:
+                log.exception("Unhandled exception processing: %r" % cmd)
+                
+    def process_command(self, cmd):
+        """ Actually process the command from the user. """
+        if len(cmd) == 0 and len(self.debugger_shortcut) != 0:
+            cmd = self.debugger_shortcut
+            print "Using: %s" % " ".join(cmd)
+        else:
+            self.debugger_shortcut = cmd
+            
+        if len(cmd) == 0:
+            return False
+            
+        if len(cmd) == 1 and cmd[0] in ("continue", "c"):
+            self.single_step = False
+            return True
+            
+        elif len(cmd) == 1 and cmd[0] in ("step", "s"):
+            self.single_step = True
+            return True
+            
+        elif len(cmd) == 1 and cmd[0] in ("quit", "q"):
+            sys.exit(0)
+            
+        elif len(cmd) == 1 and cmd[0] in ("dump", "d"):
+            self.dump_all()
+            
+        elif len(cmd) == 2 and cmd[0] in ("stack", "st"):
+            self.dump_stack(int(cmd[1]))
+            
+        elif len(cmd) >= 1 and cmd[0] == "info":
+            self.debugger_shortcut = []
+            if len(cmd) == 2 and cmd[1] in ("breakpoints", "break"):
+                print "Breakpoints:"
+                for index, breakpoint in enumerate(self.breakpoints):
+                    print "  %04x:%04x" % breakpoint
+                    
+        elif len(cmd) == 2 and cmd[0] == "break":
+            self.debugger_shortcut = []
+            (cs, ip) = cmd[1].split(":")
+            self.breakpoints.append((int(cs, 16), int(ip, 16)))
+            
+        elif len(cmd) == 2 and cmd[0] == "clear":
+            self.debugger_shortcut = []
+            if cmd[1] == "all":
+                self.breakpoints = []
+            elif cmd[1] == "dump":
+                self.dump_enabled = False
             else:
-                self.debugger_shortcut = cmd
-                
-            if len(cmd) == 0:
-                continue
-                
-            if len(cmd) == 1 and cmd[0] in ("continue", "c"):
-                self.single_step = False
-                break
-                
-            elif len(cmd) == 1 and cmd[0] in ("step", "s"):
-                self.single_step = True
-                break
-                
-            elif len(cmd) == 1 and cmd[0] in ("quit", "q"):
-                sys.exit(0)
-                
-            elif len(cmd) == 1 and cmd[0] in ("dump", "d"):
+                (cs, ip) = cmd[1].split(":")
+                self.breakpoints.remove((int(cs, 16), int(ip, 16)))
+                    
+        elif len(cmd) >= 1 and cmd[0] == "set":
+            self.debugger_shortcut = []
+            if len(cmd) == 2 and cmd[1] == "dump":
+                self.dump_enabled = True
                 self.dump_all()
                 
-            elif len(cmd) == 2 and cmd[0] in ("stack", "st"):
-                self.dump_stack(int(cmd[1]))
-                
-            elif len(cmd) >= 1 and cmd[0] == "set":
-                self.debugger_shortcut = []
-                if len(cmd) == 2 and cmd[1] == "dump":
-                    self.dump_enabled = True
-                    self.dump_all()
-                    
-            elif len(cmd) >= 1 and cmd[0] == "clear":
-                self.debugger_shortcut = []
-                if len(cmd) == 2 and cmd[1] == "dump":
-                    self.dump_enabled = False
-                
-            elif len(cmd) >= 1 and cmd[0][0] == "x":
-                if len(cmd[0]) > 1:
-                    match = GDB_EXAMINE_REGEX.match(cmd[0])
-                    if match is not None:
-                        count = int(match.group(1))
-                        format = match.group(2)
-                        unit = match.group(3)
-                else:
-                    count = 1
-                    format = "x"
-                    unit = "w"
-                    
-                if len(cmd) >= 2:
-                    address = int(cmd[1], 0)
-                else:
-                    print "you need an address"
-                    continue
-                    
-                readable = ""
-                unit_size_hex = 8
-                if unit == "b":
-                    unit_size_hex = 2
-                    ending_address = address + count
-                    data = [self.bus.mem_read_byte(x) for x in xrange(address, ending_address)]
-                    readable = "".join([chr(x) if x > 0x20 and x < 0x7F else "." for x in data])
-                elif unit == "w":
-                    unit_size_hex = 4
-                    ending_address = address + (count * 2)
-                    data = [self.bus.mem_read_word(x) for x in xrange(address, ending_address, 2)]
-                else:
-                    print "invalid unit: %r" % unit
-                    
-                self.debugger_shortcut[1] = "0x%08x" % ending_address
-                
-                if format == "x":
-                    format = "%0*x"
-                else:
-                    print "invalid format: %r" % format
-                    continue
-                    
-                print "0x%08x:" % address, " ".join([(format % (unit_size_hex, item)) for item in data]), readable
-                
+        elif len(cmd) >= 1 and cmd[0][0] == "x":
+            if len(cmd[0]) > 1:
+                match = GDB_EXAMINE_REGEX.match(cmd[0])
+                if match is not None:
+                    count = int(match.group(1))
+                    format = match.group(2)
+                    unit = match.group(3)
             else:
-                print "i don't know what %r is." % " ".join(cmd)
+                count = 1
+                format = "x"
+                unit = "w"
                 
+            if len(cmd) >= 2:
+                address = int(cmd[1], 0)
+            else:
+                print "you need an address"
+                return False
+                
+            readable = ""
+            unit_size_hex = 8
+            if unit == "b":
+                unit_size_hex = 2
+                ending_address = address + count
+                data = [self.bus.mem_read_byte(x) for x in xrange(address, ending_address)]
+                readable = "".join([chr(x) if x > 0x20 and x < 0x7F else "." for x in data])
+            elif unit == "w":
+                unit_size_hex = 4
+                ending_address = address + (count * 2)
+                data = [self.bus.mem_read_word(x) for x in xrange(address, ending_address, 2)]
+            else:
+                print "invalid unit: %r" % unit
+                
+            self.debugger_shortcut[1] = "0x%08x" % ending_address
+            
+            if format == "x":
+                format = "%0*x"
+            else:
+                print "invalid format: %r" % format
+                return False
+                
+            print "0x%08x:" % address, " ".join([(format % (unit_size_hex, item)) for item in data]), readable
+            
+        else:
+            print "i don't know what %r is." % " ".join(cmd)
+            
