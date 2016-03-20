@@ -4075,3 +4075,93 @@ class MulOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertTrue(self.cpu.flags.carry)
         self.assertTrue(self.cpu.flags.overflow)
         
+class XorOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_xor_rm8_r8(self):
+        """
+        xor [value], al
+        hlt
+        value:
+            db 0x0F
+        """
+        self.cpu.regs.AH = 0xA5
+        self.cpu.regs.AL = 0x18
+        self.load_code_string("30 06 05 00 F4 0F")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AH, 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AL, 0x18) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x05), 0x17)
+        
+    def test_xor_rm16_r16(self):
+        """
+        xor [value], ax
+        hlt
+        value:
+            dw 0x01A5
+        """
+        self.cpu.regs.AX = 0x015A
+        self.load_code_string("31 06 05 00 F4 A5 01")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x015A) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_word(0x05), 0x00FF)
+        
+    def test_xor_r8_rm8(self):
+        """
+        xor al, [value]
+        hlt
+        value:
+            db 0x04
+        """
+        self.cpu.regs.AH = 0xA5
+        self.cpu.regs.AL = 0x0F
+        self.load_code_string("32 06 05 00 F4 04")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AH, 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AL, 0x0B)
+        self.assertEqual(self.memory.mem_read_byte(0x05), 0x04) # Should be unmodified.
+        
+    def test_xor_r16_rm16(self):
+        """
+        xor bx, [value]
+        hlt
+        value:
+            dw 0xFFFF
+        """
+        self.cpu.regs.BX = 0x0ACE
+        self.load_code_string("33 1E 05 00 F4 FF FF")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 0xF531)
+        self.assertEqual(self.memory.mem_read_word(0x05), 0xFFFF) # Should be unmodified.
+        
+    def test_xor_al_imm8(self):
+        """
+        xor al, 0x07
+        hlt
+        """
+        self.cpu.regs.AH = 0xA5
+        self.cpu.regs.AL = 0x1E
+        self.load_code_string("34 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AH, 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AL, 0x19)
+        
+    def test_xor_ax_imm16(self):
+        """
+        xor ax, 0xCFFF
+        hlt
+        """
+        self.cpu.regs.AX = 0x0501
+        self.load_code_string("35 FF CF F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xCAFE)
+        
+    def test_xor_clears_carry_overflow(self):
+        """
+        xor al, 0x07
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.flags.overflow = True
+        self.load_code_string("34 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assert_flags("oszpc") # ODITSZAPC
+        

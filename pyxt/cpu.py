@@ -389,6 +389,8 @@ class CPU(object):
             self.opcode_group_and(opcode)
         elif opcode & 0xF8 == 0x28 and opcode & 0x6 != 0x6:
             self.opcode_group_sub(opcode)
+        elif opcode & 0xF8 == 0x30 and opcode & 0x6 != 0x6:
+            self.opcode_group_xor(opcode)
         elif opcode & 0xFC == 0x80:
             self.opcode_group_8x(opcode)
         elif opcode & 0xF8 == 0x40:
@@ -452,8 +454,6 @@ class CPU(object):
         elif opcode == 0xA3:
             self.opcode_mov_moffs16_ax()
             
-        elif opcode == 0x31:
-            self._xor_rm16_r16()
         elif opcode == 0x72:
             self._jc()
             
@@ -528,8 +528,6 @@ class CPU(object):
             self._jo()
         elif opcode == 0x7C:
             self.opcode_jl()
-        elif opcode == 0x32:
-            self._xor_r8_rm8()
         elif opcode == 0xE4:
             self.opcode_in_al_imm8()
         elif opcode == 0xEC:
@@ -538,10 +536,6 @@ class CPU(object):
             self._out_imm8_al()
         elif opcode == 0xEE:
             self._out_dx_al()
-        elif opcode == 0x34:
-            self._xor_al_imm8()
-        elif opcode == 0x33:
-            self._xor_r16_rm16()
         elif opcode == 0xA8:
             self.opcode_test_al_imm8()
         elif opcode == 0xC4:
@@ -1089,36 +1083,6 @@ class CPU(object):
                 self._set_rm8(rm_type, rm_value, result)
             
     # Bitwise opcodes.
-    def _xor_rm16_r16(self):
-        register, rm_type, rm_value = self.get_modrm_operands(16)
-        op1 = self._get_rm16(rm_type, rm_value)
-        op2 = self.regs[register]
-        op1 = op1 ^ op2
-        self.flags.set_from_alu_word(op1)
-        self._set_rm16(rm_type, rm_value, op1 & 0xFFFF)
-        
-    def _xor_r16_rm16(self):
-        register, rm_type, rm_value = self.get_modrm_operands(16)
-        op1 = self.regs[register]
-        op2 = self._get_rm16(rm_type, rm_value)
-        op1 = op1 ^ op2
-        self.flags.set_from_alu_word(op1)
-        self.regs[register] = op1 & 0xFFFF
-        
-    def _xor_r8_rm8(self):
-        register, rm_type, rm_value = self.get_modrm_operands(8)
-        op1 = self._get_rm8(rm_type, rm_value)
-        op2 = self.regs[register]
-        op1 = op1 ^ op2
-        self.flags.set_from_alu_byte(op1)
-        self._set_rm8(rm_type, rm_value, op1 & 0xFFFF)
-        
-    def _xor_al_imm8(self):
-        log.info("XOR al imm8")
-        value = self.regs.AL ^ self.get_byte_immediate()
-        self.flags.set_from_alu_byte(value)
-        self.regs.AL = value & 0xFF
-        
     def opcode_group_or(self, opcode):
         """ Entry point for all OR opcodes. """
         self.alu_vector_table[opcode & 0x07](operator.or_)
@@ -1127,6 +1091,11 @@ class CPU(object):
     def opcode_group_and(self, opcode):
         """ Entry point for all AND opcodes. """
         self.alu_vector_table[opcode & 0x07](operator.and_)
+        self.flags.clear_logical()
+        
+    def opcode_group_xor(self, opcode):
+        """ Entry point for all XOR opcodes. """
+        self.alu_vector_table[opcode & 0x07](operator.xor)
         self.flags.clear_logical()
         
     def opcode_test_al_imm8(self):
