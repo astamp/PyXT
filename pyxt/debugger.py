@@ -43,14 +43,23 @@ class Debugger(object):
     def dump_all(self, level = logging.DEBUG):
         """ Dump all registers and flags. """
         self.dump_regs(level, "AX", "BX", "CX", "DX")
-        self.dump_regs(level, "BP", "SP", "SI", "DI")
-        self.dump_regs(level, "SS", "DS", "ES")
-        self.dump_regs(level, "CS", "IP")
+        self.dump_reg_pair(level, "CS", "IP")
+        self.dump_reg_pair(level, "DS", "SI")
+        self.dump_reg_pair(level, "ES", "DI")
+        self.dump_reg_pair(level, "SS", "SP")
+        self.dump_reg_pair(level, "SS", "BP")
         self.dump_flags(level)
         
     def dump_regs(self, level, *regs):
         """ Dump a list of CPU registers to the log. """
         log.log(level, "  ".join(["%s = 0x%04x" % (reg, self.cpu.regs[reg]) for reg in regs]))
+        
+    def dump_reg_pair(self, level, segment, offset):
+        """ Dump a segment:offset register pair to the log. """
+        log.log(level, "%s:%s = %04x:%04x (0x%05x)",
+                segment, offset, self.cpu.regs[segment], self.cpu.regs[offset],
+                segment_offset_to_address(self.cpu.regs[segment], self.cpu.regs[offset]),
+                )
         
     def dump_flags(self, level):
         """ Dump the CPU FLAGS register to the log. """
