@@ -141,6 +141,12 @@ class Debugger(object):
         elif len(cmd) == 2 and cmd[0] in ("stack", "st"):
             self.dump_stack(int(cmd[1]))
             
+        elif len(cmd) == 1 and cmd[0] in ("vector", "vt"):
+            for vector in xrange(0, 256):
+                ip = self.bus.mem_read_word(vector * 4)
+                cs = self.bus.mem_read_word((vector * 4) + 2)
+                print "Vector 0x%02x - %04x:%04x" % (vector, cs, ip)
+                
         elif len(cmd) >= 1 and cmd[0] == "info":
             self.debugger_shortcut = []
             if len(cmd) == 2 and cmd[1] in ("breakpoints", "break"):
