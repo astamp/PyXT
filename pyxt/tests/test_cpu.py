@@ -4226,7 +4226,7 @@ class FlagsOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AL, 0x34) # Should be unmodified.
         self.assert_flags("osZPc") # ODITSZAPC
         
-    def test_sahf_simple_doesnt_modify_overflow(self):
+    def test_sahf_doesnt_modify_overflow(self):
         """
         sahf
         hlt
