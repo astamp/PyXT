@@ -2,6 +2,7 @@ import unittest
 import binascii
 
 import six
+from six.moves import range # pylint: disable=redefined-builtin 
 
 from pyxt.constants import *
 from pyxt.cpu import *
@@ -2297,7 +2298,7 @@ class IOPortTester(Device):
             self.data[port] = 0
             
     def get_ports_list(self):
-        return [port for port in xrange(1024)]
+        return [port for port in range(1024)]
         
     def io_read_byte(self, port):
         return self.data[port]
@@ -3658,7 +3659,7 @@ class IntOpcodeTests(BaseOpcodeAcceptanceTests):
         
         self.memory.mem_write_byte(0x400, 0xCD)
         self.memory.mem_write_byte(0x401, 0x10)
-        for offset in xrange(0x402, 0x504):
+        for offset in range(0x402, 0x504):
             self.memory.mem_write_byte(offset, 0xF4)
             
         self.memory.mem_write_byte(0x504, 0xBB)
