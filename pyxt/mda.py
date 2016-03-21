@@ -236,7 +236,7 @@ def main():
     """ Test application for the MDA card. """
     import sys
     
-    print "MDA test application."
+    print("MDA test application.")
     char_generator = CharacterGeneratorMDA_CGA_ROM(sys.argv[1], CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
     
     mda = MonochromeDisplayAdapter(char_generator)
