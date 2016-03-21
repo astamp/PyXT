@@ -4,6 +4,9 @@ pyxt.components - Various components needed for PyXT.
 
 # Standard library imports
 
+# Six imports
+from six.moves import range # pylint: disable=redefined-builtin 
+
 # PyXT imports
 from pyxt.bus import Device
 
@@ -34,7 +37,7 @@ class ProgrammableInterruptController(Device):
         self.icw4_needed = False
         
     def get_ports_list(self):
-        return [x for x in xrange(self.base, self.base + 2)]
+        return [x for x in range(self.base, self.base + 2)]
         
     def start_initialization_sequence(self):
         """ Kick off the 8259 initialization sequence. """
@@ -90,7 +93,7 @@ class ProgrammableInterruptController(Device):
     def process_ocw2_byte(self, value):
         command = (value & 0xE0) >> 5
         interrupt = value & 0x07
-        print "command = %r, interrupt = %r" % (command, interrupt)
+        print("command = %r, interrupt = %r" % (command, interrupt))
         
     def io_read_byte(self, address):
         offset = address - self.base
@@ -299,7 +302,7 @@ class ProgrammableIntervalTimer(Device):
         # else:
             
     def get_ports_list(self):
-        return [x for x in xrange(self.base, self.base + 4)]
+        return [x for x in range(self.base, self.base + 4)]
         
     def io_read_byte(self, port):
         offset = port - self.base
