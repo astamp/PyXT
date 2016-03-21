@@ -1078,7 +1078,7 @@ class CPU(object):
                 result = self.operator_sub_8(value, immediate)
             set_value = False
         else:
-            assert 0
+            raise NotImplementedError("sub_opcode = %r" % sub_opcode)
             
         if word_reg:
             self.flags.set_from_alu_word(result)
@@ -1306,9 +1306,8 @@ class CPU(object):
                 self.flags.carry = self.flags.overflow = self.regs.AH != 0
                 
         else:
-            print sub_opcode
-            assert 0
-        
+            raise NotImplementedError("sub_opcode = %r" % sub_opcode)
+            
     # Inc/dec opcodes.
     def opcode_group_inc(self, opcode):
         """ Handler for all INC [register] instructions. """
@@ -1336,7 +1335,7 @@ class CPU(object):
             value -= 1
             
         else:
-            assert sub_opcode == 0
+            raise NotImplementedError("sub_opcode = %r" % sub_opcode)
             
         self._set_rm8(rm_type, rm_value, value)
         self.flags.set_from_alu_no_carry_byte(value)
@@ -1363,9 +1362,8 @@ class CPU(object):
             self.internal_push(value)
             
         else:
-            print sub_opcode
-            assert sub_opcode == 0
-        
+            raise NotImplementedError("sub_opcode = %r" % sub_opcode)
+            
     # Shift opcodes.
     def opcode_group_rotate_and_shift(self, opcode):
         """ Opcode group for ROL, ROR, RCL, RCR, SHL, SHR, SAL/SHL, and SAR. """
@@ -1417,8 +1415,7 @@ class CPU(object):
             self._set_rm_bits(bits, rm_type, rm_value, value)
             
         else:
-            print sub_opcode
-            assert 0
+            raise NotImplementedError("sub_opcode = %r" % sub_opcode)
             
     # ********** FLAGS opcodes. **********
     def opcode_stc(self):
