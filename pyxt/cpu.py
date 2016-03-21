@@ -514,6 +514,8 @@ class CPU(object):
             self._sahf()
         elif opcode == 0x9F:
             self._lahf()
+        elif opcode == 0x9C:
+            self.opcode_pushf()
         elif opcode == 0x73:
             self._jae_jnb_jnc()
         elif opcode == 0x7B:
@@ -1449,6 +1451,10 @@ class CPU(object):
     def _lahf(self):
         """ Copy the lower byte of FLAGS into AH (SF, ZF, AF, PF, CF). """
         self.regs.AH = self.flags.value & 0x00FF
+        
+    def opcode_pushf(self):
+        """ Pushes the FLAGS register onto the stack. """
+        self.internal_push(self.flags.value)
         
     # ********** Miscellaneous opcodes. **********
     def _nop(self):

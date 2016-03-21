@@ -4165,3 +4165,20 @@ class XorOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assert_flags("oszpc") # ODITSZAPC
         
+class FlagsOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_pushf_simple(self):
+        """
+        pushf
+        hlt
+        """
+        self.cpu.regs.SS = 0x0030
+        self.cpu.regs.SP = 0x0100
+        self.cpu.flags.carry = True
+        self.cpu.flags.overflow = True
+        self.assertEqual(self.memory.mem_read_word(0x003FE), 0x0000)
+        self.load_code_string("9C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assert_flags("OszpC") # ODITSZAPC
+        self.assertEqual(self.memory.mem_read_word(0x003FE), 0xF801)
+        
+        
