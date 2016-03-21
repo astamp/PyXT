@@ -1,6 +1,8 @@
 import unittest
 import binascii
 
+import six
+
 from pyxt.constants import *
 from pyxt.cpu import *
 from pyxt.bus import SystemBus, Device
@@ -370,7 +372,7 @@ class BaseOpcodeAcceptanceTests(unittest.TestCase):
         
     def load_code_string(self, code):
         """ Load a program into the base memory from a hex string, returning the number of bytes loaded. """
-        return self.load_code_bytes(*[ord(byte) for byte in binascii.unhexlify(code.replace(" ", ""))])
+        return self.load_code_bytes(*[byte for byte in six.iterbytes(binascii.unhexlify(code.replace(" ", "")))])
         
     def run_to_halt(self, max_instructions = 1000, starting_ip = 0):
         """
