@@ -4180,7 +4180,7 @@ class FlagsOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.SS, 0x0030) # Should be unmodified.
         self.assertEqual(self.cpu.regs.SP, 0x00FE)
-        self.assert_flags("OszpC") # ODITSZAPC
+        self.assert_flags("OszpC") # ODITSZAPC # Should be unmodified.
         self.assertEqual(self.memory.mem_read_word(0x003FE), 0xF801)
         
     def test_popf_simple(self):
@@ -4198,4 +4198,42 @@ class FlagsOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assert_flags("oszPC") # ODITSZAPC
         self.assertEqual(self.memory.mem_read_word(0x00400), 0xF00F) # Should be unmodified.
         
+    def test_lahf_simple(self):
+        """
+        lahf
+        hlt
+        """
+        self.cpu.flags.sign = True
+        self.cpu.flags.carry = True
+        self.cpu.regs.AH = 0x12
+        self.cpu.regs.AL = 0x34
+        self.load_code_string("9F F4")
+        self.assert_flags("oSzpC") # ODITSZAPC # Should be unmodified.
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AH, 0x81)
+        self.assertEqual(self.cpu.regs.AL, 0x34) # Should be unmodified.
+        
+    def test_sahf_simple(self):
+        """
+        sahf
+        hlt
+        """
+        self.cpu.regs.AH = 0x7E
+        self.cpu.regs.AL = 0x34
+        self.load_code_string("9E F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AH, 0x7E) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AL, 0x34) # Should be unmodified.
+        self.assert_flags("osZPc") # ODITSZAPC
+        
+    def test_sahf_simple_doesnt_modify_overflow(self):
+        """
+        sahf
+        hlt
+        """
+        self.cpu.flags.overflow = True
+        self.cpu.regs.AH = 0x7E
+        self.load_code_string("9E F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assert_flags("OsZPc") # ODITSZAPC
         
