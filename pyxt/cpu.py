@@ -482,13 +482,13 @@ class CPU(object):
             
         # FLAGS set/clear instructions.
         elif opcode == 0xF8:
-            self._clc()
+            self.opcode_clc()
         elif opcode == 0xF9:
-            self._stc()
+            self.opcode_stc()
         elif opcode == 0xFC:
-            self._cld()
+            self.opcode_cld()
         elif opcode == 0xFD:
-            self._std()
+            self.opcode_std()
         elif opcode == 0xFA:
             self.opcode_cli()
         elif opcode == 0xFB:
@@ -1421,24 +1421,20 @@ class CPU(object):
             assert 0
             
     # ********** FLAGS opcodes. **********
-    def _stc(self):
+    def opcode_stc(self):
         """ Sets the carry flag. """
-        log.debug("STC")
         self.flags.carry = True
         
-    def _clc(self):
+    def opcode_clc(self):
         """ Clears the carry flag. """
-        log.debug("CLC")
         self.flags.carry = False
         
-    def _std(self):
-        """ Sets the direction flag. """
-        log.debug("STD")
+    def opcode_std(self):
+        """ Sets the direction flag (count down). """
         self.flags.direction = True
         
-    def _cld(self):
-        """ Clears the direction flag. """
-        log.debug("CLD")
+    def opcode_cld(self):
+        """ Clears the direction flag (count up). """
         self.flags.direction = False
         
     def opcode_cli(self):
