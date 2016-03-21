@@ -4,6 +4,9 @@ pyxt.dma - Virtual DMA controller for PyXT.
 
 # Standard library imports
 
+# Six imports
+from six.moves import range # pylint: disable=redefined-builtin 
+
 # PyXT imports
 from pyxt.bus import Device
 
@@ -59,10 +62,10 @@ class DmaController(Device):
         self.base = base
         self.state = STATE_SI
         self.low_byte = True
-        self.channels = [DmaChannel() for _unused in xrange(4)]
+        self.channels = [DmaChannel() for _unused in range(4)]
         
     def get_ports_list(self):
-        return [x for x in xrange(self.base, self.base + 16)]
+        return [x for x in range(self.base, self.base + 16)]
         
     def clock(self):
         pass
