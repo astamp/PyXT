@@ -2,7 +2,12 @@
 pyxt.helpers - A collection of helper functions used throughout PyXT.
 """
 
+import sys
 import array
+
+# Alias xrange to range in Python 3.
+if sys.version_info.major >= 3:
+    xrange = range
 
 def segment_offset_to_address(segment, offset):
     """ Convert a segment and offset to a real address. """
