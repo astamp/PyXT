@@ -510,14 +510,17 @@ class CPU(object):
             self.opcode_group_ff()
         elif opcode == 0xEA:
             self._jmpf()
+            
+        # Flags opcodes.
         elif opcode == 0x9E:
-            self._sahf()
+            self.opcode_sahf()
         elif opcode == 0x9F:
-            self._lahf()
+            self.opcode_lahf()
         elif opcode == 0x9C:
             self.opcode_pushf()
         elif opcode == 0x9D:
             self.opcode_popf()
+            
         elif opcode == 0x73:
             self._jae_jnb_jnc()
         elif opcode == 0x7B:
@@ -1446,11 +1449,11 @@ class CPU(object):
         """ Enable interrupts. """
         self.flags.interrupt_enable = True
         
-    def _sahf(self):
+    def opcode_sahf(self):
         """ Copy AH into the lower byte of FLAGS (SF, ZF, AF, PF, CF). """
         self.flags.value = (self.flags.value & 0xFF00) | self.regs.AH
         
-    def _lahf(self):
+    def opcode_lahf(self):
         """ Copy the lower byte of FLAGS into AH (SF, ZF, AF, PF, CF). """
         self.regs.AH = self.flags.value & 0x00FF
         
