@@ -2,13 +2,13 @@
 pyxt.helpers - A collection of helper functions used throughout PyXT.
 """
 
-import sys
+# Standard library imports
 import array
 
-# Alias xrange to range in Python 3.
-if sys.version_info.major >= 3:
-    xrange = range
+# Six imports
+from six.moves import range # pylint: disable=redefined-builtin
 
+# Functions
 def segment_offset_to_address(segment, offset):
     """ Convert a segment and offset to a real address. """
     return ((segment << 4) + offset) & 0xFFFFF
@@ -38,7 +38,7 @@ def count_bits(value):
     return count
     
 HAMMING_WEIGHT_LUT = array.array("B", (0,) * 0x10000)
-for __value in xrange(0, 0x10000):
+for __value in range(0, 0x10000):
     HAMMING_WEIGHT_LUT[__value] = count_bits(__value)
     
 def count_bits_fast(value):
@@ -137,3 +137,4 @@ def sign_extend_byte_to_word(value):
     if value & 0x80:
         value |= 0xFF00
     return value
+    
