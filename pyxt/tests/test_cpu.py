@@ -4178,7 +4178,24 @@ class FlagsOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_word(0x003FE), 0x0000)
         self.load_code_string("9C F4")
         self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0030) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x00FE)
         self.assert_flags("OszpC") # ODITSZAPC
         self.assertEqual(self.memory.mem_read_word(0x003FE), 0xF801)
+        
+    def test_popf_simple(self):
+        """
+        popf
+        hlt
+        """
+        self.cpu.regs.SS = 0x0030
+        self.cpu.regs.SP = 0x0100
+        self.memory.mem_write_word(0x00400, 0xF00F)
+        self.load_code_string("9D F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0030) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x00102)
+        self.assert_flags("oszPC") # ODITSZAPC
+        self.assertEqual(self.memory.mem_read_word(0x00400), 0xF00F) # Should be unmodified.
         
         

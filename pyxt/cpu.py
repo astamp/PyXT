@@ -516,6 +516,8 @@ class CPU(object):
             self._lahf()
         elif opcode == 0x9C:
             self.opcode_pushf()
+        elif opcode == 0x9D:
+            self.opcode_popf()
         elif opcode == 0x73:
             self._jae_jnb_jnc()
         elif opcode == 0x7B:
@@ -1455,6 +1457,10 @@ class CPU(object):
     def opcode_pushf(self):
         """ Pushes the FLAGS register onto the stack. """
         self.internal_push(self.flags.value)
+        
+    def opcode_popf(self):
+        """ Pops the FLAGS register off the stack. """
+        self.flags.value = self.internal_pop()
         
     # ********** Miscellaneous opcodes. **********
     def _nop(self):
