@@ -1,5 +1,7 @@
 import unittest
 
+from six.moves import range
+
 from pyxt.memory import *
 
 class RandomAccessMemoryTests(unittest.TestCase):
@@ -7,7 +9,7 @@ class RandomAccessMemoryTests(unittest.TestCase):
         self.obj = RAM(0x8000)
         
     def test_initialized_to_zero(self):
-        for x in xrange(0, 0x8000):
+        for x in range(0, 0x8000):
             self.assertEqual(self.obj.mem_read_byte(x), 0)
             
     def test_write_byte(self):
