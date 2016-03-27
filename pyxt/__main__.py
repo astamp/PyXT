@@ -19,6 +19,7 @@ from pyxt.memory import RAM, ROM
 from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MDA_START_ADDRESS
 
 from pyxt.dma import DmaController
+from pyxt.ppi import ProgrammablePeripheralInterface
 from pyxt.onboard import ProgrammableInterruptController, ProgrammableIntervalTimer
 
 # Logging setup
@@ -70,6 +71,8 @@ def main():
     pit.channels[1].gate = True
     pit.channels[2].gate = True
     bus.install_device(None, pit)
+    
+    bus.install_device(None, ProgrammablePeripheralInterface(0x060))
     
     print "\nSYSTEM BUS:"
     pprint(bus.devices)
