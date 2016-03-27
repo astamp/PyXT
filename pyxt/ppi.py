@@ -17,13 +17,17 @@ class ProgrammablePeripheralInterface(Device):
     def __init__(self, base, **kwargs):
         super(ProgrammablePeripheralInterface, self).__init__(**kwargs)
         self.base = base
+        self.last_scancode = 0x00
         
     def get_ports_list(self):
         return [x for x in xrange(self.base, self.base + 4)]
         
     def io_read_byte(self, port):
         offset = port - self.base
-        return 0
+        if offset == 0:
+            return self.last_scancode
+        else:
+            return 0
         
     def io_write_byte(self, port, value):
         offset = port - self.base
