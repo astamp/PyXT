@@ -23,6 +23,7 @@ class ProgrammablePeripheralInterface(Device):
         
     def io_read_byte(self, port):
         offset = port - self.base
+        return 0
         
     def io_write_byte(self, port, value):
         offset = port - self.base
