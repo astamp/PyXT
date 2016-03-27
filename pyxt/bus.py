@@ -7,6 +7,11 @@ pyxt.bus - System bus and component interface for PyXT.
 # PyXT imports
 from pyxt.constants import BLOCK_PREFIX_SHIFT, BLOCK_OFFSET_MASK
 
+# Logging setup
+import logging
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
+
 # Classes
 class Device(object):
     """ Base class for a devuce on the system bus. """
@@ -130,6 +135,7 @@ class SystemBus(object):
         if device is not None:
             return device.io_read_byte(port)
         else:
+            log.warning("No handler for reading I/O port: 0x%03x, returning 0x00.", port)
             return 0x00
             
     def io_read_word(self, port):
@@ -141,6 +147,8 @@ class SystemBus(object):
         device = self.io_decoder.get(port, None)
         if device is not None:
             device.io_write_byte(port, value)
+        else:
+            log.warning("No handler for writing I/O port: 0x%03x.", port)
             
     def io_write_word(self, port, value):
         """ Write a word to the supplied port. """
