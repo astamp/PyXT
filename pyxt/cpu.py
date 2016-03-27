@@ -1482,24 +1482,24 @@ class CPU(object):
         """ Read a byte from a port specified by an immediate byte and put it in AL. """
         port = self.get_byte_immediate()
         self.regs.AL = self.bus.io_read_byte(port)
-        log.info("Read 0x%02x from port 0x%04x.", self.regs.AL, port)
+        # log.info("Read 0x%02x from port 0x%04x.", self.regs.AL, port)
         
     def opcode_in_al_dx(self):
         """ Read a byte from a port specified by DX and put it in AL. """
         port = self.regs.DX
         self.regs.AL = self.bus.io_read_byte(port)
-        log.info("Read 0x%02x from port 0x%04x.", self.regs.AL, port)
+        # log.info("Read 0x%02x from port 0x%04x.", self.regs.AL, port)
         
     def _out_imm8_al(self):
         port = self.get_byte_immediate()
         value = self.regs.AL
-        log.info("Writing 0x%02x to port 0x%04x.", value, port)
+        # log.info("Writing 0x%02x to port 0x%04x.", value, port)
         self.bus.io_write_byte(port, value)
         
     def _out_dx_al(self):
         port = self.regs.DX
         value = self.regs.AL
-        log.info("Writing 0x%02x to port 0x%04x.", value, port)
+        # log.info("Writing 0x%02x to port 0x%04x.", value, port)
         self.bus.io_write_byte(port, value)
         
     # ********** String opcodes. **********
