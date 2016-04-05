@@ -148,7 +148,7 @@ class SystemBus(object):
         if device is not None:
             device.io_write_byte(port, value)
         else:
-            log.warning("No handler for writing I/O port: 0x%03x.", port)
+            log.warning("No handler for writing I/O port: 0x%03x. Tried to write 0x%02x", port, value)
             
     def io_write_word(self, port, value):
         """ Write a word to the supplied port. """
