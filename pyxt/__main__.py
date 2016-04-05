@@ -19,6 +19,7 @@ from pyxt.memory import RAM, ROM
 from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MDA_START_ADDRESS
 
 from pyxt.dma import DmaController
+from pyxt.nmi_mask import NMIMaskRegister
 from pyxt.ppi import ProgrammablePeripheralInterface
 from pyxt.onboard import ProgrammableInterruptController, ProgrammableIntervalTimer
 
@@ -63,8 +64,9 @@ def main():
     bus.install_device(MDA_START_ADDRESS, mda_card)
     
     bus.install_device(None, DmaController(0x0000))
+    nmi_mask = NMIMaskRegister(0x0A0)
+    bus.install_device(None, nmi_mask)
     bus.install_device(None, ProgrammableInterruptController(0x020))
-    # TODO: NMI mask register at 0x0A0 on the XT.
     
     pit = ProgrammableIntervalTimer(0x0040)
     pit.channels[0].gate = True
