@@ -727,15 +727,12 @@ class CPU(object):
             
         value = self.get_immediate(word)
         self.regs[dest] = value
-        log.debug("MOV'd 0x%04x into %s", value, dest)
         
     def _mov_r16_rm16(self):
-        log.info("MOV r16 r/m16")
         register, rm_type, rm_value = self.get_modrm_operands(16)
         self.regs[register] = self._get_rm16(rm_type, rm_value)
         
     def _mov_rm8_r8(self):
-        log.info("MOV r/m8 r8")
         register, rm_type, rm_value = self.get_modrm_operands(8)
         self._set_rm8(rm_type, rm_value, self.regs[register])
         
@@ -744,29 +741,24 @@ class CPU(object):
         self.regs[register] = self._get_rm8(rm_type, rm_value)
         
     def _mov_reg16_to_rm16(self):
-        log.info("MOV 16-bit reg to r/m (mov r/m16/32, r16/32)")
         register, rm_type, rm_value = self.get_modrm_operands(16)
         self._set_rm16(rm_type, rm_value, self.regs[register])
         
     def _mov_rm8_imm8(self):
-        log.debug("MOV r/m8 imm8")
         sub_opcode, rm_type, rm_value = self.get_modrm_operands(8, decode_register = False)
         assert sub_opcode == 0
         self._set_rm8(rm_type, rm_value, self.get_byte_immediate())
         
     def _mov_rm16_imm16(self):
-        log.debug("MOV r/m16 imm16")
         sub_opcode, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
         assert sub_opcode == 0
         self._set_rm16(rm_type, rm_value, self.get_word_immediate())
         
     def _mov_sreg_rm16(self):
-        log.debug("MOV Sreg r/m16")
         segment_register, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
         self.regs[decode_seg_reg(segment_register)] = self._get_rm16(rm_type, rm_value)
         
     def _mov_rm16_sreg(self):
-        log.debug("MOV r/m16 Sreg")
         segment_register, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
         self._set_rm16(rm_type, rm_value, self.regs[decode_seg_reg(segment_register)])
         
@@ -801,7 +793,6 @@ class CPU(object):
         self.regs[register] = temp
         
     def _xchg_r16_ax(self, opcode):
-        log.debug("XCHG r16 AX")
         dest = WORD_REG[opcode & 0x07]
         temp = self.regs[dest]
         self.regs[dest] = self.regs.AX
@@ -835,13 +826,11 @@ class CPU(object):
         src = WORD_REG[opcode & 0x07]
         value = self.regs[src]
         self.internal_push(value)
-        log.debug("PUSH'd 0x%04x from %s", value, src)
         
     def opcode_group_pop(self, opcode):
         """ Handler for all POP [register] instructions. """
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] = self.internal_pop()
-        log.debug("POP'd 0x%04x into %s", self.regs[dest], dest)
         
     def opcode_pop_rm16(self):
         """ Pop a word off of the stack and store it in an r/m16 destination. """
@@ -864,107 +853,70 @@ class CPU(object):
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
         if self.flags.carry:
             self.regs.IP += distance
-            log.debug("JC incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
-        else:
-            log.debug("JC was skipped.")
             
     def _jz(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
         if self.flags.zero:
             self.regs.IP += distance
-            log.debug("JZ incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
-        else:
-            log.debug("JZ was skipped.")
             
     def _jnz(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
-        if self.flags.zero:
-            log.debug("JNZ/JNE was skipped.")
-        else:
+        if not self.flags.zero:
             self.regs.IP += distance
-            log.debug("JNZ/JNE incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     def _jna(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
         if self.flags.zero or self.flags.carry:
             self.regs.IP += distance
-            log.debug("JNA/JBE incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
-        else:
-            log.debug("JNA/JBE was skipped.")
             
     def _ja(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
         if self.flags.zero == False and self.flags.carry == False:
             self.regs.IP += distance
-            log.debug("JA incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
-        else:
-            log.debug("JA was skipped.")
             
     def _jae_jnb_jnc(self):
         """ Jump short if the carry flag is clear. """
         distance = self.get_byte_immediate()
-        if self.flags.carry == False:
+        if not self.flags.carry:
             self.regs.IP += signed_byte(distance)
-            log.debug("JAE/JNB/JNC incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
-        else:
-            log.debug("JAE/JNB/JNC was skipped.")
             
     def _jnp_jpo(self):
         """ Jump short if the parity flag is clear. """
         distance = self.get_byte_immediate()
-        if self.flags.parity == False:
+        if not self.flags.parity:
             self.regs.IP += signed_byte(distance)
-            log.debug("JNP/JPO incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
-        else:
-            log.debug("JNP/JPO was skipped.")
             
     def _jp_jpe(self):
         """ Jump short if the parity flag is set. """
         distance = self.get_byte_immediate()
-        if self.flags.parity == False:
-            log.debug("JP/JPE was skipped.")
-        else:
+        if self.flags.parity:
             self.regs.IP += signed_byte(distance)
-            log.debug("JP/JPE incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     def _jns(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
-        if self.flags.sign:
-            log.debug("JNS was skipped.")
-        else:
+        if not self.flags.sign:
             self.regs.IP += distance
-            log.debug("JNS incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     def _js(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
         if self.flags.sign:
             self.regs.IP += distance
-            log.debug("JS incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
-        else:
-            log.debug("JS was skipped.")
             
     def _jno(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
-        if self.flags.overflow:
-            log.debug("JNO was skipped.")
-        else:
+        if not self.flags.overflow:
             self.regs.IP += distance
-            log.debug("JNO incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     def _jo(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
         if self.flags.overflow:
             self.regs.IP += distance
-            log.debug("JO incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
-        else:
-            log.debug("JO was skipped.")
             
     def opcode_jl(self):
         """ Jump short if the sign flag is not equal to the overflow flag. """
         distance = self.get_byte_immediate()
         if self.flags.sign != self.flags.overflow:
             self.regs.IP += signed_byte(distance)
-            log.debug("JL by %d to CS:IP %04x:%04x", distance, self.regs.CS, self.regs.IP)
             
     # ********** Interrupt opcodes. **********
     def opcode_int(self):
@@ -1013,7 +965,6 @@ class CPU(object):
         
         if value != 0:
             self.regs.IP += signed_byte(distance)
-            # log.debug("LOOP incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     def opcode_loopz(self):
         """ LOOPZ/LOOPE - Decrement CX and jump short if it is non-zero and the zero flag is set. """
@@ -1024,7 +975,6 @@ class CPU(object):
         
         if value != 0 and self.flags.zero:
             self.regs.IP += signed_byte(distance)
-            # log.debug("LOOPZ/LOOPE incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     def opcode_loopnz(self):
         """ LOOPNZ/LOOPNE - Decrement CX and jump short if it is non-zero and the zero flag is clear. """
@@ -1035,7 +985,6 @@ class CPU(object):
         
         if value != 0 and self.flags.zero is False:
             self.regs.IP += signed_byte(distance)
-            # log.debug("LOOPNZ/LOOPNE incremented IP by 0x%04x to 0x%04x", distance, self.regs.IP)
             
     # ********** Arithmetic opcodes. **********
     def opcode_group_8x(self, opcode):
@@ -1314,14 +1263,12 @@ class CPU(object):
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] += 1
         self.flags.set_from_alu_no_carry_word(self.regs[dest])
-        # log.debug("INC'd %s to 0x%04x", dest, self.regs[dest])
         
     def opcode_group_dec(self, opcode):
         """ Handler for all DEC [register] instructions. """
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] -= 1
         self.flags.set_from_alu_no_carry_word(self.regs[dest])
-        # log.debug("DEC'd %s to 0x%04x", dest, self.regs[dest])
         
     def opcode_group_fe(self):
         """ Opcode group "2" for r/m8 which only has sub-opcodes 0 (INC) and 1 (DEC) defined. """
@@ -1460,7 +1407,7 @@ class CPU(object):
         
     # ********** Miscellaneous opcodes. **********
     def _nop(self):
-        log.critical("NOP")
+        pass
         
     def _hlt(self):
         log.critical("HLT encountered!")
@@ -1470,36 +1417,30 @@ class CPU(object):
     def _jmp_rel16(self):
         offset = signed_word(self.get_word_immediate())
         self.regs.IP += offset
-        log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs.IP)
         
     def _jmp_rel8(self):
         offset = signed_byte(self.get_byte_immediate())
         self.regs.IP += offset
-        log.debug("JMP incremented IP by 0x%04x to 0x%04x", offset, self.regs.IP)
         
     # ********** I/O port opcodes. **********
     def opcode_in_al_imm8(self):
         """ Read a byte from a port specified by an immediate byte and put it in AL. """
         port = self.get_byte_immediate()
         self.regs.AL = self.bus.io_read_byte(port)
-        # log.info("Read 0x%02x from port 0x%04x.", self.regs.AL, port)
         
     def opcode_in_al_dx(self):
         """ Read a byte from a port specified by DX and put it in AL. """
         port = self.regs.DX
         self.regs.AL = self.bus.io_read_byte(port)
-        # log.info("Read 0x%02x from port 0x%04x.", self.regs.AL, port)
         
     def _out_imm8_al(self):
         port = self.get_byte_immediate()
         value = self.regs.AL
-        # log.info("Writing 0x%02x to port 0x%04x.", value, port)
         self.bus.io_write_byte(port, value)
         
     def _out_dx_al(self):
         port = self.regs.DX
         value = self.regs.AL
-        # log.info("Writing 0x%02x to port 0x%04x.", value, port)
         self.bus.io_write_byte(port, value)
         
     # ********** String opcodes. **********
