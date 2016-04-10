@@ -86,6 +86,8 @@ class SystemBus(object):
         self.io_devices = []
         self.io_decoder = {}
         
+        self.debugger = None
+        
     def install_device(self, prefix, device):
         """ Install a device into the system bus. """
         device.bus = self
@@ -154,3 +156,11 @@ class SystemBus(object):
         """ Write a word to the supplied port. """
         raise NotImplementedError("TODO: Support words on the I/O bus.")
         
+    def force_debugger_break(self, message = None):
+        """ Force the debugger to break into single step mode. """
+        if self.debugger is not None:
+            if message:
+                log.critical("Force break: %s" % message)
+                
+            self.debugger.single_step = True
+            

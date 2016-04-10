@@ -23,6 +23,7 @@ class Debugger(object):
     def __init__(self, cpu, bus):
         self.cpu = cpu
         self.bus = bus
+        self.bus.debugger = self
         
         self.breakpoints = []
         self.single_step = False
