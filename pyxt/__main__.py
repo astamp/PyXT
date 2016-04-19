@@ -27,6 +27,9 @@ from pyxt.onboard import ProgrammableInterruptController, ProgrammableIntervalTi
 import logging
 log = logging.getLogger(__name__)
 
+# Constants
+DEFAULT_DIP_SWITCHES = (SWITCHES_NORMAL_BOOT | SWITCHES_MEMORY_BANKS_FOUR | SWITCHES_VIDEO_MDA_HERC | SWITCHES_DISKETTES_ONE)
+
 # Functions
 def parse_cmdline():
     """ Parse the command line arguments. """
@@ -37,6 +40,8 @@ def parse_cmdline():
                       help = "ROM BIOS image to load at 0xF0000.")
     parser.add_option("--mda-rom", action = "store", dest = "mda_rom",
                       help = "MDA ROM to use for the virtual MDA card.")
+    parser.add_option("--dip-switches", action = "store", type = "int", dest = "dip_switches",
+                      help = "DIP switch byte to use.", default = DEFAULT_DIP_SWITCHES)
     return parser.parse_args()
     
 def main():
@@ -75,7 +80,7 @@ def main():
     bus.install_device(None, pit)
     
     ppi = ProgrammablePeripheralInterface(0x060)
-    ppi.dip_switches = (SWITCHES_NORMAL_BOOT | SWITCHES_MEMORY_BANKS_FOUR | SWITCHES_VIDEO_MDA_HERC | SWITCHES_DISKETTES_ONE)
+    ppi.dip_switches = options.dip_switches
     print hex(ppi.dip_switches)
     bus.install_device(None, ppi)
     
