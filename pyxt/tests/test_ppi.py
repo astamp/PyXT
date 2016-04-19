@@ -5,7 +5,7 @@ from pyxt.ppi import *
 class PPITests(unittest.TestCase):
     def setUp(self):
         self.ppi = ProgrammablePeripheralInterface(0x060)
-        self.ppi.diag_port_output = self.diag_port_hook
+        self.ppi.write_diag_port = self.diag_port_hook
         self.last_diag_output = None
         
     def diag_port_hook(self, value):

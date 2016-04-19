@@ -1,5 +1,7 @@
 """
 pyxt.ppi - Programmable peripheral interface (keyboard controller & more) for the XT and clones.
+
+See PORTS.A from Ralf Brown's Interrupt List for more info.
 """
 
 # Standard library imports
@@ -32,8 +34,9 @@ class ProgrammablePeripheralInterface(Device):
     def io_write_byte(self, port, value):
         offset = port - self.base
         if offset == 0:
-            self.diag_port_output(value)
+            self.write_diag_port(value)
             
-    def diag_port_output(self, value):
+    def write_diag_port(self, value):
+        """ Write a value to the diag port, 0x060. """
         log.info("Diag port output: 0x%02x", value)
         
