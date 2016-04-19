@@ -2173,6 +2173,27 @@ class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertFalse(self.cpu.flags.interrupt_enable)
         
+    def test_cmc_was_clear(self):
+        """
+        cmc
+        hlt
+        """
+        self.assertFalse(self.cpu.flags.carry)
+        self.load_code_string("F5 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_cmc_was_set(self):
+        """
+        cmc
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.assertTrue(self.cpu.flags.carry)
+        self.load_code_string("F5 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertFalse(self.cpu.flags.carry)
+        
 class LoopOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_loop(self):
         """

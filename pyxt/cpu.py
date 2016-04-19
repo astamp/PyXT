@@ -485,6 +485,8 @@ class CPU(object):
             self.opcode_clc()
         elif opcode == 0xF9:
             self.opcode_stc()
+        elif opcode == 0xF5:
+            self.opcode_cmc()
         elif opcode == 0xFC:
             self.opcode_cld()
         elif opcode == 0xFD:
@@ -1372,6 +1374,10 @@ class CPU(object):
     def opcode_clc(self):
         """ Clears the carry flag. """
         self.flags.carry = False
+        
+    def opcode_cmc(self):
+        """ Toggles the carry flag. """
+        self.flags.carry = not self.flags.carry
         
     def opcode_std(self):
         """ Sets the direction flag (count down). """
