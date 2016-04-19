@@ -22,3 +22,11 @@ class PPITests(unittest.TestCase):
         self.ppi.last_scancode = 0x01
         self.assertEqual(self.ppi.io_read_byte(0x060), 0x01)
         
+    def test_writing_port_b(self):
+        self.ppi.io_write_byte(0x061, 0x7F)
+        self.assertEqual(self.ppi.port_b_output, 0x7F)
+        
+    def test_read_back_port_b(self):
+        self.ppi.io_write_byte(0x061, 0x7F)
+        self.assertEqual(self.ppi.io_read_byte(0x061), 0x7F)
+        
