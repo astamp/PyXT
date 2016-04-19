@@ -1,7 +1,8 @@
 """
 pyxt.ppi - Programmable peripheral interface (keyboard controller & more) for the XT and clones.
 
-See PORTS.A from Ralf Brown's Interrupt List for more info.
+See PORTS.A from Ralf Brown's Interrupt List for more info. (http://www.cs.cmu.edu/~ralf/files.html)
+Also see http://www.rci.rutgers.edu/~preid/pcxtsw.htm for info on DIP switches.
 """
 
 # Standard library imports
@@ -15,7 +16,32 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 # Constants
-PORT_B_READ_HIGH_SWITCHES = 0x08
+PORT_B_TIMER_2_GATE = 0x01
+PORT_B_SPEAKER_DATA = 0x02
+PORT_B_RESERVED = 0x04 # Or cassette motor in PC.
+PORT_B_READ_SWITCHES_HIGH_NIBBLE = 0x08
+PORT_B_NMI_RAM_PARITY_DISABLE = 0x10
+PORT_B_NMI_IO_PARITY_DISABLE = 0x20
+PORT_B_HOLD_KEYBOARD_CLOCK_LOW = 0x40
+PORT_B_CLEAR_KEYBOARD = 0x80
+
+SWITCHES_NORMAL_BOOT = 0x01
+SWITCHES_8087_PRESENT = 0x02
+SWITCHES_MEMORY_BANKS_ONE = 0x00
+SWITCHES_MEMORY_BANKS_TWO = 0x04
+SWITCHES_MEMORY_BANKS_THREE = 0x08
+SWITCHES_MEMORY_BANKS_FOUR = 0x0C
+SWITCHES_MEMORY_BANKS_MASK = 0x0C
+SWITCHES_VIDEO_NONE_EGA_VGA = 0x00
+SWITCHES_VIDEO_CGA_40_COL = 0x10
+SWITCHES_VIDEO_CGA_80_COL = 0x20
+SWITCHES_VIDEO_MDA_HERC = 0x30
+SWITCHES_VIDEO_MASK = 0x30
+SWITCHES_DISKETTES_ONE = 0x00
+SWITCHES_DISKETTES_TWO = 0x40
+SWITCHES_DISKETTES_THREE = 0x80
+SWITCHES_DISKETTES_FOUR = 0xC0
+SWITCHES_DISKETTES_MASK = 0xC0
 
 # Classes
 class ProgrammablePeripheralInterface(Device):
@@ -63,7 +89,7 @@ class ProgrammablePeripheralInterface(Device):
         value = 0x00
         
         # If bit 3 is set, read the high DIP switches.
-        if self.port_b_output & PORT_B_READ_HIGH_SWITCHES:
+        if self.port_b_output & PORT_B_READ_SWITCHES_HIGH_NIBBLE:
             value = value | ((self.dip_switches >> 4) & 0x0F)
         else:
             value = value | self.dip_switches & 0x0F
