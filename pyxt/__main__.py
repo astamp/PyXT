@@ -20,7 +20,7 @@ from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MD
 
 from pyxt.dma import DmaController
 from pyxt.nmi_mask import NMIMaskRegister
-from pyxt.ppi import ProgrammablePeripheralInterface
+from pyxt.ppi import *
 from pyxt.onboard import ProgrammableInterruptController, ProgrammableIntervalTimer
 
 # Logging setup
@@ -74,7 +74,10 @@ def main():
     pit.channels[2].gate = True
     bus.install_device(None, pit)
     
-    bus.install_device(None, ProgrammablePeripheralInterface(0x060))
+    ppi = ProgrammablePeripheralInterface(0x060)
+    ppi.dip_switches = (SWITCHES_NORMAL_BOOT | SWITCHES_MEMORY_BANKS_FOUR | SWITCHES_VIDEO_MDA_HERC | SWITCHES_DISKETTES_ONE)
+    print hex(ppi.dip_switches)
+    bus.install_device(None, ppi)
     
     print "\nSYSTEM BUS:"
     pprint(bus.devices)
