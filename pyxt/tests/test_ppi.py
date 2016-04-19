@@ -30,3 +30,10 @@ class PPITests(unittest.TestCase):
         self.ppi.io_write_byte(0x061, 0x7F)
         self.assertEqual(self.ppi.io_read_byte(0x061), 0x7F)
         
+    def test_port_b_swaps_dip_switches(self):
+        self.ppi.dip_switches = 0xA5
+        self.ppi.io_write_byte(0x061, 0x00)
+        self.assertEqual(self.ppi.io_read_byte(0x062), 0x05)
+        self.ppi.io_write_byte(0x061, 0x08)
+        self.assertEqual(self.ppi.io_read_byte(0x062), 0x0A)
+        
