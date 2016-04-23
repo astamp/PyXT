@@ -51,6 +51,7 @@ class ProgrammablePeripheralInterface(Device):
     def __init__(self, base, **kwargs):
         super(ProgrammablePeripheralInterface, self).__init__(**kwargs)
         self.base = base
+        self.dip_switches = 0x00
         self.last_scancode = 0x00
         self.port_b_output = 0x00
         
