@@ -9,6 +9,9 @@ http://www.seasip.info/VintagePC/mda.html
 import array
 from collections import namedtuple
 
+# Six imports
+from six.moves import range # pylint: disable=redefined-builtin
+
 # PyXT imports
 from pyxt.bus import Device
 from pyxt.helpers import *
@@ -120,7 +123,7 @@ class MonochromeDisplayAdapter(Device):
         
     def get_ports_list(self):
         # range() is not inclusive so add one.
-        return [x for x in xrange(MDA_PORTS_START, MDA_PORTS_END + 1)]
+        return [x for x in range(MDA_PORTS_START, MDA_PORTS_END + 1)]
         
     def io_read_byte(self, port):
         if port in DATA_REG_ACCESS_PORTS:

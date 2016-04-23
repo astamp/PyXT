@@ -7,6 +7,9 @@ Also see http://www.rci.rutgers.edu/~preid/pcxtsw.htm for info on DIP switches.
 
 # Standard library imports
 
+# Six imports
+from six.moves import range # pylint: disable=redefined-builtin
+
 # PyXT imports
 from pyxt.bus import Device
 
@@ -52,7 +55,7 @@ class ProgrammablePeripheralInterface(Device):
         self.port_b_output = 0x00
         
     def get_ports_list(self):
-        return [x for x in xrange(self.base, self.base + 4)]
+        return [x for x in range(self.base, self.base + 4)]
         
     def io_read_byte(self, port):
         offset = port - self.base

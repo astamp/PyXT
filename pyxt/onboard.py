@@ -5,7 +5,7 @@ pyxt.components - Various components needed for PyXT.
 # Standard library imports
 
 # Six imports
-from six.moves import range # pylint: disable=redefined-builtin 
+from six.moves import range # pylint: disable=redefined-builtin
 
 # PyXT imports
 from pyxt.bus import Device

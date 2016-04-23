@@ -4,6 +4,9 @@ pyxt.nmi_mask - Non-maskable interrupt mask register... really.
 
 # Standard library imports
 
+# Six imports
+from six.moves import range # pylint: disable=redefined-builtin
+
 # PyXT imports
 from pyxt.bus import Device
 
@@ -20,7 +23,7 @@ class NMIMaskRegister(Device):
         self.masked = False
         
     def get_ports_list(self):
-        return [x for x in xrange(self.base, self.base + 1)]
+        return [x for x in range(self.base, self.base + 1)]
         
     def io_read_byte(self, port):
         # TODO: What does a real XT class PC do when you read this port?
