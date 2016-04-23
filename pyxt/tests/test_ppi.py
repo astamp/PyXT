@@ -18,6 +18,10 @@ class PPITests(unittest.TestCase):
         self.ppi.io_write_byte(0x060, 0xA5)
         self.assertEqual(self.last_diag_output, 0xA5)
         
+    def test_input_from_keyboard(self):
+        self.ppi.key_pressed(33)
+        self.assertEqual(self.ppi.io_read_byte(0x060), 33)
+        
     def test_reading_from_keyboard_port(self):
         self.ppi.last_scancode = 0x01
         self.assertEqual(self.ppi.io_read_byte(0x060), 0x01)

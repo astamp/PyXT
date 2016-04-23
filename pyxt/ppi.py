@@ -12,6 +12,7 @@ from six.moves import range # pylint: disable=redefined-builtin
 
 # PyXT imports
 from pyxt.bus import Device
+from pyxt.interface import KeyboardController
 
 # Logging setup
 import logging
@@ -47,7 +48,7 @@ SWITCHES_DISKETTES_FOUR = 0xC0
 SWITCHES_DISKETTES_MASK = 0xC0
 
 # Classes
-class ProgrammablePeripheralInterface(Device):
+class ProgrammablePeripheralInterface(Device, KeyboardController):
     def __init__(self, base, **kwargs):
         super(ProgrammablePeripheralInterface, self).__init__(**kwargs)
         self.base = base
@@ -55,6 +56,7 @@ class ProgrammablePeripheralInterface(Device):
         self.last_scancode = 0x00
         self.port_b_output = 0x00
         
+    # Device interface.
     def get_ports_list(self):
         return [x for x in range(self.base, self.base + 4)]
         
@@ -76,6 +78,12 @@ class ProgrammablePeripheralInterface(Device):
         elif offset == 1:
             self.write_port_b(value)
             
+    # KeyboardController interface.
+    def key_pressed(self, scancode):
+        self.last_scancode = scancode
+        # TODO: Trigger INT1 here.
+        
+    # Local functions.
     def write_diag_port(self, value):
         """ Write a value to the diag port, 0x060. """
         log.info("Diag port output: 0x%02x", value)
