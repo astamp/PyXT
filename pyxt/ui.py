@@ -22,6 +22,8 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 # Constants
+UPDATE_DISPLAY = USEREVENT + 0
+
 ScanCode = namedtuple("XTScanCode", ["make_codes", "break_codes"])
 
 def XTScanCode(value):
@@ -145,6 +147,7 @@ class PygameManager(object):
         self.keyboard = keyboard
         self.display = display
         self.display.reset()
+        pygame.time.set_timer(UPDATE_DISPLAY, 20)
         
     def poll(self):
         """ Run one iteration of the Pygame machine. """
@@ -163,6 +166,9 @@ class PygameManager(object):
                 if scancode:
                     self.keyboard.key_pressed(scancode.break_codes)
                     
+            elif event.type == UPDATE_DISPLAY:
+                self.display.draw()
+                
 # Main application
 def main():
     """ Test application for this module. """

@@ -7,6 +7,7 @@ http://www.seasip.info/VintagePC/mda.html
 
 # Standard library imports
 import array
+import random
 from collections import namedtuple
 
 # Six imports
@@ -52,7 +53,7 @@ BITS_LO_TO_HI = [7, 6, 5, 4, 3, 2, 1, 0]
 
 # Classes
 class MonochromeDisplayAdapter(Device):
-    def __init__(self, char_generator):
+    def __init__(self, char_generator, randomize = False):
         super(MonochromeDisplayAdapter, self).__init__()
         
         self.char_generator = char_generator
@@ -62,13 +63,24 @@ class MonochromeDisplayAdapter(Device):
         
         self.video_ram = array.array("B", (0,) * MDA_RAM_SIZE)
         
+        # If desired, randomize the contents of video memory at startup for effect.
+        if randomize:
+            for index in range(MDA_RAM_SIZE):
+                self.video_ram[index] = random.randint(0, 255)
+                
+        # Handle to the Pygame display object.
         self.screen = None
-        # self.reset()
+        
+        # Flag to indicate if we have updated the bitmap and need to display it.
+        self.needs_draw = True
         
     def reset(self):
         pygame.init()
         self.screen = pygame.display.set_mode(MDA_RESOLUTION)
         pygame.display.set_caption("PyXT Monochrome Display Adapter")
+        
+        # Now that we have a display draw whatever is currently in RAM.
+        self.redraw()
         
     def get_memory_size(self):
         return 4096
@@ -96,30 +108,11 @@ class MonochromeDisplayAdapter(Device):
         # Direct write to the "video RAM" for reading back.
         self.video_ram[offset] = value
         
-        # Odd bytes are the attributes.
-        if offset & 0x0001 == 0x0001:
-            character = self.video_ram[offset - 1]
-            attributes = value
-        else:
-            character = value
-            attributes = self.video_ram[offset + 1]
-            
-        # Shift off the lowest bit to get the location base.
-        offset = offset >> 1
+        # Reblit using the character as the base, not an attribute.
+        self.blit_single_char(offset & 0x1FFE)
         
-        row = offset // MDA_COLUMNS
-        column = offset % MDA_COLUMNS
-        
-        # This should be handled by the check above.
-        # if row >= MDA_ROWS:
-            # return
-            
-        # Fill in the internal character generator attributes.
-        cg_attributes = CHARGEN_ATTR_NONE
-        if attributes & MDA_ATTR_INTENSITY:
-            cg_attributes |= CHARGEN_ATTR_BRIGHT
-            
-        self.char_generator.blit_character(self.screen, (column * self.char_generator.char_width, row * self.char_generator.char_height), character, cg_attributes)
+        # Mark that the display bitmap is dirty and needs to be updated.
+        self.needs_draw = True
         
     def get_ports_list(self):
         # range() is not inclusive so add one.
@@ -145,6 +138,38 @@ class MonochromeDisplayAdapter(Device):
         elif port == CONTROL_REG_PORT:
             self.control_reg = value
             
+    def draw(self):
+        """ Update the "physical" display if necessary. """
+        if self.needs_draw:
+            pygame.display.flip()
+            self.needs_draw = False
+            
+    def redraw(self):
+        """ Does a full redraw of the display from RAM. """
+        for offset in xrange(0, MDA_RAM_SIZE, 2):
+            self.blit_single_char(offset)
+            
+        self.needs_draw = True
+        
+    def blit_single_char(self, offset):
+        """ Blits a single character to the display given the offset of the character. """
+        # Get the character and attributes from RAM.
+        character = self.video_ram[offset]
+        attributes = self.video_ram[offset + 1]
+        
+        # Shift off the lowest bit to get the location base.
+        offset = offset >> 1
+        row = offset // MDA_COLUMNS
+        column = offset % MDA_COLUMNS
+        
+        # Calculate the character generator attributes.
+        cg_attributes = CHARGEN_ATTR_NONE
+        if attributes & MDA_ATTR_INTENSITY:
+            cg_attributes |= CHARGEN_ATTR_BRIGHT
+            
+        # Blit the character to the bitmap.
+        self.char_generator.blit_character(self.screen, (column * self.char_generator.char_width, row * self.char_generator.char_height), character, cg_attributes)
+        
 class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
     """
     Character generator that uses the ROM image from the IBM MDA and printer card.
@@ -218,7 +243,6 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
             font_data = self.font_data_bright
             
         surface.blit(font_data, location, area = (self.char_width * index, 0, self.char_width, self.char_height))
-        pygame.display.flip()
         
     @property
     def char_width(self):

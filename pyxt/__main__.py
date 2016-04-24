@@ -65,8 +65,7 @@ def main():
         
     # Other onboard hardware devices.
     char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
-    mda_card = MonochromeDisplayAdapter(char_generator)
-    # mda_card.reset()
+    mda_card = MonochromeDisplayAdapter(char_generator, randomize = True)
     bus.install_device(MDA_START_ADDRESS, mda_card)
     
     bus.install_device(None, DmaController(0x0000))
@@ -82,12 +81,13 @@ def main():
     
     ppi = ProgrammablePeripheralInterface(0x060)
     ppi.dip_switches = options.dip_switches
-    print hex(ppi.dip_switches)
+    log.info("dip_switches = 0x%02x", ppi.dip_switches)
     bus.install_device(None, ppi)
     
-    print "\nSYSTEM BUS:"
-    pprint(bus.devices)
-    pprint(bus.io_decoder)
+    if options.debug:
+        print "\nSYSTEM BUS:"
+        pprint(bus.devices)
+        pprint(bus.io_decoder)
     
     cpu = CPU()
     cpu.install_bus(bus)
