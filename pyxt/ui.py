@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+"""
+pyxt.ui - Pygame wrapper for PyXT.
+"""
+
 # Standard library imports
 import sys
 from collections import namedtuple
@@ -9,7 +13,13 @@ import pygame
 from pygame.locals import *
 
 # PyXT imports
-from pyxt.chargen import CharacterGeneratorBIOS
+from pyxt.interface import KeyboardController
+from pyxt.mda import MonochromeDisplayAdapter, CharacterGeneratorMDA_CGA_ROM
+
+# Logging setup
+import logging
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 # Constants
 ScanCode = namedtuple("XTScanCode", ["make_codes", "break_codes"])
@@ -126,72 +136,63 @@ PYGAME_KEY_TO_XT_SCANCODES = {
 
 assert len(PYGAME_KEY_TO_XT_SCANCODES) == 83
 
-BLACK = (0x00, 0x00, 0x00)
-GREEN = (0x00, 0xC0, 0x00)
-
 # Functions
 
 # Classes
-class XTHardware(object):
-    def __init__(self):
-        pass
+class PygameManager(object):
+    """ Manages interactions with the Pygame UI for PyXT. """
+    def __init__(self, keyboard, display):
+        self.keyboard = keyboard
+        self.display = display
+        self.display.reset()
         
-    def handle_keydown(self, event):
-        if event.key == K_BACKSLASH and event.mod | KMOD_CTRL:
-            print "ITS TIME TO GO"
-            sys.exit()
-            
-        scancodes = PYGAME_KEY_TO_XT_SCANCODES.get(event.key, None)
-        if scancodes is not None:
-            print scancodes.make_codes
-        else:
-            print event
-        
-    def handle_keyup(self, event):
-        scancodes = PYGAME_KEY_TO_XT_SCANCODES.get(event.key, None)
-        if scancodes is not None:
-            print scancodes.break_codes
-        else:
-            print event
-            
+    def poll(self):
+        """ Run one iteration of the Pygame machine. """
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                log.critical("Pygame QUIT detected, powering down...")
+                sys.exit()
+                
+            elif event.type == KEYDOWN:
+                scancode = PYGAME_KEY_TO_XT_SCANCODES.get(event.key, None)
+                if scancode:
+                    self.keyboard.key_pressed(scancode.make_codes)
+                    
+            elif event.type == KEYUP:
+                scancode = PYGAME_KEY_TO_XT_SCANCODES.get(event.key, None)
+                if scancode:
+                    self.keyboard.key_pressed(scancode.break_codes)
+                    
 # Main application
 def main():
-    print "PyXT UI"
-    pygame.init()
+    """ Test application for this module. """
+    log.info("PyXT UI test application.")
     
-    size = width, height = 720, 350
-    screen = pygame.display.set_mode(size)
-    pygame.display.set_caption("PyXT")
-    screen.fill(BLACK)
+    class DemoKeyboard(KeyboardController):
+        """ Keyboard controller that prints the scancodes to the display. """
+        def __init__(self, mda_card):
+            self.x = 0
+            self.y = 0
+            self.mda_card = mda_card
+            
+        def key_pressed(self, scancode):
+            addr = int((self.y * 160) + (self.x * 2))
+            self.mda_card.mem_write_byte(addr, scancode[0])
+            self.x += 1
+            if self.x >= 80:
+                self.x = 0
+                self.y = (self.y + 1) % 25
+                
+    char_generator = CharacterGeneratorMDA_CGA_ROM(sys.argv[1])
+    mda_card = MonochromeDisplayAdapter(char_generator)
+    mda_card.reset()
     
-    hw = XTHardware()
-    cg = CharacterGeneratorBIOS(sys.argv[1])
-    print "LOADING FONT..."
+    keyboard = DemoKeyboard(mda_card)
     
-    print "GO"
-    cursor = [0, 0]
+    manager = PygameManager(keyboard, mda_card)
     while True:
-        for event in pygame.event.get():
-            # print event
-            if event.type == pygame.QUIT:
-                sys.exit()
-            elif event.type == pygame.KEYDOWN:
-                hw.handle_keydown(event)
-                
-                try:
-                    char = ord(event.unicode.encode("ascii"))
-                except Exception:
-                    continue
-                    
-                cg.blit_character(screen, cursor, char)
-                pygame.display.flip()
-                cursor[0] += cg.char_width
-                if cursor[0] > 720:
-                    cursor[0] = 0
-                    cursor[1] += cg.char_height
-                    
-            elif event.type == pygame.KEYUP:
-                hw.handle_keyup(event)
-                
+        manager.poll()
+        
 if __name__ == "__main__":
     main()
+    
