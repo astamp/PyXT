@@ -62,6 +62,7 @@ class MDATests(unittest.TestCase):
     def test_mem_read_byte_off_screen(self):
         self.assertEqual(self.mda.mem_read_byte(4000), 0x00)
         
+    @unittest.skip("We need to initialize Pygame exactly once at startup.")
     def test_reset_on_high_resolution_enable(self):
         self.assertEqual(self.reset_count, 0)
         

@@ -143,10 +143,6 @@ class MonochromeDisplayAdapter(Device):
             pass # self.write_crt_data_register(self.data_reg_index, value)
             
         elif port == CONTROL_REG_PORT:
-            # The first time we see the enable bit, "reset" the MDA card.
-            if self.control_reg & CONTROL_REG_HIRES == 0x00 and value & CONTROL_REG_HIRES == CONTROL_REG_HIRES:
-                self.reset()
-                
             self.control_reg = value
             
 class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
