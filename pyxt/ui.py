@@ -185,7 +185,6 @@ def main():
                 
     char_generator = CharacterGeneratorMDA_CGA_ROM(sys.argv[1])
     mda_card = MonochromeDisplayAdapter(char_generator)
-    mda_card.reset()
     
     keyboard = DemoKeyboard(mda_card)
     
