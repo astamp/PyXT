@@ -36,6 +36,9 @@ CONTROL_REG_HIRES = 0x01
 CONTROL_REG_VIDEO_ENABLE = 0x08
 CONTROL_REG_ENABLINK = 0x20
 
+STATUS_REG_PORT = 0x3BA
+STATUS_REG_RETRACE = 0x01
+
 MDA_ATTR_UNDERLINE =  0x01
 MDA_ATTR_FOREGROUND = 0x07
 MDA_ATTR_INTENSITY =  0x08
@@ -73,6 +76,9 @@ class MonochromeDisplayAdapter(Device):
         
         # Flag to indicate if we have updated the bitmap and need to display it.
         self.needs_draw = True
+        
+        # Every other call to the status register will flip the horizontal retrace bit.
+        self.horizontal_retrace = False
         
     def reset(self):
         pygame.init()
@@ -124,6 +130,10 @@ class MonochromeDisplayAdapter(Device):
             
         elif port == CONTROL_REG_PORT:
             return self.control_reg
+            
+        elif port == STATUS_REG_PORT:
+            self.horizontal_retrace = not self.horizontal_retrace
+            return STATUS_REG_RETRACE if self.horizontal_retrace else 0x00
             
         else:
             return 0x00

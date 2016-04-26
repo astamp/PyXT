@@ -101,3 +101,8 @@ class MDATests(unittest.TestCase):
         self.mda.video_ram[3999] = 0x34
         self.assertEqual(self.mda.mem_read_word(3999), 0x0034)
         
+    def test_horizontal_retrace_toggles(self):
+        self.assertEqual(self.mda.io_read_byte(0x3BA), 0x01)
+        self.assertEqual(self.mda.io_read_byte(0x3BA), 0x00)
+        self.assertEqual(self.mda.io_read_byte(0x3BA), 0x01)
+        
