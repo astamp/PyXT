@@ -50,7 +50,7 @@ def main():
     options, args = parse_cmdline()
     
     log_level = logging.DEBUG if options.debug else logging.INFO
-    logging.basicConfig(format = "%(asctime)s %(message)s", level = log_level)
+    logging.basicConfig(format = "%(asctime)s.%(msecs)03d %(name)s(%(levelname)s): %(message)s", datefmt="%m/%d %H:%M:%S", level = log_level)
     log.info("PyXT oh hai")
     
     bus = SystemBus()
