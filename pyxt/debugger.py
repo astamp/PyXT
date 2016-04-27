@@ -5,6 +5,7 @@ pyxt.debugger - Debugger module for PyXT.
 # Standard library imports
 import re
 import sys
+from collections import Counter
 
 # PyXT imports
 from pyxt.helpers import segment_offset_to_address
@@ -30,6 +31,8 @@ class Debugger(object):
         self.debugger_shortcut = []
         self.dump_enabled = False
         
+        self.location_counter = Counter()
+        
     # ********** Debugger functions. **********
     def fetch(self):
         """ Wraps the CPU fetch() to print info and/or pause execution. """
@@ -39,6 +42,7 @@ class Debugger(object):
         if self.should_break():
             self.enter_debugger()
             
+        self.location_counter.update({(self.cpu.regs.CS, self.cpu.regs.IP) : 1})
         self.cpu.fetch()
         
     def dump_all(self, level = logging.DEBUG):
@@ -142,6 +146,11 @@ class Debugger(object):
         elif len(cmd) == 2 and cmd[0] in ("stack", "st"):
             self.dump_stack(int(cmd[1]))
             
+        elif len(cmd) == 2 and cmd[0] in ("lc", "location-counter"):
+            for location, count in self.location_counter.most_common(int(cmd[1])):
+                cs, ip = location
+                print "location = %04x:%04x, count = %d" % (cs, ip, count)
+                
         elif len(cmd) == 1 and cmd[0] in ("vector", "vt"):
             for vector in xrange(0, 256):
                 ip = self.bus.mem_read_word(vector * 4)
