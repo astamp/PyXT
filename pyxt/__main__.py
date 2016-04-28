@@ -114,6 +114,10 @@ def main():
         debugger.dump_all(logging.ERROR)
         log.exception("Unhandled exception at CS:IP 0x%04x:0x%04x", cpu.regs.CS, cpu.regs.IP)
         
+        # Stop in the debugger one last time so we can inspect the state of the system.
+        if options.debug:
+            debugger.enter_debugger()
+            
 if __name__ == "__main__":
     if os.environ.get("PYXT_PROFILING"):
         import cProfile
