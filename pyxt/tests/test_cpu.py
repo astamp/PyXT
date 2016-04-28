@@ -4261,3 +4261,76 @@ class FlagsOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assert_flags("OsZPc") # ODITSZAPC
         
+class NegOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_neg_8_bit_positive(self):
+        """
+        neg bl
+        hlt
+        """
+        self.cpu.regs.BH = 0x77
+        self.cpu.regs.BL = 55
+        self.load_code_string("F6 DB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BL, 0xC9) # -55 in two's complement.
+        self.assertEqual(self.cpu.regs.BH, 0x77) # Should be unmodified.
+        self.assert_flags("oSzPC") # ODITSZAPC
+        
+    def test_neg_8_bit_negative(self):
+        """
+        neg bl
+        hlt
+        """
+        self.cpu.regs.BH = 0x77
+        self.cpu.regs.BL = 0xC9 # -55 in two's complement.
+        self.load_code_string("F6 DB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BL, 55)
+        self.assertEqual(self.cpu.regs.BH, 0x77) # Should be unmodified.
+        self.assert_flags("oszpC") # ODITSZAPC
+        
+    def test_neg_8_bit_zero(self):
+        """
+        neg bl
+        hlt
+        """
+        self.cpu.regs.BH = 0x77
+        self.cpu.regs.BL = 0
+        self.load_code_string("F6 DB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BL, 0)
+        self.assertEqual(self.cpu.regs.BH, 0x77) # Should be unmodified.
+        self.assert_flags("osZPc") # ODITSZAPC
+        
+    def test_neg_16_bit_positive(self):
+        """
+        neg bx
+        hlt
+        """
+        self.cpu.regs.BX = 1000
+        self.load_code_string("F7 DB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 0xFC18) # -1000 in two's complement.
+        self.assert_flags("oSzPC") # ODITSZAPC
+        
+    def test_neg_16_bit_negative(self):
+        """
+        neg bx
+        hlt
+        """
+        self.cpu.regs.BX = 0xFC18 # -1000 in two's complement.
+        self.load_code_string("F7 DB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 1000)
+        self.assert_flags("oszPC") # ODITSZAPC
+        
+    def test_neg_16_bit_zero(self):
+        """
+        neg bx
+        hlt
+        """
+        self.cpu.regs.BX = 0
+        self.load_code_string("F7 DB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 0)
+        self.assert_flags("osZPc") # ODITSZAPC
+        

@@ -1246,6 +1246,12 @@ class CPU(object):
             value = ~value
             self._set_rm_bits(bits, rm_type, rm_value, value)
             
+        elif sub_opcode == 3: # NEG
+            value = 0 - value
+            self._set_rm_bits(bits, rm_type, rm_value, value)
+            self.flags.set_from_alu(value, bits = bits, carry = False)
+            self.flags.carry = value != 0
+            
         elif sub_opcode == 4: # MUL
             if bits == 16:
                 value = self.regs.AX * value
