@@ -43,6 +43,8 @@ def parse_cmdline():
                       help = "MDA ROM to use for the virtual MDA card.")
     parser.add_option("--dip-switches", action = "store", type = "int", dest = "dip_switches",
                       help = "DIP switch byte to use.", default = DEFAULT_DIP_SWITCHES)
+    parser.add_option("--skip-memory-test", action = "store_true", dest = "skip_memory_test",
+                      help = "Set the flag to skip the POST memory test.")
     return parser.parse_args()
     
 def main():
@@ -62,6 +64,11 @@ def main():
     # ROM BIOS
     if options.bios:
         bus.install_device(BIOS_LOCATION, ROM(SIXTY_FOUR_KB, init_file = options.bios))
+        
+    # Set the flag to skip the memory test if desired.
+    # See the POST section here: http://www.bioscentral.com/misc/biosbasics.htm
+    if options.skip_memory_test:
+        bus.mem_write_word(0x0472, 0x1234)
         
     # Other onboard hardware devices.
     char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
