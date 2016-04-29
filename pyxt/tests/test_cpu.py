@@ -4334,3 +4334,40 @@ class NegOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.BX, 0)
         self.assert_flags("osZPc") # ODITSZAPC
         
+class JcxzOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_jump_taken_cx_is_zero(self):
+        """
+        jcxz location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.regs.CX = 0
+        self.load_code_string("E3 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
+    def test_jump_not_taken_cx_not_zero(self):
+        """
+        jcxz location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.regs.CX = 5643
+        self.load_code_string("E3 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0)
+        
+    def test_jump_can_be_backward(self):
+        """
+        location: inc ax
+        hlt
+        jcxz location
+        hlt
+        """
+        self.cpu.regs.CX = 0
+        self.load_code_string("40 F4 E3 FC F4")
+        self.assertEqual(self.run_to_halt(starting_ip = 0x0002), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        

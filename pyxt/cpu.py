@@ -479,6 +479,8 @@ class CPU(object):
             self._jns()
         elif opcode == 0x78:
             self._js()
+        elif opcode == 0xE3:
+            self.opcode_jcxz()
             
         # FLAGS set/clear instructions.
         elif opcode == 0xF8:
@@ -918,6 +920,12 @@ class CPU(object):
         """ Jump short if the sign flag is not equal to the overflow flag. """
         distance = self.get_byte_immediate()
         if self.flags.sign != self.flags.overflow:
+            self.regs.IP += signed_byte(distance)
+            
+    def opcode_jcxz(self):
+        """ Jump short if the CX register == 0. """
+        distance = self.get_byte_immediate()
+        if self.regs.CX == 0:
             self.regs.IP += signed_byte(distance)
             
     # ********** Interrupt opcodes. **********
