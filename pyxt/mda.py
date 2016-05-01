@@ -131,7 +131,7 @@ class MonochromeDisplayAdapter(Device):
         
     def io_read_byte(self, port):
         if port in DATA_REG_ACCESS_PORTS:
-            log.warning("Data reg port 0x%03x read, returning 0x00!", port)
+            # log.warning("Data reg port 0x%03x read, returning 0x00!", port)
             return 0x00 # self.read_crt_data_register(self.data_reg_index)
             
         elif port == CONTROL_REG_PORT:
@@ -143,16 +143,16 @@ class MonochromeDisplayAdapter(Device):
             return STATUS_REG_RETRACE if self.horizontal_retrace else 0x00
             
         else:
-            log.warning("Unknown port 0x%03x read, returning 0x00!", port)
+            # log.warning("Unknown port 0x%03x read, returning 0x00!", port)
             return 0x00
             
     def io_write_byte(self, port, value):
         if port in DATA_REG_INDEX_PORTS:
-            log.warning("Data reg index port 0x%03x written with 0x%02x!", port, value)
+            # log.warning("Data reg index port 0x%03x written with 0x%02x!", port, value)
             self.data_reg_index = value
             
         elif port in DATA_REG_ACCESS_PORTS:
-            log.warning("Data reg access port 0x%03x written with 0x%02x!", port, value)
+            # log.warning("Data reg access port 0x%03x written with 0x%02x!", port, value)
             pass # self.write_crt_data_register(self.data_reg_index, value)
             
         elif port == CONTROL_REG_PORT:
