@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 # Constants
-FDC_DOR = 2 # Digital output register.
+FDC_CONTROL = 2 # Digital output register, external to the actual controller.
 FDC_STATUS = 4
 FDC_DATA = 5
 
@@ -28,7 +28,7 @@ class FloppyDisketteController(Device):
         
     # Device interface.
     def get_ports_list(self):
-        return [self.base + FDC_DOR, self.base + FDC_STATUS, self.base + FDC_DATA]
+        return [self.base + FDC_CONTROL, self.base + FDC_STATUS, self.base + FDC_DATA]
         
     def io_read_byte(self, port):
         offset = port - self.base
@@ -42,7 +42,7 @@ class FloppyDisketteController(Device):
             
     def io_write_byte(self, port, value):
         offset = port - self.base
-        if offset == FDC_DOR:
+        if offset == FDC_CONTROL:
             pass
         elif offset == FDC_STATUS:
             pass
