@@ -4,9 +4,6 @@ pyxt.fdc - Floppy diskette controller for PyXT.
 
 # Standard library imports
 
-# Six imports
-from six.moves import range # pylint: disable=redefined-builtin
-
 # PyXT imports
 from pyxt.bus import Device
 
@@ -46,6 +43,7 @@ ST_READY = 0
 
 # Classes
 class FloppyDisketteController(Device):
+    """ Floppy diskette controller based on the NEC uPD765/Intel 8272A controllers. """
     def __init__(self, base, **kwargs):
         super(FloppyDisketteController, self).__init__(**kwargs)
         self.base = base
@@ -80,6 +78,7 @@ class FloppyDisketteController(Device):
             
     # Local functions.
     def write_control_register(self, value):
+        """ Helper for performing actions when the control register is written. """
         previously_enabled = self.enabled
         self.enabled = value & CONTROL_N_RESET == CONTROL_N_RESET
         
@@ -87,6 +86,7 @@ class FloppyDisketteController(Device):
             self.reset()
         
     def read_status_register(self):
+        """ Helper for building the response to a status request. """
         value = 0x00
         if self.enabled:
             value |= STATUS_READY
