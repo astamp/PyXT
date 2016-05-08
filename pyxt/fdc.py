@@ -20,11 +20,18 @@ FDC_CONTROL = 2 # Digital output register, external to the actual controller.
 FDC_STATUS = 4
 FDC_DATA = 5
 
+CONTROL_DRIVE0_MOTOR = 0x10 # A:
+CONTROL_DRIVE1_MOTOR = 0x20 # B:
+CONTROL_DMA_ENABLE = 0x08
+CONTROL_N_RESET = 0x04
+CONTROL_DRIVE_SELECT = 0x03 # Mask for drive number.
+
 # Classes
 class FloppyDisketteController(Device):
     def __init__(self, base, **kwargs):
         super(FloppyDisketteController, self).__init__(**kwargs)
         self.base = base
+        self.enabled = False
         
     # Device interface.
     def get_ports_list(self):
@@ -43,10 +50,13 @@ class FloppyDisketteController(Device):
     def io_write_byte(self, port, value):
         offset = port - self.base
         if offset == FDC_CONTROL:
-            pass
-        elif offset == FDC_STATUS:
-            pass
+            self.write_control_register(value)
         elif offset == FDC_DATA:
             pass
         else:
             log.warning("Invalid FDC port write: 0x%03x, with: 0x%02x.", port, value)
+            
+    # Local functions.
+    def write_control_register(self, value):
+        self.enabled = value & CONTROL_N_RESET == CONTROL_N_RESET
+        
