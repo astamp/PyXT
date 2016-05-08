@@ -19,6 +19,7 @@ from pyxt.memory import RAM, ROM
 from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MDA_START_ADDRESS
 from pyxt.ui import PygameManager
 
+from pyxt.fdc import FloppyDisketteController
 from pyxt.dma import DmaController
 from pyxt.nmi_mask import NMIMaskRegister
 from pyxt.ppi import *
@@ -74,6 +75,9 @@ def main():
     char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
     mda_card = MonochromeDisplayAdapter(char_generator, randomize = True)
     bus.install_device(MDA_START_ADDRESS, mda_card)
+    
+    diskette_controller = FloppyDisketteController(0x3F0)
+    bus.install_device(None, diskette_controller)
     
     bus.install_device(None, DmaController(0x0000))
     nmi_mask = NMIMaskRegister(0x0A0)
