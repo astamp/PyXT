@@ -549,6 +549,8 @@ class CPU(object):
             self._out_dx_al()
         elif opcode == 0xA8:
             self.opcode_test_al_imm8()
+        elif opcode == 0x84:
+            self.opcode_test_rm8_r8()
         elif opcode == 0xC4:
             self.opcode_les()
         elif opcode == 0xC5:
@@ -1068,6 +1070,13 @@ class CPU(object):
         """ AND al with imm8, update the flags, but don't store the value. """
         value = self.regs.AL & self.get_byte_immediate()
         self.flags.set_from_alu_byte(value)
+        
+    def opcode_test_rm8_r8(self):
+        """ AND an r/m8 value and a register value, update the flags, but don't store the value. """
+        register, rm_type, rm_value = self.get_modrm_operands(8)
+        value = self._get_rm8(rm_type, rm_value) & self.regs[register]
+        self.flags.set_from_alu_no_carry_byte(value)
+        self.flags.clear_logical()
         
     # Generic ALU helper functions.
     def _alu_rm8_r8(self, operation):
