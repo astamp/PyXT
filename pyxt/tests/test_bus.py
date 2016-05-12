@@ -55,3 +55,23 @@ class DeviceTests(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             self.device.io_write_word(0, 0)
             
+class InterruptControllerSpy(object):
+    def __init__(self):
+        self.irq_log = []
+        
+    def interrupt_request(self, irq):
+        self.irq_log.append(irq)
+        
+class SystemBusTests(unittest.TestCase):
+    def setUp(self):
+        self.pic = InterruptControllerSpy()
+        self.bus = SystemBus(self.pic)
+        
+    def test_interrupt_request(self):
+        self.bus.interrupt_request(7)
+        self.assertEqual(self.pic.irq_log, [7])
+        
+    def test_interrupt_request_not_in_range(self):
+        self.bus.interrupt_request(8)
+        self.assertEqual(self.pic.irq_log, [])
+        

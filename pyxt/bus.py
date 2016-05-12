@@ -79,7 +79,7 @@ class Device(object):
         
 class SystemBus(object):
     """ The main system bus for PyXT including memory mapped devices and I/O ports. """
-    def __init__(self):
+    def __init__(self, pic = None, dma = None):
         # Array of memory blocks indexed by 4 bit prefix.
         self.devices = [None] * 16
         
@@ -87,6 +87,9 @@ class SystemBus(object):
         self.io_decoder = {}
         
         self.debugger = None
+        
+        self.pic = pic
+        self.dma = dma
         
     def install_device(self, prefix, device):
         """ Install a device into the system bus. """
@@ -163,4 +166,10 @@ class SystemBus(object):
                 log.critical("Force break: %s" % message)
                 
             self.debugger.single_step = True
+            
+    def interrupt_request(self, irq):
+        """ Signals the appropriate IRQ on the interrupt controller. """
+        # First, and only, interrupt controller on the XT.
+        if self.pic and 0 <= irq <= 7:
+            self.pic.interrupt_request(irq)
             

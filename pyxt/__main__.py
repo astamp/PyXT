@@ -56,7 +56,12 @@ def main():
     logging.basicConfig(format = "%(asctime)s.%(msecs)03d %(name)s(%(levelname)s): %(message)s", datefmt="%m/%d %H:%M:%S", level = log_level)
     log.info("PyXT oh hai")
     
-    bus = SystemBus()
+    # The PIC and DMA controller are integral to the ISA/XT bus and need to be part of the bus.
+    # They will also be installed below so they can be configured via I/O ports.
+    pic = ProgrammableInterruptController(0x020)
+    dma_controller = DmaController(0x0000)
+    
+    bus = SystemBus(pic, dma_controller)
     
     # 640KB OK
     for index in xrange(10):
@@ -79,10 +84,10 @@ def main():
     diskette_controller = FloppyDisketteController(0x3F0)
     bus.install_device(None, diskette_controller)
     
-    bus.install_device(None, DmaController(0x0000))
+    bus.install_device(None, dma_controller)
     nmi_mask = NMIMaskRegister(0x0A0)
     bus.install_device(None, nmi_mask)
-    bus.install_device(None, ProgrammableInterruptController(0x020))
+    bus.install_device(None, pic)
     
     pit = ProgrammableIntervalTimer(0x0040)
     pit.channels[0].gate = True
