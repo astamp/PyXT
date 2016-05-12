@@ -17,6 +17,8 @@ FDC_CONTROL = 2 # Digital output register, external to the actual controller.
 FDC_STATUS = 4
 FDC_DATA = 5
 
+FDC_IRQ_LINE = 6
+
 CONTROL_DRIVE0_MOTOR = 0x10 # A:
 CONTROL_DRIVE1_MOTOR = 0x20 # B:
 CONTROL_DRIVE2_MOTOR = 0x40 # C: ???
@@ -56,6 +58,7 @@ class FloppyDisketteController(Device):
         
     def reset(self):
         self.state = ST_READY
+        self.bus.pic.interrupt_request(FDC_IRQ_LINE)
         
     def io_read_byte(self, port):
         offset = port - self.base

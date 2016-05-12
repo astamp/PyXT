@@ -1,10 +1,23 @@
 import unittest
 
+from pyxt.bus import SystemBus
 from pyxt.fdc import *
 
+class InterruptControllerSpy(object):
+    def __init__(self):
+        self.irq_log = []
+        
+    def interrupt_request(self, irq):
+        self.irq_log.append(irq)
+        
 class FDCTests(unittest.TestCase):
     def setUp(self):
         self.fdc = FloppyDisketteController(0x3F0)
+        
+        self.pic = InterruptControllerSpy()
+        self.bus = SystemBus(self.pic)
+        self.bus.install_device(None, self.fdc)
+        
         self.reset_called = False
         
     def test_address_list(self):
@@ -18,6 +31,7 @@ class FDCTests(unittest.TestCase):
         self.fdc.state = 5643
         self.fdc.reset()
         self.assertEqual(self.fdc.state, ST_READY)
+        self.assertEqual(self.pic.irq_log, [6])
         
     def test_enable_fdc(self):
         self.fdc.io_write_byte(0x3F2, 0x04)
