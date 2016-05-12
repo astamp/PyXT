@@ -71,7 +71,7 @@ class PICTests(unittest.TestCase):
     def test_icw2_set_vector_base(self):
         self.obj.io_write_byte(0x00A0, 0x10)
         self.obj.io_write_byte(0x00A1, 0xFF)
-        self.assertEqual(self.obj.vector_base, 0xF1)
+        self.assertEqual(self.obj.vector_base, 0xF8)
         
     def test_icw2_skip_icw3_and_icw4(self):
         self.obj.io_write_byte(0x00A0, 0x12)

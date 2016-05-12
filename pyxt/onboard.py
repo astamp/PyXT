@@ -93,7 +93,7 @@ class ProgrammableInterruptController(Device):
             self.icws_state = 2
             
         elif self.icws_state == 2:
-            self.vector_base = value & 0xF1
+            self.vector_base = value & 0xF8
             # TODO: No support for full MCS-80/8085 vector addresses.
             
             if self.cascade:
