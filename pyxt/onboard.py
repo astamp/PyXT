@@ -36,9 +36,34 @@ class ProgrammableInterruptController(Device):
         self.icws_state = 0
         self.icw4_needed = False
         
+    # Device interface.
     def get_ports_list(self):
         return [x for x in range(self.base, self.base + 2)]
         
+    def io_read_byte(self, address):
+        offset = address - self.base
+        if offset == 1:
+            return self.mask
+        else:
+            return 0
+            
+    def io_write_byte(self, address, value):
+        offset = address - self.base
+        if offset == 0 and value & 0x10 == 0x10:
+            self.start_initialization_sequence()
+            
+        if self.icws_state > 0:
+            self.process_icws_byte(value)
+        else:
+            if offset == 1:
+                self.mask = value
+            else:
+                if value & 0x08 == 0x08:
+                    self.process_ocw3_byte(value)
+                else:
+                    self.process_ocw2_byte(value)
+                    
+    # Local functions.
     def start_initialization_sequence(self):
         """ Kick off the 8259 initialization sequence. """
         self.trigger_mode = self.EDGE_TRIGGERED
@@ -95,29 +120,7 @@ class ProgrammableInterruptController(Device):
         interrupt = value & 0x07
         print("command = %r, interrupt = %r" % (command, interrupt))
         
-    def io_read_byte(self, address):
-        offset = address - self.base
-        if offset == 1:
-            return self.mask
-        else:
-            return 0
-            
-    def io_write_byte(self, address, value):
-        offset = address - self.base
-        if offset == 0 and value & 0x10 == 0x10:
-            self.start_initialization_sequence()
-            
-        if self.icws_state > 0:
-            self.process_icws_byte(value)
-        else:
-            if offset == 1:
-                self.mask = value
-            else:
-                if value & 0x08 == 0x08:
-                    self.process_ocw3_byte(value)
-                else:
-                    self.process_ocw2_byte(value)
-                    
+        
 PIT_COMMAND_LATCH = 0x00
 PIT_READ_WRITE_NONE = 0x00
 PIT_READ_WRITE_LOW = 0x01
@@ -293,6 +296,7 @@ class ProgrammableIntervalTimer(Device):
         self.channels = [Counter(), Counter(), Counter()]
         self.divisor = self.CLOCK_DIVISOR
         
+    # Device interface.
     def clock(self):
         self.divisor -= 1
         if self.divisor == 0:
@@ -322,6 +326,7 @@ class ProgrammableIntervalTimer(Device):
             else:
                 self.channels[counter].reconfigure(command, mode, bcd)
                 
+    # Local functions.
     @classmethod
     def decode_control_word(cls, value):
         """ Decode a control word into its fields. """
