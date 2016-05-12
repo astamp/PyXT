@@ -4411,3 +4411,84 @@ class JcxzOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(starting_ip = 0x0002), 3)
         self.assertEqual(self.cpu.regs.AL, 1)
         
+class ShrTests(BaseOpcodeAcceptanceTests):
+    def test_shr_rm8_1_positive(self):
+        """
+        shr al, 1
+        hlt
+        """
+        self.cpu.regs.AL = 0x40
+        self.load_code_string("D0 E8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x20)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_shr_rm8_1_negative(self):
+        """
+        shr al, 1
+        hlt
+        """
+        self.cpu.regs.AL = 0x80
+        self.load_code_string("D0 E8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x40) # Doesn't maintain sign like SAR.
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_shr_rm8_1_shift_out(self):
+        """
+        shr al, 1
+        hlt
+        """
+        self.cpu.regs.AL = 0x01
+        self.load_code_string("D0 E8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x00)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertTrue(self.cpu.flags.carry) # Carry out.
+        
+    def test_shr_rm16_1_positive(self):
+        """
+        shr ax, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x4000
+        self.load_code_string("D1 E8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x2000)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_shr_rm16_1_negative(self):
+        """
+        shr ax, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x8000
+        self.load_code_string("D1 E8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x4000) # Doesn't maintain sign like SAR.
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_shr_rm16_1_shift_out(self):
+        """
+        shr ax, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x0001
+        self.load_code_string("D1 E8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0000)
+        self.assertTrue(self.cpu.flags.carry) # Carry out.
+        
+    def test_shr_rm16_1_cross_byte(self):
+        """
+        shr ax, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x0100
+        self.load_code_string("D1 E8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x0080)
+        self.assertFalse(self.cpu.flags.carry)
+        

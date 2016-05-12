@@ -1364,10 +1364,12 @@ class CPU(object):
             self.flags.set_from_alu(value, bits = bits, carry = False)
             self._set_rm_bits(bits, rm_type, rm_value, value)
             
-        elif sub_opcode == 0x05:
+        elif sub_opcode == 0x05: # SHR - Shift right, no sign extension.
             self.flags.carry = (value >> (count - 1)) & 0x01 == 0x01
             value = value >> count
+            
             self.flags.set_from_alu(value, bits = bits, carry = False)
+            self._set_rm_bits(bits, rm_type, rm_value, value)
             
         elif sub_opcode == 0x04:
             # 0x0010 << 12 => CF = True
