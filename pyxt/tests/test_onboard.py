@@ -11,6 +11,7 @@ class PICTests(unittest.TestCase):
         
     def test_initial_state(self):
         self.assertEqual(self.obj.mask, 0x00)
+        self.assertEqual(self.obj.interrupt_request_register, 0x00)
         self.assertEqual(self.obj.priorities, [0, 1, 2, 3, 4, 5, 6, 7])
         self.assertEqual(self.obj.icws_state, 0)
         self.assertEqual(self.obj.icw4_needed, False)
@@ -155,6 +156,17 @@ class PICTests(unittest.TestCase):
         self.assertEqual(self.obj.mask, 0x00)
         
     # ***** OCW2 Tests *****
+    
+    # ***** IRQ Tests *****
+    def test_irq_not_masked(self):
+        self.obj.interrupt_request(4)
+        self.assertEqual(self.obj.interrupt_request_register, 0x10)
+        
+    def test_irq_when_masked(self):
+        self.obj.io_write_byte(0x0A1, 0xFF) # Mask all interrupts.
+        self.obj.interrupt_request(4)
+        self.assertEqual(self.obj.interrupt_request_register, 0x00)
+        
     
 class PITDeviceTests(unittest.TestCase):
     def setUp(self):

@@ -36,6 +36,8 @@ class ProgrammableInterruptController(Device):
         self.icws_state = 0
         self.icw4_needed = False
         
+        self.interrupt_request_register = 0x00
+        
     # Device interface.
     def get_ports_list(self):
         return [x for x in range(self.base, self.base + 2)]
@@ -120,6 +122,16 @@ class ProgrammableInterruptController(Device):
         interrupt = value & 0x07
         print("command = %r, interrupt = %r" % (command, interrupt))
         
+    def interrupt_request(self, irq):
+        """ Called when an interrupt is requested from a device. """
+        irq_mask = 0x01 << irq
+        
+        # If the IRQ is masked, ignore the request.
+        if irq_mask & self.mask == irq_mask:
+            return
+            
+        # Log that the interrupt is pending service.
+        self.interrupt_request_register |= irq_mask
         
 PIT_COMMAND_LATCH = 0x00
 PIT_READ_WRITE_NONE = 0x00
