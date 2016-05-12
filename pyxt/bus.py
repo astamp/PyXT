@@ -163,7 +163,7 @@ class SystemBus(object):
         """ Force the debugger to break into single step mode. """
         if self.debugger is not None:
             if message:
-                log.critical("Force break: %s" % message)
+                log.critical("Force break: %s", message)
                 
             self.debugger.single_step = True
             
