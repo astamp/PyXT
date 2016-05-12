@@ -20,6 +20,8 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 # Constants
+KEYBOARD_IRQ_LINE = 1
+
 PORT_B_TIMER_2_GATE = 0x01
 PORT_B_SPEAKER_DATA = 0x02
 PORT_B_RESERVED = 0x04 # Or cassette motor in PC.
@@ -80,8 +82,9 @@ class ProgrammablePeripheralInterface(Device, KeyboardController):
             
     # KeyboardController interface.
     def key_pressed(self, scancode):
-        self.last_scancode = scancode
-        # TODO: Trigger INT1 here.
+        # Scancode could be a tuple of multiple bytes in an AT keyboard, we will only ever have 1 byte.
+        self.last_scancode = scancode[0]
+        self.bus.pic.interrupt_request(KEYBOARD_IRQ_LINE)
         
     # Local functions.
     def write_diag_port(self, value):
