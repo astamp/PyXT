@@ -351,6 +351,9 @@ class CPU(object):
         
     def fetch(self):
         """ Fetch and execute one instruction. """
+        # Process any pending interrupts, including trap/single-step.
+        self.process_interrupts()
+        
         # Clear all prefixes.
         self.repeat_prefix = REPEAT_NONE
         self.segment_override = None
@@ -932,8 +935,24 @@ class CPU(object):
             
     # ********** Interrupt opcodes. **********
     def opcode_int(self):
+        """ Jump to the specified interrupt vector (imm8). """
+        self.internal_service_interrupt(self.get_byte_immediate())
+        
+    def opcode_iret(self):
+        """ Return from interrupt, restoring IP, CS, and FLAGS. """
+        self.regs.IP = self.internal_pop()
+        self.regs.CS = self.internal_pop()
+        self.flags.value = self.internal_pop()
+        
+    def process_interrupts(self):
+        """ Process non-software interrupts. """
+        if self.flags.interrupt_enable and self.bus.pic and self.bus.pic.interrupt_pending():
+            interrupt = self.bus.pic.pop_interrupt_vector()
+            log.debug("External interrupt requested INT %02xh.", interrupt)
+            self.internal_service_interrupt(interrupt)
+            
+    def internal_service_interrupt(self, interrupt):
         """ Jump to the specified interrupt vector, saving FLAGS, CS, and IP. """
-        interrupt = self.get_byte_immediate()
         self.internal_push(self.flags.value)
         self.flags.trap = False
         self.flags.interrupt_enable = False
@@ -941,13 +960,7 @@ class CPU(object):
         self.regs.CS = self.bus.mem_read_word((interrupt * 4) + 2)
         self.internal_push(self.regs.IP)
         self.regs.IP = self.bus.mem_read_word(interrupt * 4)
-        log.debug("INT %02xh to CS:IP 0x%04x:0x%04x", interrupt, self.regs.CS, self.regs.IP)
-        
-    def opcode_iret(self):
-        """ Return from interrupt, restoring IP, CS, and FLAGS. """
-        self.regs.IP = self.internal_pop()
-        self.regs.CS = self.internal_pop()
-        self.flags.value = self.internal_pop()
+        log.debug("INT %02xh to CS:IP %04x:%04x", interrupt, self.regs.CS, self.regs.IP)
         
     # ********** Fancy jump opcodes. **********
     def _jmpf(self):
