@@ -133,6 +133,10 @@ class ProgrammableInterruptController(Device):
         # Log that the interrupt is pending service.
         self.interrupt_request_register |= irq_mask
         
+    def interrupt_pending(self):
+        """ Returns True if an interrupt request is pending. """
+        return self.interrupt_request_register != 0x00
+        
 PIT_COMMAND_LATCH = 0x00
 PIT_READ_WRITE_NONE = 0x00
 PIT_READ_WRITE_LOW = 0x01

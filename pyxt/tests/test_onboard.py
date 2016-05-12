@@ -167,7 +167,13 @@ class PICTests(unittest.TestCase):
         self.obj.interrupt_request(4)
         self.assertEqual(self.obj.interrupt_request_register, 0x00)
         
-    
+    def test_interrupt_pending_no(self):
+        self.assertFalse(self.obj.interrupt_pending())
+        
+    def test_interrupt_pending_yes(self):
+        self.obj.interrupt_request(4)
+        self.assertTrue(self.obj.interrupt_pending())
+        
 class PITDeviceTests(unittest.TestCase):
     def setUp(self):
         self.pit = ProgrammableIntervalTimer(0x0040)
