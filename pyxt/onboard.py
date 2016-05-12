@@ -137,6 +137,17 @@ class ProgrammableInterruptController(Device):
         """ Returns True if an interrupt request is pending. """
         return self.interrupt_request_register != 0x00
         
+    def pop_interrupt_vector(self):
+        """ Acknowledges the highest priority interrupt and returns the vector number. """
+        # TODO: Proper priority handling.
+        for irq in range(8):
+            irq_mask = 0x01 << irq
+            if irq_mask & self.interrupt_request_register == irq_mask:
+                self.interrupt_request_register &= ~irq_mask
+                return self.vector_base + irq
+        
+        raise RuntimeError("pop_interrupt_vector() called with no pending interrupts!")
+        
 PIT_COMMAND_LATCH = 0x00
 PIT_READ_WRITE_NONE = 0x00
 PIT_READ_WRITE_LOW = 0x01
