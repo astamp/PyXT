@@ -2826,7 +2826,7 @@ class SarOpcodeTests(BaseOpcodeAcceptanceTests):
         self.cpu.regs.AX = 0x0100
         self.load_code_string("D1 F8 F4")
         self.assertEqual(self.run_to_halt(), 2)
-        self.assertEqual(self.cpu.regs.AL, 0x0080)
+        self.assertEqual(self.cpu.regs.AX, 0x0080)
         self.assertFalse(self.cpu.flags.carry)
         
 class StosOpcodeTests(BaseOpcodeAcceptanceTests):
@@ -4489,6 +4489,64 @@ class ShrTests(BaseOpcodeAcceptanceTests):
         self.cpu.regs.AX = 0x0100
         self.load_code_string("D1 E8 F4")
         self.assertEqual(self.run_to_halt(), 2)
-        self.assertEqual(self.cpu.regs.AL, 0x0080)
+        self.assertEqual(self.cpu.regs.AX, 0x0080)
+        self.assertFalse(self.cpu.flags.carry)
+        
+class ShlTests(BaseOpcodeAcceptanceTests):
+    def test_shl_rm8_1_simple(self):
+        """
+        shl al, 1
+        hlt
+        """
+        self.cpu.regs.AL = 0x01
+        self.load_code_string("D0 E0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x02)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_shl_rm8_1_shift_out(self):
+        """
+        shl al, 1
+        hlt
+        """
+        self.cpu.regs.AL = 0x80
+        self.load_code_string("D0 E0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x00)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertTrue(self.cpu.flags.carry) # Carry out.
+        
+    def test_shl_rm16_1_simple(self):
+        """
+        shl ax, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x0002
+        self.load_code_string("D1 E0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0004)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_shl_rm16_1_shift_out(self):
+        """
+        shl ax, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x8000
+        self.load_code_string("D1 E0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0000)
+        self.assertTrue(self.cpu.flags.carry) # Carry out.
+        
+    def test_shl_rm16_1_cross_byte(self):
+        """
+        shl ax, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x0080
+        self.load_code_string("D1 E0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0100)
         self.assertFalse(self.cpu.flags.carry)
         

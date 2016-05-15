@@ -1384,14 +1384,19 @@ class CPU(object):
             self.flags.set_from_alu(value, bits = bits, carry = False)
             self._set_rm_bits(bits, rm_type, rm_value, value)
             
-        elif sub_opcode == 0x04:
-            # 0x0010 << 12 => CF = True
-            self.flags.carry = (value << count) & 0x10000 == 0x10000
+        elif sub_opcode == 0x04: # SHL/SAL - Shift in zeros to the left, to the left.
+            if bits == 8:
+                self.flags.carry = (value << count) & 0x100 == 0x100
+            else:
+                self.flags.carry = (value << count) & 0x10000 == 0x10000
+                
             value = value << count
             self.flags.set_from_alu(value, bits = bits, carry = False)
             if count == 1:
                 self.flags.overflow = ((old_value & high_bit_mask) ^ (value & high_bit_mask)) == high_bit_mask
                 
+            self._set_rm_bits(bits, rm_type, rm_value, value)
+            
         elif sub_opcode == 0x07:
             if bits == 8:
                 value, self.flags.carry = shift_arithmetic_right_8_bits(value, count)
