@@ -1,5 +1,6 @@
 import unittest
 
+from pyxt.tests.utils import SystemBusTestable
 from pyxt.ppi import *
 
 class PPITests(unittest.TestCase):
@@ -7,6 +8,9 @@ class PPITests(unittest.TestCase):
         self.ppi = ProgrammablePeripheralInterface(0x060)
         self.ppi.write_diag_port = self.diag_port_hook
         self.last_diag_output = None
+        
+        self.bus = SystemBusTestable()
+        self.bus.install_device(None, self.ppi)
         
     def diag_port_hook(self, value):
         self.last_diag_output = value
@@ -21,6 +25,7 @@ class PPITests(unittest.TestCase):
     def test_input_from_keyboard(self):
         self.ppi.key_pressed((33,))
         self.assertEqual(self.ppi.io_read_byte(0x060), 33)
+        self.assertEqual(self.bus.get_irq_log(), [1])
         
     def test_reading_from_keyboard_port(self):
         self.ppi.last_scancode = 0x01

@@ -1,5 +1,6 @@
 import unittest
 
+from pyxt.tests.utils import InterruptControllerSpy
 from pyxt.bus import *
 
 class DeviceTests(unittest.TestCase):
@@ -55,13 +56,6 @@ class DeviceTests(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             self.device.io_write_word(0, 0)
             
-class InterruptControllerSpy(object):
-    def __init__(self):
-        self.irq_log = []
-        
-    def interrupt_request(self, irq):
-        self.irq_log.append(irq)
-        
 class SystemBusTests(unittest.TestCase):
     def setUp(self):
         self.pic = InterruptControllerSpy()
