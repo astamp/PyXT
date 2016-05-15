@@ -13,7 +13,7 @@ class DisplayAdapter(object):
 class KeyboardController(object):
     """ Interface for a PyGame keyboard controller. """
     
-    def key_pressed(self, scancode):
-        """ Function called when a scancode is ready for the controller. """
+    def key_pressed(self, scancodes):
+        """ Function called when one or more scancodes are ready for the controller. """
         raise NotImplementedError
         
