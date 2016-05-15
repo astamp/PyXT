@@ -4411,7 +4411,7 @@ class JcxzOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(starting_ip = 0x0002), 3)
         self.assertEqual(self.cpu.regs.AL, 1)
         
-class ShrTests(BaseOpcodeAcceptanceTests):
+class ShrOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_shr_rm8_1_positive(self):
         """
         shr al, 1
@@ -4492,7 +4492,7 @@ class ShrTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0x0080)
         self.assertFalse(self.cpu.flags.carry)
         
-class ShlTests(BaseOpcodeAcceptanceTests):
+class ShlOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_shl_rm8_1_simple(self):
         """
         shl al, 1
