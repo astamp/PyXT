@@ -12,6 +12,9 @@ class InterruptControllerSpy(object):
     def interrupt_request(self, irq):
         self.irq_log.append(irq)
         
+    def interrupt_pending(self):
+        return False
+        
 class SystemBusTestable(SystemBus):
     """ System bus object for unit testing. """
     def __init__(self):

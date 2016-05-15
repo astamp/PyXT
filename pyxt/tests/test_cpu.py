@@ -6,7 +6,8 @@ from six.moves import range # pylint: disable=redefined-builtin
 
 from pyxt.constants import *
 from pyxt.cpu import *
-from pyxt.bus import SystemBus, Device
+from pyxt.bus import Device
+from pyxt.tests.utils import SystemBusTestable
 from pyxt.memory import RAM
 
 class CpuTests(unittest.TestCase):
@@ -353,7 +354,7 @@ class BaseOpcodeAcceptanceTests(unittest.TestCase):
     nasm temp.asm -f bin -o temp.bin
     """
     def setUp(self):
-        self.bus = SystemBus()
+        self.bus = SystemBusTestable()
         self.cpu = CPU()
         self.cpu.install_bus(self.bus)
         self.cpu.regs.CS = 0x0000
