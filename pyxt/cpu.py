@@ -110,6 +110,38 @@ def supports_rep_prefix(func):
             func(self, *args)
             
     return _repeated
+    
+def supports_repz_repnz_prefix(func):
+    """ Decorator to implement the REPZ/REPNZ prefixes which repeats while CX != 0 and the zero flag is in a given state. """
+    
+    def _repeated(self, *args):
+        """ Wrapper that implements REPZ and REPNZ. """
+        if self.repeat_prefix == REPEAT_REP_REPZ:
+            while self.regs.CX != 0:
+                # TODO: When interrupts are supported we will need to process them here.
+                self.regs.CX -= 1
+                func(self, *args)
+                if not self.flags.zero: # Need to test this after func() to avoid testing precondition.
+                    break
+                    
+            # Clear the prefix so we can catch invalid combinations.
+            self.repeat_prefix = REPEAT_NONE
+            
+        elif self.repeat_prefix == REPEAT_REPNZ:
+            while self.regs.CX != 0:
+                # TODO: When interrupts are supported we will need to process them here.
+                self.regs.CX -= 1
+                func(self, *args)
+                if self.flags.zero: # Need to test this after func() to avoid testing precondition.
+                    break
+                    
+            # Clear the prefix so we can catch invalid combinations.
+            self.repeat_prefix = REPEAT_NONE
+            
+        else:
+            func(self, *args)
+            
+    return _repeated
 
 # Classes
 class WordRegs(Structure):
@@ -369,6 +401,8 @@ class CPU(object):
             # Configure flags based on the prefix.
             if opcode == 0xF3:
                 self.repeat_prefix = REPEAT_REP_REPZ
+            elif opcode == 0xF2:
+                self.repeat_prefix = REPEAT_REPNZ
             elif opcode == 0x26:
                 self.segment_override = "ES"
             elif opcode == 0x2E:
@@ -1567,6 +1601,7 @@ class CPU(object):
         self.regs.SI += -2 if self.flags.direction else 2
         self.regs.DI += -2 if self.flags.direction else 2
         
+    @supports_repz_repnz_prefix
     def opcode_scasb(self):
         """ Compare the byte at ES:DI with AL and update the flags. """
         result = self.operator_sub_8(

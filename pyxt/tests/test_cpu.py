@@ -4734,3 +4734,122 @@ class ScasOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.DI, 0x0005)
         self.assert_flags("oSzPC") # ODITSZAPC
         
+class RepzRepnzPrefixTests(BaseOpcodeAcceptanceTests):
+    def test_repnz_scasb_exit_on_zero(self):
+        """
+        repnz scasb
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AL = 0x02
+        self.cpu.regs.CX = 20
+        self.cpu.flags.zero = True # Should not cause it to immediately terminate.
+        self.memory.mem_write_byte(20, 0x01)
+        self.memory.mem_write_byte(21, 0x01)
+        self.memory.mem_write_byte(22, 0x01)
+        self.memory.mem_write_byte(23, 0x01)
+        self.memory.mem_write_byte(24, 0x02)
+        self.load_code_string("F2 AE F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.CX, 15)
+        self.assertEqual(self.cpu.regs.DI, 0x0009)
+        self.assert_flags("osZPc") # ODITSZAPC
+        
+    def test_repz_scasb_exit_on_nonzero(self):
+        """
+        repz scasb
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AL = 0x01
+        self.cpu.regs.CX = 20
+        self.cpu.flags.zero = False # Should not cause it to immediately terminate.
+        self.memory.mem_write_byte(20, 0x01)
+        self.memory.mem_write_byte(21, 0x01)
+        self.memory.mem_write_byte(22, 0x01)
+        self.memory.mem_write_byte(23, 0x01)
+        self.memory.mem_write_byte(24, 0x02)
+        self.load_code_string("F3 AE F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.CX, 15)
+        self.assertEqual(self.cpu.regs.DI, 0x0009)
+        self.assert_flags("oSzPC") # ODITSZAPC
+        
+    def test_repnz_cancels_after_one(self):
+        """
+        repnz scasb
+        scasb
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AL = 0x02
+        self.cpu.regs.CX = 3
+        self.cpu.flags.zero = True # Should not cause it to immediately terminate.
+        self.memory.mem_write_byte(20, 0x01)
+        self.memory.mem_write_byte(21, 0x01)
+        self.memory.mem_write_byte(22, 0x01) # This also tests exit on CX == 0.
+        self.memory.mem_write_byte(23, 0x01)
+        self.memory.mem_write_byte(24, 0x02)
+        self.load_code_string("F2 AE AE F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.cpu.regs.DI, 0x0008)
+        self.assert_flags("oszpc") # ODITSZAPC - We should not hit the matching case.
+        
+    def test_repz_cancels_after_one(self):
+        """
+        repz scasb
+        scasb
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AL = 0x01
+        self.cpu.regs.CX = 3
+        self.cpu.flags.zero = False # Should not cause it to immediately terminate.
+        self.memory.mem_write_byte(20, 0x01)
+        self.memory.mem_write_byte(21, 0x01)
+        self.memory.mem_write_byte(22, 0x01) # This also tests exit on CX == 0.
+        self.memory.mem_write_byte(23, 0x01)
+        self.memory.mem_write_byte(24, 0x02)
+        self.load_code_string("F3 AE AE F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.cpu.regs.DI, 0x0008)
+        self.assert_flags("osZPc") # ODITSZAPC - We should not hit the matching case.
+        
+    def test_repnz_skip_if_cx_zero(self):
+        """
+        repnz scasb
+        hlt
+        """
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AL = 0x02
+        self.cpu.regs.CX = 0
+        self.load_code_string("F2 AE F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.cpu.regs.DI, 0x0004)
+        
+    def test_repz_skip_if_cx_zero(self):
+        """
+        repz scasb
+        hlt
+        """
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AL = 0x01
+        self.cpu.regs.CX = 0
+        self.load_code_string("F3 AE F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.CX, 0)
+        self.assertEqual(self.cpu.regs.DI, 0x0004)
+        
