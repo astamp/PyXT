@@ -65,6 +65,7 @@ class FloppyDisketteController(Device):
         if offset == FDC_STATUS:
             return self.read_status_register()
         elif offset == FDC_DATA:
+            log.warning("Invalid FDC data register read: 0x%03x, returning 0x00.", port)
             return 0
         else:
             log.warning("Invalid FDC port read: 0x%03x, returning 0x00.", port)
@@ -75,6 +76,7 @@ class FloppyDisketteController(Device):
         if offset == FDC_CONTROL:
             self.write_control_register(value)
         elif offset == FDC_DATA:
+            log.warning("FDC data register write: 0x%03x, with: 0x%02x.", port, value)
             pass
         else:
             log.warning("Invalid FDC port write: 0x%03x, with: 0x%02x.", port, value)
