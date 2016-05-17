@@ -4551,3 +4551,113 @@ class ShlOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0x0100)
         self.assertFalse(self.cpu.flags.carry)
         
+class DivOpcodeTests(BaseOpcodeAcceptanceTests):
+    def setUp(self):
+        super(DivOpcodeTests, self).setUp()
+        self.local_interrupt_log = []
+        self.cpu.internal_service_interrupt = self.service_interrupt_hook
+        
+    def service_interrupt_hook(self, interrupt):
+        self.local_interrupt_log.append(interrupt)
+        
+    def test_div_by_byte(self):
+        """
+        div bl
+        hlt
+        """
+        self.cpu.regs.AX = 1000
+        self.cpu.regs.BL = 7
+        self.load_code_string("F6 F3 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 142)
+        self.assertEqual(self.cpu.regs.AH, 6)
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_div_by_byte_no_remainder(self):
+        """
+        div bl
+        hlt
+        """
+        self.cpu.regs.AX = 1000
+        self.cpu.regs.BL = 10
+        self.load_code_string("F6 F3 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 100)
+        self.assertEqual(self.cpu.regs.AH, 0)
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_div_by_byte_zero(self):
+        """
+        div bl
+        hlt
+        """
+        self.cpu.regs.AX = 1000
+        self.cpu.regs.BL = 0
+        self.load_code_string("F6 F3 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.local_interrupt_log, [0])
+        
+    def test_div_by_byte_result_too_big(self):
+        """
+        div bl
+        hlt
+        """
+        self.cpu.regs.AX = 1000
+        self.cpu.regs.BL = 2
+        self.load_code_string("F6 F3 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.local_interrupt_log, [0])
+        
+    def test_div_by_word(self):
+        """
+        div bx
+        hlt
+        """
+        self.cpu.regs.DX = 0xABCD
+        self.cpu.regs.AX = 0xEF12
+        self.cpu.regs.BX = 0xF000
+        self.load_code_string("F7 F3 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xB742)
+        self.assertEqual(self.cpu.regs.DX, 0xF12)
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_div_by_word_no_remainder(self):
+        """
+        div bx
+        hlt
+        """
+        self.cpu.regs.DX = 0xABCD
+        self.cpu.regs.AX = 0xE000
+        self.cpu.regs.BX = 0xF000
+        self.load_code_string("F7 F3 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xB742)
+        self.assertEqual(self.cpu.regs.DX, 0)
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_div_by_word_zero(self):
+        """
+        div bx
+        hlt
+        """
+        self.cpu.regs.DX = 0xABCD
+        self.cpu.regs.AX = 0xE000
+        self.cpu.regs.BX = 0
+        self.load_code_string("F7 F3 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.local_interrupt_log, [0])
+        
+    def test_div_by_word_result_too_big(self):
+        """
+        div bx
+        hlt
+        """
+        self.cpu.regs.DX = 0xABCD
+        self.cpu.regs.AX = 0xE000
+        self.cpu.regs.BX = 2
+        self.load_code_string("F7 F3 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.local_interrupt_log, [0])
+        
+    

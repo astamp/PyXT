@@ -42,6 +42,8 @@ REPEAT_NONE = 0
 REPEAT_REP_REPZ = 0xF3
 REPEAT_REPNZ = 0xF2
 
+INT_DIVIDE_ERROR = 0
+
 BYTE_REG = {
     0x00 : "AL",
     0x01 : "CL",
@@ -1292,6 +1294,32 @@ class CPU(object):
                 self.regs.AX = self.regs.AL * value
                 self.flags.carry = self.flags.overflow = self.regs.AH != 0
                 
+        elif sub_opcode == 6: # DIV (unsigned)
+            # Throw a divide error for divide by zero.
+            if value == 0:
+                self.internal_service_interrupt(INT_DIVIDE_ERROR)
+                
+            else:
+                if bits == 16:
+                    source = (self.regs.DX << 16) | self.regs.AX
+                    quotient = source // value
+                    # Throw a divide error for a result too large to fix in AX.
+                    if quotient > 0xFFFF:
+                        self.internal_service_interrupt(INT_DIVIDE_ERROR)
+                    else:
+                        self.regs.AX = quotient
+                        self.regs.DX = source % value
+                    
+                else:
+                    source = self.regs.AX
+                    quotient = source // value
+                    # Throw a divide error for a result too large to fix in AL.
+                    if quotient > 0xFF:
+                        self.internal_service_interrupt(INT_DIVIDE_ERROR)
+                    else:
+                        self.regs.AL = quotient
+                        self.regs.AH = source % value
+                        
         else:
             raise NotImplementedError("sub_opcode = %r" % sub_opcode)
             
