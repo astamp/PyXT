@@ -576,6 +576,8 @@ class CPU(object):
             self.opcode_lodsb()
         elif opcode == 0xAD:
             self.opcode_lodsw()
+        elif opcode == 0xAE:
+            self.opcode_scasb()
             
         # PUSH segment registers.
         elif opcode == 0x06:
@@ -1564,6 +1566,15 @@ class CPU(object):
         )
         self.regs.SI += -2 if self.flags.direction else 2
         self.regs.DI += -2 if self.flags.direction else 2
+        
+    def opcode_scasb(self):
+        """ Compare the byte at ES:DI with AL and update the flags. """
+        result = self.operator_sub_8(
+            self.regs.AL,
+            self.bus.mem_read_word(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
+        )
+        self.flags.set_from_alu_byte(result)
+        self.regs.DI += -1 if self.flags.direction else 1
         
     # ********** Memory access helpers. **********
     def get_data_segment(self):
