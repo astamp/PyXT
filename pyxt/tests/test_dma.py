@@ -167,3 +167,19 @@ class DMATests(unittest.TestCase):
         self.assertTrue(self.dma.channels[1].masked)
         self.assertFalse(self.dma.channels[2].masked)
         self.assertTrue(self.dma.channels[3].masked)
+        
+    def test_write_single_mask_bit(self):
+        # Unmask channel 1.
+        self.dma.io_write_byte(0x0A, 0x01)
+        self.assertTrue(self.dma.channels[0].masked)
+        self.assertFalse(self.dma.channels[1].masked)
+        self.assertTrue(self.dma.channels[2].masked)
+        self.assertTrue(self.dma.channels[3].masked)
+        
+        # Mask channel 1.
+        self.dma.io_write_byte(0x0A, 0x05)
+        self.assertTrue(self.dma.channels[0].masked)
+        self.assertTrue(self.dma.channels[1].masked)
+        self.assertTrue(self.dma.channels[2].masked)
+        self.assertTrue(self.dma.channels[3].masked)
+        

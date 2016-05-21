@@ -163,6 +163,11 @@ class DmaController(Device):
         elif offset == 0x08:
             self.enable = value & 0x04 == 0x04
             
+        # Write a single mask bit.
+        elif offset == 0x0A:
+            channel = self.channels[value & CHANNEL_MASK]
+            channel.masked = value & 0x04 == 0x04
+            
         # Write mode register.
         elif offset == 0x0B:
             channel = self.channels[value & CHANNEL_MASK]
