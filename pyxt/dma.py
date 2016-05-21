@@ -93,10 +93,9 @@ class DmaController(Device):
             
     def io_read_byte(self, port):
         offset = port - self.base
-        if offset & 0x08:
-            return 0x00
-            
-        else:
+        
+        # Read from the DMA address and word count registers.
+        if offset & 0x08 == 0x00:
             # Which DMA channel?
             channel = offset >> 1
             
@@ -106,12 +105,15 @@ class DmaController(Device):
             else:
                 return self.read_low_high(self.channels[channel].address)
                 
+        else:
+            raise NotImplementedError("offset = 0x%02x" % offset)
+            
     def io_write_byte(self, port, value):
         offset = port - self.base
-        if offset & 0x08:
-            pass
-            
-        else:
+        # print "offset = 0x%02x, value = 0x%02x" % (offset, value)
+        
+        # Write to the DMA address and word count registers.
+        if offset & 0x08 == 0x00:
             # Which DMA channel?
             channel = offset >> 1
             
@@ -121,3 +123,5 @@ class DmaController(Device):
             else:
                 self.channels[channel].address = self.channels[channel].base_address = self.write_low_high(self.channels[channel].address, value)
                 
+        else:
+            raise NotImplementedError("offset = 0x%02x" % offset)
