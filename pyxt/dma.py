@@ -202,3 +202,7 @@ class DmaController(Device):
             self.low_byte = True
             return read_high(word)
             
+    def print_dma_stats(self):
+        for index, channel in enumerate(self.channels):
+            print self.enable, index, channel.word_count, channel.address
+            
