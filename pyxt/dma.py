@@ -94,29 +94,17 @@ class DmaController(Device):
         self.channels = [DmaChannel() for _unused in range(4)]
         self.enable = False
         
+    # Device interface.
     def get_ports_list(self):
         return [x for x in range(self.base, self.base + 16)]
         
     def clock(self):
         if self.enable:
-            pass
-        
-    def write_low_high(self, word, value):
-        if self.low_byte:
-            self.low_byte = False
-            return write_low(word, value)
-        else:
-            self.low_byte = True
-            return write_high(word, value)
-            
-    def read_low_high(self, word):
-        if self.low_byte:
-            self.low_byte = False
-            return read_low(word)
-        else:
-            self.low_byte = True
-            return read_high(word)
-            
+            for channel in self.channels:
+                if channel.requested and channel.word_count > 0:
+                    channel.word_count -= 1
+                    channel.address += channel.increment
+                    
     def io_read_byte(self, port):
         offset = port - self.base
         
@@ -196,4 +184,21 @@ class DmaController(Device):
                 
         else:
             raise NotImplementedError("offset = 0x%02x" % offset)
+            
+    # Local functions.
+    def write_low_high(self, word, value):
+        if self.low_byte:
+            self.low_byte = False
+            return write_low(word, value)
+        else:
+            self.low_byte = True
+            return write_high(word, value)
+            
+    def read_low_high(self, word):
+        if self.low_byte:
+            self.low_byte = False
+            return read_low(word)
+        else:
+            self.low_byte = True
+            return read_high(word)
             
