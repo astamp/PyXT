@@ -144,5 +144,11 @@ class DmaController(Device):
         elif offset == 0x0C:
             self.low_byte = True
             
+        # Master clear.
+        elif offset == 0x0D:
+            self.low_byte = True
+            self.enable = False
+            self.state = STATE_SI
+            
         else:
             raise NotImplementedError("offset = 0x%02x" % offset)

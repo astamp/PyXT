@@ -129,3 +129,12 @@ class DMATests(unittest.TestCase):
         self.assertTrue(self.dma.enable)
         self.dma.io_write_byte(0x08, 0x00)
         self.assertFalse(self.dma.enable)
+        
+    def test_master_clear(self):
+        self.dma.enable = True
+        self.dma.low_byte = False
+        self.dma.state = 5643
+        self.dma.io_write_byte(0x0D, 0)
+        
+        # Should be the same as a reset, so call the initial state test.
+        self.test_initial_state()
