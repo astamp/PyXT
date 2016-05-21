@@ -10,6 +10,11 @@ from six.moves import range # pylint: disable=redefined-builtin
 # PyXT imports
 from pyxt.bus import Device
 
+# Logging setup
+import logging
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
+
 # Constants
 STATE_SI = 0
 STATE_S0 = 1
