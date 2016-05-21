@@ -69,12 +69,14 @@ class DmaController(Device):
         self.state = STATE_SI
         self.low_byte = True
         self.channels = [DmaChannel() for _unused in range(4)]
+        self.enable = False
         
     def get_ports_list(self):
         return [x for x in range(self.base, self.base + 16)]
         
     def clock(self):
-        pass
+        if self.enable:
+            pass
         
     def write_low_high(self, word, value):
         if self.low_byte:
@@ -134,6 +136,10 @@ class DmaController(Device):
             else:
                 self.channels[channel].address = self.channels[channel].base_address = self.write_low_high(self.channels[channel].address, value)
                 
+        # Write the command register.
+        elif offset == 0x08:
+            self.enable = value & 0x04 == 0x04
+            
         # Clear low/high flip-flop.
         elif offset == 0x0C:
             self.low_byte = True

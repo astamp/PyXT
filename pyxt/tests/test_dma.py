@@ -15,6 +15,7 @@ class DMATests(unittest.TestCase):
     def test_initial_state(self):
         self.assertEqual(self.dma.state, STATE_SI)
         self.assertEqual(self.dma.low_byte, True)
+        self.assertEqual(self.dma.enable, False)
         
     def test_read_low_high(self):
         self.assertEqual(self.dma.read_low_high(0xCAFE), 0xFE)
@@ -122,3 +123,7 @@ class DMATests(unittest.TestCase):
         self.dma.channels[1].requested = True
         self.dma.channels[2].word_count = 0xFFFF
         self.assertEqual(self.dma.io_read_byte(0x08), 0x24)
+        
+    def test_write_command_register(self):
+        self.dma.io_write_byte(0x08, 0x04)
+        self.assertTrue(self.dma.enable)
