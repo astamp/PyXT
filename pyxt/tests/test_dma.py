@@ -124,6 +124,8 @@ class DMATests(unittest.TestCase):
         self.dma.channels[2].word_count = 0xFFFF
         self.assertEqual(self.dma.io_read_byte(0x08), 0x24)
         
-    def test_write_command_register(self):
+    def test_command_register_enable_disable(self):
         self.dma.io_write_byte(0x08, 0x04)
         self.assertTrue(self.dma.enable)
+        self.dma.io_write_byte(0x08, 0x00)
+        self.assertFalse(self.dma.enable)
