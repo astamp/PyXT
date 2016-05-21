@@ -183,6 +183,12 @@ class DmaController(Device):
             for channel in self.channels:
                 channel.requested = False
                 channel.masked = True
-            
+                
+        # Write all mask bits.
+        elif offset == 0x0F:
+            for index, channel in enumerate(self.channels):
+                channel.masked = bool(value & (0x01 << index))
+                
         else:
             raise NotImplementedError("offset = 0x%02x" % offset)
+            
