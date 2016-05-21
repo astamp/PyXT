@@ -147,3 +147,17 @@ class DMATests(unittest.TestCase):
         
         # Should be the same as a reset, so call the initial state test.
         self.test_initial_state()
+        
+    def test_write_mode_register(self):
+        self.dma.io_write_byte(0x0B, 0x74)
+        self.assertEqual(self.dma.channels[0].transfer_type, TYPE_WRITE)
+        self.assertEqual(self.dma.channels[0].mode, MODE_SINGLE)
+        self.assertTrue(self.dma.channels[0].auto_init)
+        self.assertEqual(self.dma.channels[0].increment, -1)
+        
+        self.dma.io_write_byte(0x0B, 0x89)
+        self.assertEqual(self.dma.channels[1].transfer_type, TYPE_READ)
+        self.assertEqual(self.dma.channels[1].mode, MODE_BLOCK)
+        self.assertFalse(self.dma.channels[1].auto_init)
+        self.assertEqual(self.dma.channels[1].increment, 1)
+        

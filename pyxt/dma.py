@@ -32,6 +32,23 @@ STATE_S22 = 12
 STATE_S23 = 13
 STATE_S24 = 14
 
+# Mode register fields.
+CHANNEL_MASK = 0x03
+
+TYPE_MASK = 0x0C
+TYPE_VERIFY = 0x00
+TYPE_WRITE = 0x04
+TYPE_READ = 0x08
+
+AUTOINIT_ENABLE = 0x10
+ADDRESS_DECREMENT = 0x20
+
+MODE_MASK = 0xC0
+MODE_DEMAND = 0x00
+MODE_SINGLE = 0x40
+MODE_BLOCK = 0x80
+MODE_CASCADE = 0xC0
+
 # Functions
 def write_low(word, byte):
     """ Writes byte into the low portion of word. """
@@ -57,7 +74,12 @@ class DmaChannel(object):
         self.word_count = 0x0000
         self.base_address = 0x0000
         self.base_word_count = 0x0000
-        self.mode = 0x00
+        
+        self.mode = MODE_DEMAND
+        self.auto_init = False
+        self.increment = 1
+        self.transfer_type = TYPE_VERIFY
+        
         self.requested = False
         self.masked = True
         
@@ -140,6 +162,14 @@ class DmaController(Device):
         # Write the command register.
         elif offset == 0x08:
             self.enable = value & 0x04 == 0x04
+            
+        # Write mode register.
+        elif offset == 0x0B:
+            channel = self.channels[value & CHANNEL_MASK]
+            channel.mode = value & MODE_MASK
+            channel.transfer_type = value & TYPE_MASK
+            channel.auto_init = value & AUTOINIT_ENABLE == AUTOINIT_ENABLE
+            channel.increment = -1 if value & ADDRESS_DECREMENT == ADDRESS_DECREMENT else 1
             
         # Clear low/high flip-flop.
         elif offset == 0x0C:
