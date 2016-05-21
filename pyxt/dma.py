@@ -123,5 +123,9 @@ class DmaController(Device):
             else:
                 self.channels[channel].address = self.channels[channel].base_address = self.write_low_high(self.channels[channel].address, value)
                 
+        # Clear low/high flip-flop.
+        elif offset == 0x0C:
+            self.low_byte = True
+            
         else:
             raise NotImplementedError("offset = 0x%02x" % offset)

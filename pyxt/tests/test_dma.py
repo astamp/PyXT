@@ -109,3 +109,12 @@ class DMATests(unittest.TestCase):
         self.assertEqual(self.dma.io_read_byte(0x0007), 0xFF)
         self.assertEqual(self.dma.io_read_byte(0x0007), 0xEE)
         
+    def test_set_low_high_flipflop_low(self):
+        self.dma.low_byte = True
+        self.dma.io_write_byte(0x0C, 0)
+        self.assertTrue(self.dma.low_byte) # Shouldn't toggle.
+        
+        self.dma.low_byte = False
+        self.dma.io_write_byte(0x0C, 0)
+        self.assertTrue(self.dma.low_byte) # Should set to low byte.
+        
