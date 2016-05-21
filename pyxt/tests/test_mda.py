@@ -25,7 +25,7 @@ class MDATests(unittest.TestCase):
         self.assertEqual(self.mda.control_reg, 0x00)
         self.assertEqual(self.mda.screen, None)
         self.assertEqual(self.mda.char_generator, self.cg)
-        self.assertEqual(len(self.mda.video_ram), 4000)
+        self.assertEqual(len(self.mda.video_ram), 4096)
         
     def test_mem_write_byte_updates_video_ram(self):
         self.mda.mem_write_byte(0x0000, 0x41)

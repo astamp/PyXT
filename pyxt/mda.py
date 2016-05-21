@@ -54,8 +54,9 @@ MDA_COLUMNS = 80
 MDA_ROWS = 25
 MDA_BYTES_PER_CHAR = 2
 
-# TODO: This is 4000, does this need to be a round 4k for compatibility?
-MDA_RAM_SIZE = MDA_COLUMNS * MDA_ROWS * MDA_BYTES_PER_CHAR
+# WARNING: This has to be 4k in order to pass the memory test! (Was 4000)
+# MDA_RAM_SIZE = MDA_COLUMNS * MDA_ROWS * MDA_BYTES_PER_CHAR
+MDA_RAM_SIZE = 4096
 
 BITS_LO_TO_HI = [7, 6, 5, 4, 3, 2, 1, 0]
 
@@ -183,6 +184,10 @@ class MonochromeDisplayAdapter(Device):
         row = offset // MDA_COLUMNS
         column = offset % MDA_COLUMNS
         
+        # Don't attempt to write characters that are off the screen.
+        if row >= MDA_ROWS:
+            return
+            
         # Calculate the character generator attributes.
         cg_attributes = CHARGEN_ATTR_NONE
         if attributes & MDA_ATTR_INTENSITY:
