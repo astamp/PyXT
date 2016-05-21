@@ -183,3 +183,37 @@ class DMATests(unittest.TestCase):
         self.assertTrue(self.dma.channels[2].masked)
         self.assertTrue(self.dma.channels[3].masked)
         
+    def test_clock(self):
+        self.dma.channels[0].mode = MODE_SINGLE
+        self.dma.channels[0].requested = True
+        self.dma.channels[0].word_count = 4
+        self.dma.channels[0].address = 0
+        
+        # Nothing should happen when not enabled.
+        self.dma.clock()
+        self.assertEqual(self.dma.channels[0].word_count, 4)
+        self.assertEqual(self.dma.channels[0].address, 0)
+        
+        # Enabling should allow DMA to work.
+        self.dma.enable = True
+        self.dma.clock()
+        self.assertEqual(self.dma.channels[0].word_count, 3)
+        self.assertEqual(self.dma.channels[0].address, 1)
+        
+        self.dma.clock()
+        self.assertEqual(self.dma.channels[0].word_count, 2)
+        self.assertEqual(self.dma.channels[0].address, 2)
+        
+        self.dma.clock()
+        self.assertEqual(self.dma.channels[0].word_count, 1)
+        self.assertEqual(self.dma.channels[0].address, 3)
+        
+        self.dma.clock()
+        self.assertEqual(self.dma.channels[0].word_count, 0)
+        self.assertEqual(self.dma.channels[0].address, 4)
+        
+        # Nothing more to do.
+        self.dma.clock()
+        self.assertEqual(self.dma.channels[0].word_count, 0)
+        self.assertEqual(self.dma.channels[0].address, 4)
+        
