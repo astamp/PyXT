@@ -127,6 +127,8 @@ def main():
             dma_controller.clock()
             cpu_or_debugger.fetch()
             
+        raise RuntimeError("System halted.")
+        
     except Exception:
         debugger.dump_all(logging.ERROR)
         log.exception("Unhandled exception at CS:IP 0x%04x:0x%04x", cpu.regs.CS, cpu.regs.IP)
