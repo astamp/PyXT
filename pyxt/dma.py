@@ -59,6 +59,7 @@ class DmaChannel(object):
         self.base_word_count = 0x0000
         self.mode = 0x00
         self.requested = False
+        self.masked = True
         
 class DmaController(Device):
     """ A Device emulating an 8237 DMA controller. """
@@ -149,6 +150,9 @@ class DmaController(Device):
             self.low_byte = True
             self.enable = False
             self.state = STATE_SI
+            for channel in self.channels:
+                channel.requested = False
+                channel.masked = True
             
         else:
             raise NotImplementedError("offset = 0x%02x" % offset)

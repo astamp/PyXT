@@ -16,6 +16,11 @@ class DMATests(unittest.TestCase):
         self.assertEqual(self.dma.state, STATE_SI)
         self.assertEqual(self.dma.low_byte, True)
         self.assertEqual(self.dma.enable, False)
+        self.assertEqual(len(self.dma.channels), 4)
+        
+        for channel in self.dma.channels:
+            self.assertFalse(channel.requested)
+            self.assertTrue(channel.masked)
         
     def test_read_low_high(self):
         self.assertEqual(self.dma.read_low_high(0xCAFE), 0xFE)
@@ -131,9 +136,13 @@ class DMATests(unittest.TestCase):
         self.assertFalse(self.dma.enable)
         
     def test_master_clear(self):
+        # Set the controller into a non-default state.
         self.dma.enable = True
         self.dma.low_byte = False
         self.dma.state = 5643
+        self.dma.channels[0].requested = True
+        self.dma.channels[0].masked = False
+        
         self.dma.io_write_byte(0x0D, 0)
         
         # Should be the same as a reset, so call the initial state test.
