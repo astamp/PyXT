@@ -118,3 +118,7 @@ class DMATests(unittest.TestCase):
         self.dma.io_write_byte(0x0C, 0)
         self.assertTrue(self.dma.low_byte) # Should set to low byte.
         
+    def test_read_status_register(self):
+        self.dma.channels[1].requested = True
+        self.dma.channels[2].word_count = 0xFFFF
+        self.assertEqual(self.dma.io_read_byte(0x08), 0x24)

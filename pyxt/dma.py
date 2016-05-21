@@ -58,6 +58,7 @@ class DmaChannel(object):
         self.base_address = 0x0000
         self.base_word_count = 0x0000
         self.mode = 0x00
+        self.requested = False
         
 class DmaController(Device):
     """ A Device emulating an 8237 DMA controller. """
@@ -105,6 +106,16 @@ class DmaController(Device):
             else:
                 return self.read_low_high(self.channels[channel].address)
                 
+        # Read the status register.
+        elif offset == 0x08:
+            value = 0x00
+            for index, channel in enumerate(self.channels):
+                if channel.requested:
+                    value |= (0x10 << index)
+                if channel.word_count == 0xFFFF:
+                    value |= (0x01 << index)
+            return value
+            
         else:
             raise NotImplementedError("offset = 0x%02x" % offset)
             
