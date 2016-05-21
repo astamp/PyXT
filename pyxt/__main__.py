@@ -124,6 +124,7 @@ def main():
         while not cpu.hlt:
             pygame_manager.poll()
             pit.clock()
+            dma_controller.clock()
             cpu_or_debugger.fetch()
             
     except Exception:
