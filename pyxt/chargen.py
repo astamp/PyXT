@@ -16,6 +16,7 @@ EGA_BRIGHT_GREEN = (0x55, 0xFF, 0x55)
 
 CHARGEN_ATTR_NONE = 0x0000
 CHARGEN_ATTR_BRIGHT = 0x0001
+CHARGEN_ATTR_REVERSE = 0x0002
 
 # Classes
 class CharacterGenerator(object):

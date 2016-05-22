@@ -190,6 +190,8 @@ class MonochromeDisplayAdapter(Device):
             
         # Calculate the character generator attributes.
         cg_attributes = CHARGEN_ATTR_NONE
+        if attributes & MDA_ATTR_BACKGROUND == MDA_ATTR_BACKGROUND:
+            cg_attributes |= CHARGEN_ATTR_REVERSE
         if attributes & MDA_ATTR_INTENSITY:
             cg_attributes |= CHARGEN_ATTR_BRIGHT
             
@@ -228,8 +230,12 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
         self.font_data_bright = pygame.Surface((self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual))
         self.font_data_bright.fill(EGA_BLACK)
         
+        self.font_data_reverse = pygame.Surface((self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual))
+        self.font_data_reverse.fill(EGA_GREEN)
+        
         pix_normal = pygame.PixelArray(self.font_data_normal)
         pix_bright = pygame.PixelArray(self.font_data_bright)
+        pix_reverse = pygame.PixelArray(self.font_data_reverse)
         
         # The characters are split top and bottom across the first 2 2k pages of the part.
         with open(rom_file, "rb") as fileptr:
@@ -248,16 +254,19 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
                     if (1 << bit) & byte:
                         pix_normal[(index * self.char_width) + (7 - bit), row] = EGA_GREEN
                         pix_bright[(index * self.char_width) + (7 - bit), row] = EGA_BRIGHT_GREEN
+                        pix_reverse[(index * self.char_width) + (7 - bit), row] = EGA_BLACK
                         
                 # For the box drawing characters, the last column is duplicated for continuous lines.
                 if self.char_width == 9 and 0xC0 <= index <= 0xDF:
                     if byte & 0x01:
                         pix_normal[(index * self.char_width) + 8, row] = EGA_GREEN
                         pix_bright[(index * self.char_width) + 8, row] = EGA_BRIGHT_GREEN
+                        pix_reverse[(index * self.char_width) + 8, row] = EGA_BLACK
                         
         # Make sure to explicitly del this to free the surface lock.
         del pix_normal
         del pix_bright
+        del pix_reverse
         
     def blit_character(self, surface, location, index, attributes = CHARGEN_ATTR_NONE):
         """ Place a character onto a surface at the given location. """
@@ -265,7 +274,10 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
             return
             
         font_data = self.font_data_normal
-        if attributes & CHARGEN_ATTR_BRIGHT:
+        # Reverse video overrides brightness.
+        if attributes & CHARGEN_ATTR_REVERSE:
+            font_data = self.font_data_reverse
+        elif attributes & CHARGEN_ATTR_BRIGHT:
             font_data = self.font_data_bright
             
         surface.blit(font_data, location, area = (self.char_width * index, 0, self.char_width, self.char_height))
