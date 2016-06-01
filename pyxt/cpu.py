@@ -1646,9 +1646,11 @@ class CPU(object):
     def _set_rm16(self, rm_type, rm_value, value):
         """ Helper for writing to a 16 bit r/m field. """
         if rm_type == REGISTER:
+            # The UnionRegs object will handle masking correctly.
             self.regs[rm_value] = value
         elif rm_type == ADDRESS:
-            self.write_data_word(rm_value, value)
+            # Mask here as memory accesses are direct array.array accesses that do not like signed values.
+            self.write_data_word(rm_value, value & 0xFFFF)
             
     def _get_rm8(self, rm_type, rm_value):
         """ Helper for reading from an 8 bit r/m field. """
@@ -1662,9 +1664,11 @@ class CPU(object):
         """ Helper for writing to an 8 bit r/m field. """
         if rm_type == REGISTER:
             assert rm_value[1] in "HL"
+            # The UnionRegs object will handle masking correctly.
             self.regs[rm_value] = value
         elif rm_type == ADDRESS:
-            self.write_data_byte(rm_value, value)
+            # Mask here as memory accesses are direct array.array accesses that do not like signed values.
+            self.write_data_byte(rm_value, value & 0xFF)
             
     def _get_rm_bits(self, bits, rm_type, rm_value):
         """ Helper for reading from either an 8 or 16 bit r/m field. """
