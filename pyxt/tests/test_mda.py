@@ -102,7 +102,22 @@ class MDATests(unittest.TestCase):
         self.assertEqual(self.mda.mem_read_word(3999), 0x0034)
         
     def test_horizontal_retrace_toggles(self):
-        self.assertEqual(self.mda.io_read_byte(0x3BA), 0x01)
-        self.assertEqual(self.mda.io_read_byte(0x3BA), 0x00)
-        self.assertEqual(self.mda.io_read_byte(0x3BA), 0x01)
+        self.assertEqual(self.mda.io_read_byte(0x3BA), 0xF0)
+        self.assertEqual(self.mda.io_read_byte(0x3BA), 0xF1)
+        self.assertEqual(self.mda.io_read_byte(0x3BA), 0xF0)
+        
+    def test_current_pixel_updates_on_status_read(self):
+        self.assertEqual(self.mda.current_pixel, [0, 0])
+        self.mda.io_read_byte(0x3BA)
+        self.assertEqual(self.mda.current_pixel, [1, 0])
+        
+    def test_current_pixel_wraps_right(self):
+        self.mda.current_pixel = [719, 0]
+        self.mda.io_read_byte(0x3BA)
+        self.assertEqual(self.mda.current_pixel, [0, 1])
+        
+    def test_current_pixel_wraps_bottom(self):
+        self.mda.current_pixel = [719, 349]
+        self.mda.io_read_byte(0x3BA)
+        self.assertEqual(self.mda.current_pixel, [0, 0])
         

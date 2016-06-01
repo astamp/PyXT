@@ -42,7 +42,9 @@ CONTROL_REG_VIDEO_ENABLE = 0x08
 CONTROL_REG_ENABLINK = 0x20
 
 STATUS_REG_PORT = 0x3BA
-STATUS_REG_RETRACE = 0x01
+STATUS_REG_BASE = 0xF0
+STATUS_REG_PIXEL_ON = 0x08
+STATUS_REG_HORIZONTAL_RETRACE = 0x01
 
 MDA_ATTR_UNDERLINE =  0x01
 MDA_ATTR_FOREGROUND = 0x07
@@ -85,6 +87,9 @@ class MonochromeDisplayAdapter(Device):
         
         # Every other call to the status register will flip the horizontal retrace bit.
         self.horizontal_retrace = False
+        
+        # Used to simulate the pixel on bit when the status register is being read.
+        self.current_pixel = [0, 0]
         
     def reset(self):
         pygame.init()
@@ -140,8 +145,14 @@ class MonochromeDisplayAdapter(Device):
             return self.control_reg
             
         elif port == STATUS_REG_PORT:
+            status = STATUS_REG_BASE
+            if self.get_current_pixel():
+                status |= STATUS_REG_PIXEL_ON
+            if self.horizontal_retrace:
+                status |= STATUS_REG_HORIZONTAL_RETRACE
+                
             self.horizontal_retrace = not self.horizontal_retrace
-            return STATUS_REG_RETRACE if self.horizontal_retrace else 0x00
+            return status
             
         else:
             # log.warning("Unknown port 0x%03x read, returning 0x00!", port)
@@ -197,6 +208,23 @@ class MonochromeDisplayAdapter(Device):
             
         # Blit the character to the bitmap.
         self.char_generator.blit_character(self.screen, (column * self.char_generator.char_width, row * self.char_generator.char_height), character, cg_attributes)
+        
+    def get_current_pixel(self):
+        """ Returns if the current pixel is on or off and increments the pixel index. """
+        if self.screen is not None:
+            color = self.screen.get_at(self.current_pixel)
+        else:
+            color = (0, 0, 0, 0)
+            
+        # Update the current pixel for the next status read.
+        self.current_pixel[0] += 1
+        if self.current_pixel[0] >= MDA_RESOLUTION[0]:
+            self.current_pixel[0] = 0
+            self.current_pixel[1] += 1
+            if self.current_pixel[1] >= MDA_RESOLUTION[1]:
+                self.current_pixel[1] = 0
+                
+        return color[0:3] != EGA_BLACK
         
 class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
     """
