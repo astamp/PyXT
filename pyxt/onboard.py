@@ -10,6 +10,11 @@ from six.moves import range # pylint: disable=redefined-builtin
 # PyXT imports
 from pyxt.bus import Device
 
+# Logging setup
+import logging
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
+
 # Classes
 class ProgrammableInterruptController(Device):
     """ An IOComponent emulating an 8259 PIC controller. """
@@ -338,11 +343,15 @@ class ProgrammableIntervalTimer(Device):
     def io_read_byte(self, port):
         offset = port - self.base
         if offset < 3:
-            return self.channels[offset].read()
+            value = self.channels[offset].read()
         else:
-            return 0x00
+            value = 0x00
             
+        log.debug("PIT read: port 0x%03x, 0x%02x", port, value)
+        return value
+        
     def io_write_byte(self, port, value):
+        log.debug("PIT write: port 0x%03x, 0x%02x", port, value)
         offset = port - self.base
         if offset < 3:
             self.channels[offset].write(value)
