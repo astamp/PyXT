@@ -161,7 +161,9 @@ PIT_READ_WRITE_BOTH = 0x03
 
 class Counter(object):
     """ Class containing the configuration for a single PIT channel. """
-    def __init__(self):
+    def __init__(self, output_changed_callback = None):
+        self.output_changed_callback = output_changed_callback
+        
         self.count = 0
         self.value = 0
         self.latched_value = None
@@ -170,7 +172,7 @@ class Counter(object):
         
         self.read_write_mode = PIT_READ_WRITE_NONE
         self.low_byte = True
-        self.output = False
+        self.__output = False
         self.__gate = False
         self.gate = False
         
@@ -192,6 +194,19 @@ class Counter(object):
                 self.enabled = False
                 self.output = True
                 
+    @property
+    def output(self):
+        """ Returns the current output pin state. """
+        return self.__output
+        
+    @output.setter
+    def output(self, value):
+        """ Sets the output pin value and calls the callback. """
+        if self.__output != value:
+            self.__output = value
+            if callable(self.output_changed_callback):
+                self.output_changed_callback(self.__output)
+            
     def clock(self):
         """ Handle the clock input to the channel. """
         if not self.enabled:

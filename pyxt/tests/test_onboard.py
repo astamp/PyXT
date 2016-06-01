@@ -227,7 +227,11 @@ class PITDeviceTests(unittest.TestCase):
         
 class PITCounterTests(unittest.TestCase):
     def setUp(self):
-        self.counter = Counter()
+        self.last_callback = None
+        self.counter = Counter(self.output_changed_callback)
+        
+    def output_changed_callback(self, value):
+        self.last_callback = value
         
     def test_initial_state(self):
         self.assertEqual(self.counter.count, 0)
@@ -464,4 +468,29 @@ class PITCounterTests(unittest.TestCase):
         self.assertEqual(self.counter.value, 0x0004)
         self.assertTrue(self.counter.output)
         # ... and so on.
+        
+    def test_output_changed_callback_not_called_at_creation(self):
+        self.assertIsNone(self.last_callback)
+        
+    def test_output_changed_callback_negative_going_transition(self):
+        # Must first be positive to go negative.
+        self.counter.output = True
+        self.last_callback = None
+        
+        self.counter.output = False
+        self.assertTrue(self.last_callback is False)
+        self.assertFalse(self.counter.output)
+        
+    def test_output_changed_callback_positive_going_transition(self):
+        self.counter.output = True
+        self.assertTrue(self.last_callback is True)
+        self.assertTrue(self.counter.output)
+        
+    def test_output_changed_callback_no_double_jeopardy(self):
+        self.counter.output = True
+        self.assertTrue(self.last_callback)
+        self.last_callback = None
+        
+        self.counter.output = True
+        self.assertIsNone(self.last_callback)
         
