@@ -21,6 +21,12 @@ class ProgrammableInterruptController(Device):
     EDGE_TRIGGERED = 0
     LEVEL_TRIGGERED = 1
     
+    READ_NONE = 0x00
+    READ_NONE_ALSO = 0x01
+    READ_IR_REGISTER = 0x02
+    READ_IS_REGISTER = 0x03
+    OCW3_READ_REGISTER_MASK = 0x03
+    
     def __init__(self, base, **kwargs):
         super(ProgrammableInterruptController, self).__init__(**kwargs)
         self.base = base
@@ -41,7 +47,9 @@ class ProgrammableInterruptController(Device):
         self.icws_state = 0
         self.icw4_needed = False
         
+        self.read_register = self.READ_NONE
         self.interrupt_request_register = 0x00
+        self.interrupt_in_service_register = 0x00
         
     # Device interface.
     def get_ports_list(self):
@@ -51,8 +59,12 @@ class ProgrammableInterruptController(Device):
         offset = address - self.base
         if offset == 1:
             return self.mask
+        elif self.read_register == self.READ_IR_REGISTER:
+            return self.interrupt_request_register
+        elif self.read_register == self.READ_IS_REGISTER:
+            return self.interrupt_in_service_register
         else:
-            return 0
+            return 0x00
             
     def io_write_byte(self, address, value):
         offset = address - self.base
@@ -127,6 +139,9 @@ class ProgrammableInterruptController(Device):
         interrupt = value & 0x07
         print("command = %r, interrupt = %r" % (command, interrupt))
         
+    def process_ocw3_byte(self, value):
+        self.read_register = value & self.OCW3_READ_REGISTER_MASK
+        
     def interrupt_request(self, irq):
         """ Called when an interrupt is requested from a device. """
         irq_mask = 0x01 << irq
@@ -149,6 +164,7 @@ class ProgrammableInterruptController(Device):
             irq_mask = 0x01 << irq
             if irq_mask & self.interrupt_request_register == irq_mask:
                 self.interrupt_request_register &= ~irq_mask
+                self.interrupt_in_service_register |= irq_mask
                 return self.vector_base + irq
         
         raise RuntimeError("pop_interrupt_vector() called with no pending interrupts!")
