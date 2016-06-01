@@ -175,6 +175,8 @@ PIT_READ_WRITE_LOW = 0x01
 PIT_READ_WRITE_HIGH = 0x02
 PIT_READ_WRITE_BOTH = 0x03
 
+TIMER_IRQ_LINE = 0
+
 class Counter(object):
     """ Class containing the configuration for a single PIT channel. """
     def __init__(self, output_changed_callback = None):
@@ -351,12 +353,12 @@ class ProgrammableIntervalTimer(Device):
     """ An IOComponent emulating an 8253 PIT timer. """
     # This is intentionally not 4 so that it is misaligned with the CPU which currenly assumes 1
     # clock cycle per instruction.
-    CLOCK_DIVISOR = 3
+    CLOCK_DIVISOR = 2
     
     def __init__(self, base, **kwargs):
         super(ProgrammableIntervalTimer, self).__init__(**kwargs)
         self.base = base
-        self.channels = [Counter(), Counter(), Counter()]
+        self.channels = [Counter(self.counter_0_callback), Counter(), Counter()]
         self.divisor = self.CLOCK_DIVISOR
         
     # Device interface.
@@ -410,3 +412,11 @@ class ProgrammableIntervalTimer(Device):
         
         return counter, command, mode, bcd
         
+    def counter_0_callback(self, value):
+        """
+        Called back when channel 0 reaches terminal count.
+        """
+        # We only care about a positive going transition.
+        if value:
+            self.bus.interrupt_request(TIMER_IRQ_LINE)
+            
