@@ -81,6 +81,18 @@ def rotate_left_16_bits(value, count):
     new_value = ((value << count) & left_rotate_mask) | ((value >> (16 - count)) & right_rotate_mask)
     return new_value, new_value & 0x0001 == 0x0001
     
+def rotate_right_16_bits(value, count):
+    """ Rotate an 16-bit value right by count and return the result and the carry flag. """
+    # It doesn't make sense to rotate more than 15 bits.
+    count = count & 0x0F
+    
+    # Calculate the masks.
+    right_rotate_mask = (1 << (16 - count)) - 1
+    left_rotate_mask = (~right_rotate_mask) & 0xFFFF
+    
+    new_value = ((value << (16 - count)) & left_rotate_mask) | ((value >> count) & right_rotate_mask)
+    return new_value, new_value & 0x8000 == 0x8000
+    
 SAR_SHIFT_IN_MASK_8_BITS = [
     0x00,
     0x80,
