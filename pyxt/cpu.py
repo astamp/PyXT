@@ -9,8 +9,7 @@ from ctypes import Structure, Union, c_ushort, c_ubyte
 
 # PyXT imports
 from pyxt.exceptions import InvalidOpcodeException
-from pyxt.helpers import count_bits_fast, segment_offset_to_address, rotate_left_8_bits, rotate_left_16_bits
-from pyxt.helpers import shift_arithmetic_right_8_bits, shift_arithmetic_right_16_bits, sign_extend_byte_to_word
+from pyxt.helpers import *
 
 # Logging setup
 import logging
@@ -1457,6 +1456,15 @@ class CPU(object):
                 value, self.flags.carry = rotate_left_8_bits(value, count)
             else:
                 value, self.flags.carry = rotate_left_16_bits(value, count)
+                
+            self.flags.set_from_alu(value, bits = bits, carry = False)
+            self._set_rm_bits(bits, rm_type, rm_value, value)
+            
+        elif sub_opcode == 0x01: # ROR - Rotate right shifting bits back in on the left.
+            if bits == 8:
+                value, self.flags.carry = rotate_right_8_bits(value, count)
+            else:
+                value, self.flags.carry = rotate_right_16_bits(value, count)
                 
             self.flags.set_from_alu(value, bits = bits, carry = False)
             self._set_rm_bits(bits, rm_type, rm_value, value)

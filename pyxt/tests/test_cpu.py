@@ -4892,3 +4892,50 @@ class RetfOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.CS, 0x0001)
         self.assertEqual(self.cpu.regs.IP, 0x0007) # Next instruction after the hlt.
         
+class RorOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_ror_rm8_1_simple(self):
+        """
+        ror al, 1
+        hlt
+        """
+        self.cpu.regs.AL = 0xF0
+        self.load_code_string("D0 C8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x78)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_ror_rm8_1_wrap_around(self):
+        """
+        ror al, 1
+        hlt
+        """
+        self.cpu.regs.AL = 0x01
+        self.load_code_string("D0 C8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x80)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_ror_rm16_1_simple(self):
+        """
+        ror ax, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x0F00
+        self.load_code_string("D1 C8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0780)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_ror_rm16_1_wrap_around(self):
+        """
+        ror ax, 1
+        hlt
+        """
+        self.cpu.regs.AX = 0x0001
+        self.load_code_string("D1 C8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x8000)
+        self.assertTrue(self.cpu.flags.carry)
+        
