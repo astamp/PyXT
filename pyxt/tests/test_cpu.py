@@ -4939,3 +4939,43 @@ class RorOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0x8000)
         self.assertTrue(self.cpu.flags.carry)
         
+class XlatOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_xlat_simple(self):
+        """
+        xlat
+        hlt
+        """
+        self.memory.mem_write_byte(0x0137, 0xAA)
+        self.cpu.regs.BX = 0x0100
+        self.cpu.regs.AL = 0x37
+        self.load_code_string("D7 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0xAA)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        
+    def test_xlat_zero(self):
+        """
+        xlat
+        hlt
+        """
+        self.memory.mem_write_byte(0x0100, 0x55)
+        self.cpu.regs.BX = 0x0100
+        self.cpu.regs.AL = 0x00
+        self.load_code_string("D7 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x55)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        
+    def test_xlat_max(self):
+        """
+        xlat
+        hlt
+        """
+        self.memory.mem_write_byte(0x01FF, 0xA5)
+        self.cpu.regs.BX = 0x0100
+        self.cpu.regs.AL = 0xFF
+        self.load_code_string("D7 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0xA5)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        

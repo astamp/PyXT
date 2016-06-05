@@ -599,6 +599,8 @@ class CPU(object):
             self.opcode_lds()
         elif opcode == 0x98:
             self.opcode_cbw()
+        elif opcode == 0xD7:
+            self.opcode_xlat()
             
         # String operations.
         elif opcode == 0xA4:
@@ -1319,6 +1321,10 @@ class CPU(object):
     def opcode_cbw(self):
         """ Sign extends the byte in AL to a word in AX. """
         self.regs.AX = sign_extend_byte_to_word(self.regs.AL)
+        
+    def opcode_xlat(self):
+        """ Fetches the value at DS:[BX+AL] into AL. """
+        self.regs.AL = self.read_data_byte(self.regs.BX + self.regs.AL)
         
     def opcode_group_f6f7(self, opcode):
         """ "Group 1" byte and word instructions. """
