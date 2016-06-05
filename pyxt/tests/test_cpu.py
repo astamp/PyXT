@@ -4853,3 +4853,42 @@ class RepzRepnzPrefixTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.CX, 0)
         self.assertEqual(self.cpu.regs.DI, 0x0004)
         
+class RetfOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_retf_simple(self):
+        """
+        retf
+        hlt
+        TIMES (0x14 - ($ - $$)) db 0x00
+        inc al
+        hlt
+        """
+        self.cpu.regs.SS = 0x0000
+        self.cpu.regs.SP = 0x00FC
+        self.memory.mem_write_word(0x00FC, 0x0004)
+        self.memory.mem_write_word(0x00FE, 0x0001)
+        self.load_code_string("CB F4 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        self.assertEqual(self.cpu.regs.SP, 0x0100)
+        self.assertEqual(self.cpu.regs.CS, 0x0001)
+        self.assertEqual(self.cpu.regs.IP, 0x0007) # Next instruction after the hlt.
+        
+    def test_retf_imm16(self):
+        """
+        retf 0x6
+        hlt
+        TIMES (0x14 - ($ - $$)) db 0x00
+        inc al
+        hlt
+        """
+        self.cpu.regs.SS = 0x0000
+        self.cpu.regs.SP = 0x00FC
+        self.memory.mem_write_word(0x00FC, 0x0004)
+        self.memory.mem_write_word(0x00FE, 0x0001)
+        self.load_code_string("CA 06 00 F4 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        self.assertEqual(self.cpu.regs.SP, 0x0106)
+        self.assertEqual(self.cpu.regs.CS, 0x0001)
+        self.assertEqual(self.cpu.regs.IP, 0x0007) # Next instruction after the hlt.
+        

@@ -458,6 +458,10 @@ class CPU(object):
             self._call()
         elif opcode == 0xC3:
             self._ret()
+        elif opcode == 0xCA:
+            self.opcode_retf_imm16()
+        elif opcode == 0xCB:
+            self.opcode_retf()
             
         # Interrupt instructions.
         elif opcode == 0xCD:
@@ -1018,6 +1022,22 @@ class CPU(object):
     def _ret(self):
         self.regs.IP = self.internal_pop()
         log.debug("RET back to 0x%04x", self.regs.IP)
+        
+    def opcode_retf(self):
+        """ RETF - Far return, pops IP and CS. """
+        new_ip = self.internal_pop()
+        new_cs = self.internal_pop()
+        self.regs.IP = new_ip
+        self.regs.CS = new_cs
+        
+    def opcode_retf_imm16(self):
+        """ RETF - Far return, pops IP and CS and adds imm16 to SP. """
+        adjustment = self.get_word_immediate()
+        new_ip = self.internal_pop()
+        new_cs = self.internal_pop()
+        self.regs.IP = new_ip
+        self.regs.CS = new_cs
+        self.regs.SP += adjustment
         
     def opcode_loop(self):
         """ LOOP - Decrement CX and jump short if it is non-zero. """
