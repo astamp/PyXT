@@ -57,6 +57,18 @@ def rotate_left_8_bits(value, count):
     new_value = ((value << count) & left_rotate_mask) | ((value >> (8 - count)) & right_rotate_mask)
     return new_value, new_value & 0x01 == 0x01
     
+def rotate_right_8_bits(value, count):
+    """ Rotate an 8-bit value right by count and return the result and the carry flag. """
+    # It doesn't make sense to rotate more than 7 bits.
+    count = count & 0x07
+    
+    # Calculate the masks.
+    right_rotate_mask = (1 << (8 - count)) - 1
+    left_rotate_mask = (~right_rotate_mask) & 0xFF
+    
+    new_value = ((value << (8 - count)) & left_rotate_mask) | ((value >> count) & right_rotate_mask)
+    return new_value, new_value & 0x80 == 0x80
+    
 def rotate_left_16_bits(value, count):
     """ Rotate a 16-bit value left by count and return the result and the carry flag. """
     # It doesn't make sense to rotate more than 15 bits.

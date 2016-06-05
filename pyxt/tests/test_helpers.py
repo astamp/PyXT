@@ -77,6 +77,7 @@ class CountBitsFastTests(unittest.TestCase):
         self.assertEqual(count_bits_fast(0xF00D), 7)
         
 class RotateTests(unittest.TestCase):
+    # Rotate left 8 bits.
     def test_rotate_left_8_bits_by_1(self):
         self.assertEqual(rotate_left_8_bits(0x01, 1), (0x02, False))
         self.assertEqual(rotate_left_8_bits(0x02, 1), (0x04, False))
@@ -104,7 +105,35 @@ class RotateTests(unittest.TestCase):
     def test_rotate_left_8_bits_by_more_than_8(self):
         self.assertEqual(rotate_left_8_bits(0x01, 9), (0x02, False))
         
+    # Rotate right 8 bits.
+    def test_rotate_right_8_bits_by_1(self):
+        self.assertEqual(rotate_right_8_bits(0x80, 1), (0x40, False))
+        self.assertEqual(rotate_right_8_bits(0x40, 1), (0x20, False))
+        self.assertEqual(rotate_right_8_bits(0x20, 1), (0x10, False))
+        self.assertEqual(rotate_right_8_bits(0x10, 1), (0x08, False))
+        self.assertEqual(rotate_right_8_bits(0x08, 1), (0x04, False))
+        self.assertEqual(rotate_right_8_bits(0x04, 1), (0x02, False))
+        self.assertEqual(rotate_right_8_bits(0x02, 1), (0x01, False))
+        self.assertEqual(rotate_right_8_bits(0x01, 1), (0x80, True))
         
+    def test_rotate_right_8_bits_by_3(self):
+        self.assertEqual(rotate_right_8_bits(0xFE, 3), (0xDF, True))
+        self.assertEqual(rotate_right_8_bits(0xFB, 3), (0x7F, False))
+        
+    # Rotate by zero will be handled by the caller.
+    def test_rotate_right_8_bits_by_0_doesnt_crash(self):
+        ham, wah = rotate_right_8_bits(0xEF, 0)
+        # self.assertEqual(rotate_right_8_bits(0xEF, 0), (0xEF, False))
+        # self.assertEqual(rotate_right_8_bits(0x01, 0), (0x01, False))
+        # self.assertEqual(rotate_right_8_bits(0x80, 0), (0x00, False))
+        
+    def test_rotate_right_8_bits_by_8(self):
+        self.assertEqual(rotate_right_8_bits(0xEF, 8), (0xEF, True))
+        
+    def test_rotate_right_8_bits_by_more_than_8(self):
+        self.assertEqual(rotate_right_8_bits(0x80, 9), (0x40, False))
+        
+    # Rotate left 16 bits.
     def test_rotate_left_16_bits_by_1(self):
         self.assertEqual(rotate_left_16_bits(0x0001, 1), (0x0002, False))
         self.assertEqual(rotate_left_16_bits(0x0080, 1), (0x0100, False))
