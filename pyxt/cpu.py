@@ -1427,6 +1427,10 @@ class CPU(object):
             self._set_rm16(rm_type, rm_value, value)
             self.flags.set_from_alu_no_carry_word(value)
             
+        elif sub_opcode == 2: # CALL r/m16
+            self.internal_push(self.regs.IP)
+            self.regs.IP = value
+            
         elif sub_opcode == 4: # JMP
             self.regs.IP = value
             

@@ -4990,3 +4990,25 @@ class ImmediateOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.BX, 0x1233)
         
+class CallOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_call_rm16(self):
+        """
+        mov bx, ham
+        call bx
+        inc cl
+        hlt
+
+        ham:
+        inc al
+        hlt
+        """
+        self.cpu.regs.SP = 0x0100
+        self.load_code_string("BB 08 00 FF D3 FE C1 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 4)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        self.assertEqual(self.cpu.regs.CL, 0) # We don't actually return in this test.
+        self.assertEqual(self.cpu.regs.SP, 0x00FE)
+        self.assertEqual(self.memory.mem_read_word(0x00FE), 0x0005) # Return should point back at INC cl.
+        self.assertEqual(self.cpu.regs.CS, 0x0000)
+        self.assertEqual(self.cpu.regs.IP, 0x000B) # Next instruction after the second hlt.
+        
