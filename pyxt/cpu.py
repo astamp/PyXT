@@ -1089,9 +1089,7 @@ class CPU(object):
         # Process the immediate.
         immediate = self.get_immediate(word_imm)
         if sign_extend and not word_imm:
-            extended_imm = sign_extend_byte_to_word(immediate)
-            log.debug("Sign extending 0x%02x to 0x%04x", immediate, extended_imm)
-            immediate = extended_imm
+            immediate = sign_extend_byte_to_word(immediate)
             
         set_value = True
         if sub_opcode == 0x00:

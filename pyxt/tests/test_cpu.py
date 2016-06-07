@@ -4979,3 +4979,14 @@ class XlatOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AL, 0xA5)
         self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
         
+class ImmediateOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_sign_extend_byte_to_word(self):
+        """
+        add bx, -1
+        hlt
+        """
+        self.cpu.regs.BX = 0x1234
+        self.load_code_string("83 C3 FF F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 0x1233)
+        
