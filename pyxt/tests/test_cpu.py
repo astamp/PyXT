@@ -5012,3 +5012,43 @@ class CallOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.CS, 0x0000)
         self.assertEqual(self.cpu.regs.IP, 0x000B) # Next instruction after the second hlt.
         
+    def test_call_relative_forward(self):
+        """
+        call ham
+        inc cl
+        hlt
+        
+        ham:
+        inc al
+        hlt
+        """
+        self.cpu.regs.SP = 0x0100
+        self.load_code_string("E8 03 00 FE C1 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        self.assertEqual(self.cpu.regs.CL, 0) # We don't actually return in this test.
+        self.assertEqual(self.cpu.regs.SP, 0x00FE)
+        self.assertEqual(self.memory.mem_read_word(0x00FE), 0x0003) # Return should point back at INC cl.
+        self.assertEqual(self.cpu.regs.CS, 0x0000)
+        self.assertEqual(self.cpu.regs.IP, 0x0009) # Next instruction after the second hlt.
+        
+    def test_call_relative_backward(self):
+        """
+        ham:
+        inc al
+        hlt
+        
+        call ham
+        inc cl
+        hlt
+        """
+        self.cpu.regs.SP = 0x0100
+        self.load_code_string("FE C0 F4 E8 FA FF FE C1 F4")
+        self.assertEqual(self.run_to_halt(starting_ip = 0x0003), 3) # Start at CALL ham.
+        self.assertEqual(self.cpu.regs.AL, 1)
+        self.assertEqual(self.cpu.regs.CL, 0) # We don't actually return in this test.
+        self.assertEqual(self.cpu.regs.SP, 0x00FE)
+        self.assertEqual(self.memory.mem_read_word(0x00FE), 0x0006) # Return should point back at INC cl.
+        self.assertEqual(self.cpu.regs.CS, 0x0000)
+        self.assertEqual(self.cpu.regs.IP, 0x0003) # Next instruction after the first hlt.
+        

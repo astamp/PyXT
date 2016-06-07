@@ -454,7 +454,7 @@ class CPU(object):
         elif opcode == 0xE2:
             self.opcode_loop()
         elif opcode == 0xE8:
-            self._call()
+            self.opcode_call_rel16()
         elif opcode == 0xC3:
             self._ret()
         elif opcode == 0xCA:
@@ -1014,8 +1014,9 @@ class CPU(object):
         self.regs.CS = new_cs
         log.debug("JMP FAR to CS: 0x%04x  IP:0x%04x", self.regs.CS, self.regs.IP)
         
-    def _call(self):
-        offset = self.get_word_immediate()
+    def opcode_call_rel16(self):
+        """ Calls a near function at a location relative to the current IP. """
+        offset = signed_word(self.get_word_immediate())
         self.internal_push(self.regs.IP)
         self.regs.IP += offset
         log.debug("CALL incremented IP by 0x%04x to 0x%04x", offset, self.regs.IP)
