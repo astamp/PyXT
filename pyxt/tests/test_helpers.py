@@ -257,3 +257,43 @@ class SignExtendByteToWordTests(unittest.TestCase):
     def test_word_input_masked_to_byte(self):
         self.assertEqual(sign_extend_byte_to_word(0xFF7F), 0x007F)
         
+class RotateThruCarryTests(unittest.TestCase):
+    # Rotate left 8 bits.
+    def test_rotate_thru_carry_left_8_bits_by_1(self):
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x00, True, 1), (0x01, False))
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x01, False, 1), (0x02, False))
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x02, False, 1), (0x04, False))
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x04, False, 1), (0x08, False))
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x08, False, 1), (0x10, False))
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x10, False, 1), (0x20, False))
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x20, False, 1), (0x40, False))
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x40, False, 1), (0x80, False))
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x80, False, 1), (0x00, True))
+        
+    def test_rotate_thru_carry_left_8_bits_by_3(self):
+        # 1 1010 1010
+        # 1 0101 0101
+        # 0 1010 1011
+        # 1 0101 0110
+        self.assertEqual(rotate_thru_carry_left_8_bits(0xAA, True, 3), (0x56, True))
+        
+        # 0 0101 0101
+        # 0 1010 1010
+        # 1 0101 0100
+        # 0 1010 1001
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x55, False, 3), (0xA9, False))
+        
+    # Rotate by zero will be handled by the caller.
+    def test_rotate_thru_carry_left_8_bits_by_0_doesnt_crash(self):
+        self.assertEqual(rotate_thru_carry_left_8_bits(0xEF, False, 0), (0xEF, False))
+        
+    def test_rotate_thru_carry_left_8_bits_by_8(self):
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x01, False, 8), (0x00, True))
+        
+    def test_rotate_thru_carry_left_8_bits_by_9(self):
+        self.assertEqual(rotate_thru_carry_left_8_bits(0xEF, False, 9), (0xEF, False))
+        
+    def test_rotate_thru_carry_left_8_bits_by_more_than_9(self):
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x00, True, 10), (0x01, False))
+        self.assertEqual(rotate_thru_carry_left_8_bits(0x80, False, 10), (0x00, True))
+        

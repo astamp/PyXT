@@ -162,3 +162,41 @@ def sign_extend_byte_to_word(value):
         value |= 0xFF00
     return value
     
+def rotate_thru_carry_left_8_bits(value, carry_in, count):
+    """
+    Rotate an 8-bit value left through the carry flag by count and return the result and the new carry flag.
+    
+    This is essentially a 9-bit rotate where the top bit is the carry flag.
+    
+    c high low
+    A BCDE FGHI - Starting values
+    B CDEF GHIA - RCL 1
+    C DEFG HIAB - RCL 2
+    D EFGH IABC - RCL 3
+    E FGHI ABCD - RCL 4
+    F GHIA BCDE - RCL 5
+    G HIAB CDEF - RCL 6
+    H IABC DEFG - RCL 7
+    I ABCD EFGH - RCL 8
+    A BCDE FGHI - RCL 9
+    """
+    # It doesn't make sense to rotate more than 9 bits.
+    count = count % 9
+    
+    # A rotate of zero is a no-op.
+    if count == 0:
+        return value, carry_in
+        
+    # Calculate the masks.
+    carry_rotate_mask = 1 << (count - 1) # Bit location to place the carry in.
+    right_rotate_mask = (1 << (count - 1)) - 1 # Mask for right side of new value.
+    left_rotate_mask = (~(right_rotate_mask | carry_rotate_mask)) & 0xFF # Mask for left side of new value.
+    new_carry_mask = 1 << (8 - count) # Bit location in old value of carry out.
+    
+    new_value = (
+        ((value << count) & left_rotate_mask) |
+        ((value >> (9 - count)) & right_rotate_mask) |
+        (carry_rotate_mask if carry_in else 0x00)
+    )
+    return new_value, value & new_carry_mask == new_carry_mask
+    
