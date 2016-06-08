@@ -3438,6 +3438,77 @@ class PushOpcodeTests(BaseOpcodeAcceptanceTests):
         # SS is 0x0010 from the common setUp().
         self.assertEqual(self.memory.mem_read_word(0x001FE), 0x0010)
         
+    def run_push_shortcut_test(self, code_string, register):
+        """ Generic function for testing the PUSH [register] opcodes. """
+        self.cpu.regs[register] = 0xCAFE
+        self.load_code_string(code_string)
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x00FE)
+        self.assertEqual(self.cpu.regs[register], 0xCAFE) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_word(0x001FE), 0xCAFE)
+        
+    def test_push_ax(self):
+        """
+        push ax
+        hlt
+        """
+        self.run_push_shortcut_test("50 F4", "AX")
+        
+    def test_push_bx(self):
+        """
+        push bx
+        hlt
+        """
+        self.run_push_shortcut_test("53 F4", "BX")
+        
+    def test_push_cx(self):
+        """
+        push cx
+        hlt
+        """
+        self.run_push_shortcut_test("51 F4", "CX")
+        
+    def test_push_dx(self):
+        """
+        push dx
+        hlt
+        """
+        self.run_push_shortcut_test("52 F4", "DX")
+        
+    def test_push_sp(self):
+        """
+        push sp
+        hlt
+        """
+        self.load_code_string("54 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x00FE)
+        # On 808x this pushes the new value, on 286+ this pushes the old value.
+        self.assertEqual(self.memory.mem_read_word(0x001FE), 0x00FE)
+        
+    def test_push_bp(self):
+        """
+        push bp
+        hlt
+        """
+        self.run_push_shortcut_test("55 F4", "BP")
+        
+    def test_push_si(self):
+        """
+        push si
+        hlt
+        """
+        self.run_push_shortcut_test("56 F4", "SI")
+        
+    def test_push_di(self):
+        """
+        push di
+        hlt
+        """
+        self.run_push_shortcut_test("57 F4", "DI")
+        
 class PopOpcodeTests(BaseOpcodeAcceptanceTests):
     def setUp(self):
         super(PopOpcodeTests, self).setUp()

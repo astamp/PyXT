@@ -524,6 +524,8 @@ class CPU(object):
             self._hlt()
         elif opcode & 0xFC == 0x80:
             self.opcode_group_8x(opcode)
+        elif opcode == 0x54:
+            self.opcode_push_sp(opcode)
         elif opcode & 0xF8 == 0x50:
             self.opcode_group_push(opcode)
         elif opcode & 0xF8 == 0x58:
@@ -945,6 +947,15 @@ class CPU(object):
         """ Pop a word off of the stack and store it in an r/m16 destination. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         self._set_rm16(rm_type, rm_value, self.internal_pop())
+        
+    def opcode_push_sp(self, opcode):
+        """
+        Special handler for PUSH SP on 8086/8088.
+        
+        On 808x this pushes the new SP value, on 286+ this pushes the old SP value.
+        """
+        self.regs.SP -= 2
+        self.bus.mem_write_word(segment_offset_to_address(self.regs.SS, self.regs.SP), self.regs.SP)
         
     def internal_push(self, value):
         """ Decrement the stack pointer and push a word on to the stack. """
