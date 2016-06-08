@@ -371,6 +371,102 @@ class CPU(object):
         self.repeat_prefix = REPEAT_NONE
         self.segment_override = None
         
+        # Fast instruction decoding.
+        self.opcode_vector = [
+            # 0x00 - 0x0F
+            self.opcode_group_add,
+            self.opcode_group_add,
+            self.opcode_group_add,
+            self.opcode_group_add,
+            self.opcode_group_add,
+            self.opcode_group_add,
+            lambda _opcode: self.internal_push(self.regs.ES),
+            lambda _opcode: operator.setitem(self.regs, "ES", self.internal_pop()),
+            self.opcode_group_or,
+            self.opcode_group_or,
+            self.opcode_group_or,
+            self.opcode_group_or,
+            self.opcode_group_or,
+            self.opcode_group_or,
+            lambda _opcode: self.internal_push(self.regs.CS),
+            None, # There is no POP CS (0x0F is used for two-byte opcodes in 286+).
+            
+            # 0x10 - 0x1F
+            self.opcode_group_adc,
+            self.opcode_group_adc,
+            self.opcode_group_adc,
+            self.opcode_group_adc,
+            self.opcode_group_adc,
+            self.opcode_group_adc,
+            lambda _opcode: self.internal_push(self.regs.SS),
+            lambda _opcode: operator.setitem(self.regs, "SS", self.internal_pop()),
+            self.opcode_group_sbb,
+            self.opcode_group_sbb,
+            self.opcode_group_sbb,
+            self.opcode_group_sbb,
+            self.opcode_group_sbb,
+            self.opcode_group_sbb,
+            lambda _opcode: self.internal_push(self.regs.DS),
+            lambda _opcode: operator.setitem(self.regs, "DS", self.internal_pop()), 
+            
+            # 0x20 - 0x2F
+            self.opcode_group_and,
+            self.opcode_group_and,
+            self.opcode_group_and,
+            self.opcode_group_and,
+            self.opcode_group_and,
+            self.opcode_group_and,
+            None, # ES segment override prefix.
+            None, # TODO: Implement DAA.
+            self.opcode_group_sub,
+            self.opcode_group_sub,
+            self.opcode_group_sub,
+            self.opcode_group_sub,
+            self.opcode_group_sub,
+            self.opcode_group_sub,
+            None, # CS segment override prefix.
+            None, # TODO: Implement DAS.
+            
+            # 0x30 - 0x3F
+            self.opcode_group_xor,
+            self.opcode_group_xor,
+            self.opcode_group_xor,
+            self.opcode_group_xor,
+            self.opcode_group_xor,
+            self.opcode_group_xor,
+            None, # SS segment override prefix.
+            None, # TODO: Implement AAA.
+            self.opcode_cmp_rm8_r8,
+            self.opcode_cmp_rm16_r16,
+            self.opcode_cmp_r8_rm8,
+            self.opcode_cmp_r16_rm16,
+            self.opcode_cmp_al_imm8,
+            self.opcode_cmp_ax_imm16,
+            None, # DS segment override prefix.
+            None, # TODO: Implement AAS.
+            
+            # 0x40 - 0x4F
+            self.opcode_group_inc,
+            self.opcode_group_inc,
+            self.opcode_group_inc,
+            self.opcode_group_inc,
+            self.opcode_group_inc,
+            self.opcode_group_inc,
+            self.opcode_group_inc,
+            self.opcode_group_inc,
+            self.opcode_group_dec,
+            self.opcode_group_dec,
+            self.opcode_group_dec,
+            self.opcode_group_dec,
+            self.opcode_group_dec,
+            self.opcode_group_dec,
+            self.opcode_group_dec,
+            self.opcode_group_dec,
+        ]
+        
+        while len(self.opcode_vector) < 256:
+            self.opcode_vector.append(None)
+            
     def install_bus(self, bus):
         """ Register the bus with the CPU. """
         self.bus = bus
@@ -413,28 +509,21 @@ class CPU(object):
             else:
                 break
                 
+        # First check if the opcode is in the instruction decoding table.
+        opcode_handler = self.opcode_vector[opcode]
+        if opcode_handler is not None:
+            opcode_handler(opcode)
+            
+            # HACK: Remove this and the return when all instructions are converted.
+            if self.repeat_prefix != REPEAT_NONE:
+                self.signal_invalid_opcode(opcode, "Opcode doesn't support repeat prefix.")
+            
+            return
+            
         if opcode == 0xF4:
             self._hlt()
-        elif opcode & 0xF8 == 0x00 and opcode & 0x6 != 0x6:
-            self.opcode_group_add(opcode)
-        elif opcode & 0xF8 == 0x08 and opcode & 0x6 != 0x6:
-            self.opcode_group_or(opcode)
-        elif opcode & 0xF8 == 0x10 and opcode & 0x6 != 0x6:
-            self.opcode_group_adc(opcode)
-        elif opcode & 0xF8 == 0x18 and opcode & 0x6 != 0x6:
-            self.opcode_group_sbb(opcode)
-        elif opcode & 0xF8 == 0x20 and opcode & 0x6 != 0x6:
-            self.opcode_group_and(opcode)
-        elif opcode & 0xF8 == 0x28 and opcode & 0x6 != 0x6:
-            self.opcode_group_sub(opcode)
-        elif opcode & 0xF8 == 0x30 and opcode & 0x6 != 0x6:
-            self.opcode_group_xor(opcode)
         elif opcode & 0xFC == 0x80:
             self.opcode_group_8x(opcode)
-        elif opcode & 0xF8 == 0x40:
-            self.opcode_group_inc(opcode)
-        elif opcode & 0xF8 == 0x48:
-            self.opcode_group_dec(opcode)
         elif opcode & 0xF8 == 0x50:
             self.opcode_group_push(opcode)
         elif opcode & 0xF8 == 0x58:
@@ -498,20 +587,6 @@ class CPU(object):
             
         elif opcode == 0x72:
             self._jc()
-            
-        # CMP
-        elif opcode == 0x38:
-            self.opcode_cmp_rm8_r8()
-        elif opcode == 0x39:
-            self.opcode_cmp_rm16_r16()
-        elif opcode == 0x3A:
-            self.opcode_cmp_r8_rm8()
-        elif opcode == 0x3B:
-            self.opcode_cmp_r16_rm16()
-        elif opcode == 0x3C:
-            self.opcode_cmp_al_imm8()
-        elif opcode == 0x3D:
-            self.opcode_cmp_ax_imm16()
             
         elif opcode == 0x76:
             self._jna()
@@ -617,24 +692,6 @@ class CPU(object):
             self.opcode_lodsw()
         elif opcode == 0xAE:
             self.opcode_scasb()
-            
-        # PUSH segment registers.
-        elif opcode == 0x06:
-            self.internal_push(self.regs.ES)
-        elif opcode == 0x0E:
-            self.internal_push(self.regs.CS)
-        elif opcode == 0x16:
-            self.internal_push(self.regs.SS)
-        elif opcode == 0x1E:
-            self.internal_push(self.regs.DS)
-            
-        # POP segment registers (except CS which is 0x0F).
-        elif opcode == 0x07:
-            self.regs.ES = self.internal_pop()
-        elif opcode == 0x17:
-            self.regs.SS = self.internal_pop()
-        elif opcode == 0x1F:
-            self.regs.DS = self.internal_pop()
             
         elif opcode == 0x8F:
             self.opcode_pop_rm16()
@@ -1275,7 +1332,7 @@ class CPU(object):
         self.alu_vector_table[opcode & 0x07](self.operator_adc_16 if opcode & 0x01 else self.operator_adc_8)
         
     # CMP
-    def opcode_cmp_rm8_r8(self):
+    def opcode_cmp_rm8_r8(self, _opcode):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
         register, rm_type, rm_value = self.get_modrm_operands(8)
         op1 = self._get_rm8(rm_type, rm_value)
@@ -1283,7 +1340,7 @@ class CPU(object):
         result = self.operator_sub_8(op1, op2)
         self.flags.set_from_alu_byte(result)
         
-    def opcode_cmp_rm16_r16(self):
+    def opcode_cmp_rm16_r16(self, _opcode):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
@@ -1291,7 +1348,7 @@ class CPU(object):
         result = self.operator_sub_16(op1, op2)
         self.flags.set_from_alu_word(result)
         
-    def opcode_cmp_r8_rm8(self):
+    def opcode_cmp_r8_rm8(self, _opcode):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
         register, rm_type, rm_value = self.get_modrm_operands(8)
         op1 = self.regs[register]
@@ -1299,7 +1356,7 @@ class CPU(object):
         result = self.operator_sub_8(op1, op2)
         self.flags.set_from_alu_byte(result)
         
-    def opcode_cmp_r16_rm16(self):
+    def opcode_cmp_r16_rm16(self, _opcode):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         op1 = self.regs[register]
@@ -1307,12 +1364,12 @@ class CPU(object):
         result = self.operator_sub_16(op1, op2)
         self.flags.set_from_alu_word(result)
         
-    def opcode_cmp_al_imm8(self):
+    def opcode_cmp_al_imm8(self, _opcode):
         """ Subtract immediate byte from AL, update the flags, but don't store the value. """
         result = self.operator_sub_8(self.regs.AL, self.get_byte_immediate())
         self.flags.set_from_alu_byte(result)
         
-    def opcode_cmp_ax_imm16(self):
+    def opcode_cmp_ax_imm16(self, _opcode):
         """ Subtract immediate word from AX, update the flags, but don't store the value. """
         result = self.operator_sub_16(self.regs.AX, self.get_word_immediate())
         self.flags.set_from_alu_word(result)
