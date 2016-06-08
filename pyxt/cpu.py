@@ -1478,6 +1478,15 @@ class CPU(object):
             self.flags.set_from_alu(value, bits = bits, carry = False)
             self._set_rm_bits(bits, rm_type, rm_value, value)
             
+        elif sub_opcode == 0x02: # RCL - Rotate left through the carry flag.
+            if bits == 8:
+                value, self.flags.carry = rotate_thru_carry_left_8_bits(value, self.flags.carry, count)
+            else:
+                value, self.flags.carry = rotate_thru_carry_left_16_bits(value, self.flags.carry, count)
+                
+            self.flags.set_from_alu(value, bits = bits, carry = False)
+            self._set_rm_bits(bits, rm_type, rm_value, value)
+            
         elif sub_opcode == 0x05: # SHR - Shift right, no sign extension.
             self.flags.carry = (value >> (count - 1)) & 0x01 == 0x01
             value = value >> count

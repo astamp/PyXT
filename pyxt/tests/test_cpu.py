@@ -5052,3 +5052,82 @@ class CallOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.CS, 0x0000)
         self.assertEqual(self.cpu.regs.IP, 0x0003) # Next instruction after the first hlt.
         
+
+class RclOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_rcl_rm8_1_carry_in(self):
+        """
+        rcl al, 1
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.regs.AL = 0x08
+        self.load_code_string("D0 D0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x11)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_rcl_rm8_1_carry_out(self):
+        """
+        rcl al, 1
+        hlt
+        """
+        self.cpu.flags.carry = False
+        self.cpu.regs.AL = 0xF0
+        self.load_code_string("D0 D0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0xE0)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_rcl_rm8_cl(self):
+        """
+        rcl al, cl
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.regs.AL = 0x81
+        self.cpu.regs.CL = 2
+        self.load_code_string("D2 D0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x07)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_rcl_rm16_1_carry_in(self):
+        """
+        rcl ax, 1
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.regs.AX = 0x0080
+        self.load_code_string("D1 D0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0101)
+        self.assertFalse(self.cpu.flags.carry)
+        
+    def test_rcl_rm16_1_carry_out(self):
+        """
+        rcl ax, 1
+        hlt
+        """
+        self.cpu.flags.carry = False
+        self.cpu.regs.AX = 0x9000
+        self.load_code_string("D1 D0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x2000)
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_rcl_rm16_cl(self):
+        """
+        rcl ax, cl
+        hlt
+        """
+        self.cpu.flags.carry = False
+        self.cpu.regs.AX = 0x9000
+        self.cpu.regs.CL = 2
+        self.load_code_string("D3 D0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x4001)
+        self.assertFalse(self.cpu.flags.carry)
+        
