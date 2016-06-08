@@ -5181,3 +5181,42 @@ class RclOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0x4001)
         self.assertFalse(self.cpu.flags.carry)
         
+class InvalidOpcodeTests(BaseOpcodeAcceptanceTests):
+    def assert_throws_invalid_opcode(self, code_string):
+        self.load_code_string(code_string)
+        with self.assertRaises(InvalidOpcodeException) as context:
+            self.run_to_halt()
+            
+    def test_0f_not_valid_for_808x(self):
+        self.assert_throws_invalid_opcode("0F")
+        
+    def test_6x_not_valid_for_808x(self):
+        self.assert_throws_invalid_opcode("60")
+        self.assert_throws_invalid_opcode("61")
+        self.assert_throws_invalid_opcode("62")
+        self.assert_throws_invalid_opcode("63")
+        self.assert_throws_invalid_opcode("64")
+        self.assert_throws_invalid_opcode("65")
+        self.assert_throws_invalid_opcode("66")
+        self.assert_throws_invalid_opcode("67")
+        self.assert_throws_invalid_opcode("68")
+        self.assert_throws_invalid_opcode("69")
+        self.assert_throws_invalid_opcode("6A")
+        self.assert_throws_invalid_opcode("6B")
+        self.assert_throws_invalid_opcode("6C")
+        self.assert_throws_invalid_opcode("6D")
+        self.assert_throws_invalid_opcode("6E")
+        self.assert_throws_invalid_opcode("6F")
+        
+    def test_cx_not_valid_for_808x(self):
+        self.assert_throws_invalid_opcode("C0")
+        self.assert_throws_invalid_opcode("C1")
+        self.assert_throws_invalid_opcode("C8")
+        self.assert_throws_invalid_opcode("C9")
+        
+    def test_d6_not_valid_for_808x(self):
+        self.assert_throws_invalid_opcode("D6")
+        
+    def test_f1_not_valid_for_808x(self):
+        self.assert_throws_invalid_opcode("F1")
+        
