@@ -2727,6 +2727,19 @@ class RolOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
         self.assertTrue(self.cpu.flags.carry)
         
+    def test_rol_rm8_cl(self):
+        """
+        rol al, cl
+        hlt
+        """
+        self.cpu.regs.AL = 0x08
+        self.cpu.regs.CL = 4
+        self.load_code_string("D2 C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x80)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertFalse(self.cpu.flags.carry)
+        
     def test_rol_rm16_1_simple(self):
         """
         rol ax, 1
@@ -2747,6 +2760,18 @@ class RolOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("D1 C0 F4")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.AX, 0x0001)
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_rol_rm16_cl(self):
+        """
+        rol ax, cl
+        hlt
+        """
+        self.cpu.regs.AX = 0x0007
+        self.cpu.regs.CL = 14
+        self.load_code_string("D3 C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xC001)
         self.assertTrue(self.cpu.flags.carry)
         
 class SarOpcodeTests(BaseOpcodeAcceptanceTests):
@@ -4917,6 +4942,19 @@ class RorOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
         self.assertTrue(self.cpu.flags.carry)
         
+    def test_ror_rm8_cl(self):
+        """
+        ror al, cl
+        hlt
+        """
+        self.cpu.regs.AL = 0x01
+        self.cpu.regs.CL = 2
+        self.load_code_string("D2 C8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x40)
+        self.assertEqual(self.cpu.regs.AH, 0x00) # Should be unmodified.
+        self.assertFalse(self.cpu.flags.carry)
+        
     def test_ror_rm16_1_simple(self):
         """
         ror ax, 1
@@ -4938,6 +4976,18 @@ class RorOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.AX, 0x8000)
         self.assertTrue(self.cpu.flags.carry)
+        
+    def test_ror_rm16_cl(self):
+        """
+        ror ax, cl
+        hlt
+        """
+        self.cpu.regs.AX = 0x1000
+        self.cpu.regs.CL = 9
+        self.load_code_string("D3 C8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0008)
+        self.assertFalse(self.cpu.flags.carry)
         
 class XlatOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_xlat_simple(self):
