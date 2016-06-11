@@ -462,6 +462,16 @@ class CPU(object):
             self.opcode_group_dec,
             self.opcode_group_dec,
             self.opcode_group_dec,
+            
+            # 0x50 - 0x5F
+            self.opcode_group_push,
+            self.opcode_group_push,
+            self.opcode_group_push,
+            self.opcode_group_push,
+            self.opcode_push_sp,
+            self.opcode_group_push,
+            self.opcode_group_push,
+            self.opcode_group_push,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -524,10 +534,6 @@ class CPU(object):
             self._hlt()
         elif opcode & 0xFC == 0x80:
             self.opcode_group_8x(opcode)
-        elif opcode == 0x54:
-            self.opcode_push_sp(opcode)
-        elif opcode & 0xF8 == 0x50:
-            self.opcode_group_push(opcode)
         elif opcode & 0xF8 == 0x58:
             self.opcode_group_pop(opcode)
         elif opcode & 0xF8 == 0x90:
