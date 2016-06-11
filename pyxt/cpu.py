@@ -565,9 +565,9 @@ class CPU(object):
         elif opcode & 0xFE == 0xF6:
             self.opcode_group_f6f7(opcode)
         elif opcode == 0x74:
-            self._jz()
+            self.opcode_jz(opcode)
         elif opcode == 0x75:
-            self._jnz()
+            self.opcode_jnz(opcode)
         elif opcode == 0xE0:
             self.opcode_loopnz()
         elif opcode == 0xE1:
@@ -1014,15 +1014,17 @@ class CPU(object):
         if self.flags.carry:
             self.regs.IP += signed_byte(distance)
             
-    def _jz(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
+    def opcode_jz(self, _opcode):
+        """ JZ/JE - Jump short if the zero flag is set. """
+        distance = self.get_byte_immediate()
         if self.flags.zero:
-            self.regs.IP += distance
+            self.regs.IP += signed_byte(distance)
             
-    def _jnz(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
+    def opcode_jnz(self, _opcode):
+        """ JNZ/JNE - Jump short if the zero flag is clear. """
+        distance = self.get_byte_immediate()
         if not self.flags.zero:
-            self.regs.IP += distance
+            self.regs.IP += signed_byte(distance)
             
     def _jna(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
