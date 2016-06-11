@@ -683,7 +683,7 @@ class CPU(object):
         elif opcode & 0xFC == 0xD0:
             self.opcode_group_rotate_and_shift(opcode)
         elif opcode == 0x71:
-            self._jno()
+            self.opcode_jno(opcode)
         elif opcode == 0x70:
             self.opcode_jo(opcode)
         elif opcode == 0x7C:
@@ -1061,16 +1061,17 @@ class CPU(object):
         if self.flags.sign:
             self.regs.IP += distance
             
-    def _jno(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
+    def opcode_jno(self, _opcode):
+        """ Jump short if the overflow flag is clear. """
+        distance = self.get_byte_immediate()
         if not self.flags.overflow:
-            self.regs.IP += distance
+            self.regs.IP += signed_byte(distance)
             
     def opcode_jo(self, _opcode):
         """ Jump short if the overflow flag is set. """
-        distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
+        distance = self.get_byte_immediate()
         if self.flags.overflow:
-            self.regs.IP += distance
+            self.regs.IP += signed_byte(distance)
             
     def opcode_jl(self):
         """ Jump short if the sign flag is not equal to the overflow flag. """
