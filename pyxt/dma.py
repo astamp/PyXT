@@ -204,5 +204,5 @@ class DmaController(Device):
             
     def print_dma_stats(self):
         for index, channel in enumerate(self.channels):
-            print self.enable, index, channel.word_count, channel.address
+            print(self.enable, index, channel.word_count, channel.address)
             
