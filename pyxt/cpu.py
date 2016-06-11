@@ -675,7 +675,7 @@ class CPU(object):
             self.opcode_popf()
             
         elif opcode == 0x73:
-            self._jae_jnb_jnc()
+            self.opcode_jnc(opcode)
         elif opcode == 0x7B:
             self._jnp_jpo()
         elif opcode == 0x7A:
@@ -1034,8 +1034,8 @@ class CPU(object):
         if self.flags.zero == False and self.flags.carry == False:
             self.regs.IP += distance
             
-    def _jae_jnb_jnc(self):
-        """ Jump short if the carry flag is clear. """
+    def opcode_jnc(self, _opcode):
+        """ JNC/JAE/JNB - Jump short if the carry flag is clear. """
         distance = self.get_byte_immediate()
         if not self.flags.carry:
             self.regs.IP += signed_byte(distance)
