@@ -2,10 +2,15 @@
 pyxt.debugger - Debugger module for PyXT.
 """
 
+from __future__ import print_function
+
 # Standard library imports
 import re
 import sys
 from collections import Counter
+
+# Six imports
+from six.moves import range # pylint: disable=redefined-builtin
 
 # PyXT imports
 from pyxt.helpers import segment_offset_to_address
@@ -84,7 +89,7 @@ class Debugger(object):
         
     def dump_stack(self, depth):
         """ Dump the stack. """
-        for temp_sp in xrange(self.cpu.regs.SP, self.cpu.regs.SP + (depth * 2), 2):
+        for temp_sp in range(self.cpu.regs.SP, self.cpu.regs.SP + (depth * 2), 2):
             value = self.bus.mem_read_word(segment_offset_to_address(self.cpu.regs.SS, temp_sp))
             log.debug("SP=%04x: %04x", temp_sp, value)
             
@@ -98,17 +103,17 @@ class Debugger(object):
         
     def break_signal(self, _signum, _frame):
         """ Control-C handler to enter single-step mode. """
-        print "Control-C"
+        print("Control-C")
         self.single_step = True
         
     def enter_debugger(self):
         """ Interactive debugger menu. """
         while True:
-            print "\nNext instruction: 0x%02x" % self.peek_instruction_byte()
+            print("\nNext instruction: 0x%02x" % self.peek_instruction_byte())
             if len(self.debugger_shortcut) != 0:
-                print "[%s] >" % " ".join(self.debugger_shortcut),
+                print("[%s] >" % " ".join(self.debugger_shortcut), end=" ")
             else:
-                print ">",
+                print(">", end=" ")
             cmd = raw_input().lower().split()
             
             try:
@@ -122,7 +127,7 @@ class Debugger(object):
         """ Actually process the command from the user. """
         if len(cmd) == 0 and len(self.debugger_shortcut) != 0:
             cmd = self.debugger_shortcut
-            print "Using: %s" % " ".join(cmd)
+            print("Using: %s" % " ".join(cmd))
         else:
             self.debugger_shortcut = cmd
             
@@ -149,20 +154,20 @@ class Debugger(object):
         elif len(cmd) == 2 and cmd[0] in ("lc", "location-counter"):
             for location, count in self.location_counter.most_common(int(cmd[1])):
                 cs, ip = location
-                print "location = %04x:%04x, count = %d" % (cs, ip, count)
+                print("location = %04x:%04x, count = %d" % (cs, ip, count))
                 
         elif len(cmd) == 1 and cmd[0] in ("vector", "vt"):
-            for vector in xrange(0, 256):
+            for vector in range(0, 256):
                 ip = self.bus.mem_read_word(vector * 4)
                 cs = self.bus.mem_read_word((vector * 4) + 2)
-                print "Vector 0x%02x - %04x:%04x" % (vector, cs, ip)
+                print("Vector 0x%02x - %04x:%04x" % (vector, cs, ip))
                 
         elif len(cmd) >= 1 and cmd[0] == "info":
             self.debugger_shortcut = []
             if len(cmd) == 2 and cmd[1] in ("breakpoints", "break"):
-                print "Breakpoints:"
+                print("Breakpoints:")
                 for index, breakpoint in enumerate(self.breakpoints):
-                    print "  %04x:%04x" % breakpoint
+                    print("  %04x:%04x" % breakpoint)
                     
         elif len(cmd) == 2 and cmd[0] == "break":
             self.debugger_shortcut = []
@@ -200,7 +205,7 @@ class Debugger(object):
             if len(cmd) >= 2:
                 address = int(cmd[1], 0)
             else:
-                print "you need an address"
+                print("you need an address")
                 return False
                 
             readable = ""
@@ -208,25 +213,25 @@ class Debugger(object):
             if unit == "b":
                 unit_size_hex = 2
                 ending_address = address + count
-                data = [self.bus.mem_read_byte(x) for x in xrange(address, ending_address)]
+                data = [self.bus.mem_read_byte(x) for x in range(address, ending_address)]
                 readable = "".join([chr(x) if x > 0x20 and x < 0x7F else "." for x in data])
             elif unit == "w":
                 unit_size_hex = 4
                 ending_address = address + (count * 2)
-                data = [self.bus.mem_read_word(x) for x in xrange(address, ending_address, 2)]
+                data = [self.bus.mem_read_word(x) for x in range(address, ending_address, 2)]
             else:
-                print "invalid unit: %r" % unit
+                print("invalid unit: %r" % unit)
                 
             self.debugger_shortcut[1] = "0x%08x" % ending_address
             
             if format == "x":
                 format = "%0*x"
             else:
-                print "invalid format: %r" % format
+                print("invalid format: %r" % format)
                 return False
                 
-            print "0x%08x:" % address, " ".join([(format % (unit_size_hex, item)) for item in data]), readable
+            print("0x%08x:" % address, " ".join([(format % (unit_size_hex, item)) for item in data]), readable)
             
         else:
-            print "i don't know what %r is." % " ".join(cmd)
+            print("i don't know what %r is." % " ".join(cmd))
             
