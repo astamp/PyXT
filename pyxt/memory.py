@@ -5,6 +5,9 @@ pyxt.memory - Memory devices for PyXT.
 # Standard library imports
 import array
 
+# Six imports
+import six
+
 # PyXT imports
 from pyxt.bus import Device
 from pyxt.helpers import bytes_to_word, word_to_bytes
@@ -49,8 +52,8 @@ class ROM(RAM): # pylint:disable=abstract-method
         with open(filename, "rb") as fileptr:
             data = fileptr.read()
             
-        for index, char in enumerate(data, start = offset):
-            self.contents[index] = ord(char)
+        for index, byte in enumerate(six.iterbytes(data), start = offset):
+            self.contents[index] = byte
             
     def mem_write_byte(self, offset, value):
         pass
