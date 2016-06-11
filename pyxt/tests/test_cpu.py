@@ -3566,6 +3566,90 @@ class PopOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.SP, 0x0102)
         self.assertEqual(self.memory.mem_read_word(0x05), 0xBEEF)
         
+    def run_pop_shortcut_test(self, code_string, register):
+        """ Generic function for testing the POP [register] opcodes. """
+        self.memory.mem_write_word(0x00200, 0xBEEF)
+        self.load_code_string(code_string)
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x0102)
+        self.assertEqual(self.cpu.regs[register], 0xBEEF)
+        
+    def test_pop_ax(self):
+        """
+        pop ax
+        hlt
+        """
+        self.run_pop_shortcut_test("58 F4", "AX")
+        
+    def test_pop_bx(self):
+        """
+        pop bx
+        hlt
+        """
+        self.run_pop_shortcut_test("5B F4", "BX")
+        
+    def test_pop_cx(self):
+        """
+        pop cx
+        hlt
+        """
+        self.run_pop_shortcut_test("59 F4", "CX")
+        
+    def test_pop_dx(self):
+        """
+        pop dx
+        hlt
+        """
+        self.run_pop_shortcut_test("5A F4", "DX")
+        
+    def test_pop_sp(self):
+        """
+        pop sp
+        hlt
+        """
+        self.memory.mem_write_word(0x00200, 0x0300)
+        self.load_code_string("5C F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x0302)
+        
+    def test_pop_bp(self):
+        """
+        pop bp
+        hlt
+        """
+        self.run_pop_shortcut_test("5D F4", "BP")
+        
+    def test_pop_si(self):
+        """
+        pop si
+        hlt
+        """
+        self.run_pop_shortcut_test("5E F4", "SI")
+        
+    def test_pop_di(self):
+        """
+        pop di
+        hlt
+        """
+        self.run_pop_shortcut_test("5F F4", "DI")
+        
+class PushPopRoundTrip(BaseOpcodeAcceptanceTests):
+    def test_push_pop_sp(self):
+        """
+        push sp
+        pop sp
+        hlt
+        """
+        # SS:SP => 0010:0100 => 0x00200
+        self.cpu.regs.SS = 0x0010
+        self.cpu.regs.SP = 0x0100
+        self.load_code_string("54 5C F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.SS, 0x0010) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.SP, 0x0100) # Should be unmodified.
+        
 class XchgOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_xchg_r8_rm8(self):
         """
