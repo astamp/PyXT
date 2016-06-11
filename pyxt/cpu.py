@@ -472,6 +472,14 @@ class CPU(object):
             self.opcode_group_push,
             self.opcode_group_push,
             self.opcode_group_push,
+            self.opcode_group_pop,
+            self.opcode_group_pop,
+            self.opcode_group_pop,
+            self.opcode_group_pop,
+            self.opcode_pop_sp,
+            self.opcode_group_pop,
+            self.opcode_group_pop,
+            self.opcode_group_pop,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -534,10 +542,6 @@ class CPU(object):
             self._hlt()
         elif opcode & 0xFC == 0x80:
             self.opcode_group_8x(opcode)
-        elif opcode == 0x5C:
-            self.opcode_pop_sp(opcode)
-        elif opcode & 0xF8 == 0x58:
-            self.opcode_group_pop(opcode)
         elif opcode & 0xF8 == 0x90:
             self._xchg_r16_ax(opcode)
         elif opcode & 0xFE == 0xF6:
@@ -967,9 +971,9 @@ class CPU(object):
         
     def opcode_pop_sp(self, opcode):
         """
-        Special handler for POP SP, this needs to assign the top of the stack to SP, then increment it by 2.
+        Special handler for POP SP.
         
-        On 808x this pushes the new SP value, on 286+ this pushes the old SP value.
+        This needs to assign the top of the stack to SP, then increment it by 2.
         """
         self.regs.SP = self.bus.mem_read_word(segment_offset_to_address(self.regs.SS, self.regs.SP))
         self.regs.SP += 2
