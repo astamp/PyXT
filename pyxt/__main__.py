@@ -4,11 +4,16 @@
 pyxt - Main application for running a demo PyXT system.
 """
 
+from __future__ import print_function
+
 # Standard library imports
 import os
 import signal
 from pprint import pprint
 from optparse import OptionParser
+
+# Six imports
+from six.moves import range # pylint: disable=redefined-builtin
 
 # PyXT imports
 from pyxt.constants import SIXTY_FOUR_KB, BIOS_LOCATION
@@ -64,7 +69,7 @@ def main():
     bus = SystemBus(pic, dma_controller)
     
     # 640KB OK
-    for index in xrange(10):
+    for index in range(10):
         bus.install_device(index * SIXTY_FOUR_KB, RAM(SIXTY_FOUR_KB))
         
     # ROM BIOS
@@ -101,7 +106,7 @@ def main():
     bus.install_device(None, ppi)
     
     if options.debug:
-        print "\nSYSTEM BUS:"
+        print("\nSYSTEM BUS:")
         pprint(bus.devices)
         pprint(bus.io_decoder)
     
