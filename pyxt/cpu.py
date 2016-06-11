@@ -480,6 +480,24 @@ class CPU(object):
             self.opcode_group_pop,
             self.opcode_group_pop,
             self.opcode_group_pop,
+            
+            # 0x60 - 0x6F (All invalid on 808x).
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         ]
         
         while len(self.opcode_vector) < 256:
