@@ -11,6 +11,7 @@ import random
 from collections import namedtuple
 
 # Six imports
+import six
 from six.moves import range # pylint: disable=redefined-builtin
 
 # PyXT imports
@@ -179,7 +180,7 @@ class MonochromeDisplayAdapter(Device):
             
     def redraw(self):
         """ Does a full redraw of the display from RAM. """
-        for offset in xrange(0, MDA_RAM_SIZE, 2):
+        for offset in range(0, MDA_RAM_SIZE, 2):
             self.blit_single_char(offset)
             
         self.needs_draw = True
@@ -271,12 +272,12 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
             upper_half = fileptr.read(self.PAGE_SIZE)
             lower_half = fileptr.read(self.PAGE_SIZE)
             
-        for index in xrange(self.CHAR_COUNT):
-            for row in xrange(0, self.font_info.rows_actual):
+        for index in range(self.CHAR_COUNT):
+            for row in range(0, self.font_info.rows_actual):
                 if row < 8:
-                    byte = ord(upper_half[(index * 8) + row])
+                    byte = six.indexbytes(upper_half, (index * 8) + row)
                 else:
-                    byte = ord(lower_half[(index  * 8) + (row - 8)])
+                    byte = six.indexbytes(lower_half, (index  * 8) + (row - 8))
                     
                 for bit in BITS_LO_TO_HI:
                     if (1 << bit) & byte:
@@ -332,20 +333,23 @@ def main():
     mda.reset()
     
     # Test the font.
-    for x in xrange(256):
+    for x in range(256):
         mda.mem_write_byte((x % 32) + ((x // 32) * 80) << 1, x)
         
     # Test screen width and setting attributes after setting chars.
-    for x in xrange(80):
+    for x in range(80):
         mda.mem_write_byte((x << 1) + 1600, 0x30 + (x % 10))
         mda.mem_write_byte((x << 1) + 1600 + 1, 0x08 if x & 0x01 else 0x00)
         
     # Test setting attributes before setting chars.
-    for x in xrange(5):
+    for x in range(5):
         mda.mem_write_byte((x << 1) + 1920 + 1, 0x08)
-    for x, char in enumerate("Hello world"):
-        mda.mem_write_byte((x << 1) + 1920, ord(char))
+    for x, byte in enumerate(six.iterbytes(b"Hello world")):
+        mda.mem_write_byte((x << 1) + 1920, byte)
         
+    # Ensure we commit the memory to the "display".
+    mda.draw()
+    
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
