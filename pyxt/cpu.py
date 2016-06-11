@@ -685,7 +685,7 @@ class CPU(object):
         elif opcode == 0x71:
             self._jno()
         elif opcode == 0x70:
-            self._jo()
+            self.opcode_jo(opcode)
         elif opcode == 0x7C:
             self.opcode_jl()
         elif opcode == 0xE4:
@@ -1066,7 +1066,8 @@ class CPU(object):
         if not self.flags.overflow:
             self.regs.IP += distance
             
-    def _jo(self):
+    def opcode_jo(self, _opcode):
+        """ Jump short if the overflow flag is set. """
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
         if self.flags.overflow:
             self.regs.IP += distance

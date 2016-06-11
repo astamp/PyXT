@@ -5375,3 +5375,40 @@ class InvalidOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_f1_not_valid_for_808x(self):
         self.assert_throws_invalid_opcode("F1")
         
+class JoOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_jump_taken(self):
+        """
+        jo location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.overflow = True
+        self.load_code_string("70 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
+    def test_jump_not_taken(self):
+        """
+        jo location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.overflow = False
+        self.load_code_string("70 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0)
+        
+    def test_jump_can_be_backward(self):
+        """
+        location: inc al
+        hlt
+        jo location
+        hlt
+        """
+        self.cpu.flags.overflow = True
+        self.load_code_string("FE C0 F4 70 FB F4")
+        self.assertEqual(self.run_to_halt(starting_ip = 0x0003), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
