@@ -5449,3 +5449,40 @@ class JnoOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(starting_ip = 0x0003), 3)
         self.assertEqual(self.cpu.regs.AL, 1)
         
+class JcOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_jump_taken(self):
+        """
+        jc location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.load_code_string("72 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
+    def test_jump_not_taken(self):
+        """
+        jc location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.carry = False
+        self.load_code_string("72 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0)
+        
+    def test_jump_can_be_backward(self):
+        """
+        location: inc al
+        hlt
+        jc location
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.load_code_string("FE C0 F4 72 FB F4")
+        self.assertEqual(self.run_to_halt(starting_ip = 0x0003), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        

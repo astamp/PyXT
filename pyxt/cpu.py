@@ -618,7 +618,7 @@ class CPU(object):
             self.opcode_mov_moffs16_ax()
             
         elif opcode == 0x72:
-            self._jc()
+            self.opcode_jc(opcode)
             
         elif opcode == 0x76:
             self._jna()
@@ -1008,10 +1008,11 @@ class CPU(object):
         return value
         
     # ********** Conditional jump opcodes. **********
-    def _jc(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
+    def opcode_jc(self, _opcode):
+        """ JC/JNAE/JB - Jump short if the carry flag is set. """
+        distance = self.get_byte_immediate()
         if self.flags.carry:
-            self.regs.IP += distance
+            self.regs.IP += signed_byte(distance)
             
     def _jz(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
