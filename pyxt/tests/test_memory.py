@@ -2,6 +2,7 @@ import unittest
 
 from six.moves import range
 
+from pyxt.tests.utils import get_test_file
 from pyxt.memory import *
 
 class RandomAccessMemoryTests(unittest.TestCase):
@@ -26,4 +27,37 @@ class RandomAccessMemoryTests(unittest.TestCase):
         self.obj.contents[1235] = 77
         self.obj.contents[1236] = 78
         self.assertEqual(self.obj.mem_read_byte(1235), 77)
+        
+class ReadOnlyMemoryTests(unittest.TestCase):
+    def setUp(self):
+        self.rom = ROM(16, init_file = get_test_file(self, "romtest.bin"))
+        
+    def test_init_file(self):
+        self.assertEqual(self.rom.mem_read_byte(0), six.byte2int(b"e"))
+        self.assertEqual(self.rom.mem_read_byte(1), six.byte2int(b"a"))
+        self.assertEqual(self.rom.mem_read_byte(2), six.byte2int(b"t"))
+        self.assertEqual(self.rom.mem_read_byte(3), six.byte2int(b"-"))
+        self.assertEqual(self.rom.mem_read_byte(4), six.byte2int(b"a"))
+        self.assertEqual(self.rom.mem_read_byte(5), six.byte2int(b"-"))
+        self.assertEqual(self.rom.mem_read_byte(6), six.byte2int(b"s"))
+        self.assertEqual(self.rom.mem_read_byte(7), six.byte2int(b"t"))
+        self.assertEqual(self.rom.mem_read_byte(8), six.byte2int(b"e"))
+        self.assertEqual(self.rom.mem_read_byte(9), six.byte2int(b"a"))
+        self.assertEqual(self.rom.mem_read_byte(10), six.byte2int(b"k"))
+        
+    def test_initialized_to_zero_past_file_length(self):
+        for x in range(11, 16):
+            self.assertEqual(self.rom.mem_read_byte(x), 0)
+            
+    def test_read_word(self):
+        self.assertEqual(self.rom.mem_read_word(0), 0x6165)
+        
+    def test_write_byte_doesnt(self):
+        self.rom.mem_write_byte(0, 0xFF)
+        self.assertEqual(self.rom.mem_read_byte(0), 0x65)
+        
+    def test_write_word_doesnt(self):
+        self.rom.mem_write_word(0, 0xFFFF)
+        self.assertEqual(self.rom.contents[0], 0x65)
+        self.assertEqual(self.rom.contents[1], 0x61)
         

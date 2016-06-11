@@ -2,7 +2,18 @@
 pyxt.tests.utils - Helpers for writing unit tests.
 """
 
+import os
+import inspect
+
 from pyxt.bus import SystemBus
+
+def get_test_file(suite, filename):
+    """ Get the path to a test file for a given suite. """
+    return os.path.join(
+        os.path.dirname(inspect.getfile(suite.__class__)),
+        "files",
+        filename,
+    )
 
 class InterruptControllerSpy(object):
     """ Stubs out the interrupt controller for testing. """
