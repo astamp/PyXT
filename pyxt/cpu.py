@@ -498,6 +498,14 @@ class CPU(object):
             None,
             None,
             None,
+            
+            # 0x70 - 0x7F
+            self.opcode_jo,
+            self.opcode_jno,
+            self.opcode_jc,
+            self.opcode_jnc,
+            self.opcode_jz,
+            self.opcode_jnz,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -564,10 +572,6 @@ class CPU(object):
             self._xchg_r16_ax(opcode)
         elif opcode & 0xFE == 0xF6:
             self.opcode_group_f6f7(opcode)
-        elif opcode == 0x74:
-            self.opcode_jz(opcode)
-        elif opcode == 0x75:
-            self.opcode_jnz(opcode)
         elif opcode == 0xE0:
             self.opcode_loopnz()
         elif opcode == 0xE1:
@@ -616,9 +620,6 @@ class CPU(object):
             self.opcode_mov_moffs8_al()
         elif opcode == 0xA3:
             self.opcode_mov_moffs16_ax()
-            
-        elif opcode == 0x72:
-            self.opcode_jc(opcode)
             
         elif opcode == 0x76:
             self._jna()
@@ -674,18 +675,12 @@ class CPU(object):
         elif opcode == 0x9D:
             self.opcode_popf()
             
-        elif opcode == 0x73:
-            self.opcode_jnc(opcode)
         elif opcode == 0x7B:
             self._jnp_jpo()
         elif opcode == 0x7A:
             self._jp_jpe()
         elif opcode & 0xFC == 0xD0:
             self.opcode_group_rotate_and_shift(opcode)
-        elif opcode == 0x71:
-            self.opcode_jno(opcode)
-        elif opcode == 0x70:
-            self.opcode_jo(opcode)
         elif opcode == 0x7C:
             self.opcode_jl()
         elif opcode == 0xE4:
