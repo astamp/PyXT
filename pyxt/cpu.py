@@ -624,7 +624,7 @@ class CPU(object):
         elif opcode == 0x76:
             self.opcode_jna(opcode)
         elif opcode == 0x77:
-            self._ja()
+            self.opcode_ja(opcode)
         elif opcode == 0x79:
             self._jns()
         elif opcode == 0x78:
@@ -1027,10 +1027,11 @@ class CPU(object):
         if self.flags.zero or self.flags.carry:
             self.regs.IP += signed_byte(distance)
             
-    def _ja(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
-        if self.flags.zero == False and self.flags.carry == False:
-            self.regs.IP += distance
+    def opcode_ja(self, _opcode):
+        """ JA/JNBE - Jump short if both zero and carry are clear. """
+        distance = self.get_byte_immediate()
+        if not self.flags.zero and not self.flags.carry:
+            self.regs.IP += signed_byte(distance)
             
     def opcode_jnc(self, _opcode):
         """ JNC/JAE/JNB - Jump short if the carry flag is clear. """
