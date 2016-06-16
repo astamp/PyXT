@@ -676,9 +676,9 @@ class CPU(object):
             self.opcode_popf()
             
         elif opcode == 0x7B:
-            self._jnp_jpo()
+            self.opcode_jnp(opcode)
         elif opcode == 0x7A:
-            self._jp_jpe()
+            self.opcode_jp(opcode)
         elif opcode & 0xFC == 0xD0:
             self.opcode_group_rotate_and_shift(opcode)
         elif opcode == 0x7C:
@@ -1039,14 +1039,14 @@ class CPU(object):
         if not self.flags.carry:
             self.regs.IP += signed_byte(distance)
             
-    def _jnp_jpo(self):
-        """ Jump short if the parity flag is clear. """
+    def opcode_jnp(self, _opcode):
+        """ JNP/JPO - Jump short if the parity flag is clear (odd parity). """
         distance = self.get_byte_immediate()
         if not self.flags.parity:
             self.regs.IP += signed_byte(distance)
             
-    def _jp_jpe(self):
-        """ Jump short if the parity flag is set. """
+    def opcode_jp(self, _opcode):
+        """ JP/JPE - Jump short if the parity flag is set (even parity). """
         distance = self.get_byte_immediate()
         if self.flags.parity:
             self.regs.IP += signed_byte(distance)
