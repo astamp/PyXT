@@ -5926,3 +5926,47 @@ class JnpOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(starting_ip = 0x0003), 3)
         self.assertEqual(self.cpu.regs.AL, 1)
         
+class JleOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_jump_conditions(self):
+        """
+        jle location
+        hlt
+        location: inc al
+        hlt
+        """
+        test_data = (
+            # Sign, Overflow,   Zero,   Jump should be taken
+            (False, False,      False,  False),
+            (False, False,      True,   True),
+            (False, True,       False,  True),
+            (False, True,       True,   True),
+            (True,  False,      False,  True),
+            (True,  False,      True,   True),
+            (True,  True,       False,  False),
+            (True,  True,       True,   True),
+        )
+        
+        self.load_code_string("7E 01 F4 FE C0 F4")
+        
+        for self.cpu.flags.sign, self.cpu.flags.overflow, self.cpu.flags.zero, jump_should_be_taken in test_data:
+            self.cpu.regs.AL = 0
+            
+            if jump_should_be_taken:
+                self.assertEqual(self.run_to_halt(), 3)
+                self.assertEqual(self.cpu.regs.AL, 1)
+            else:
+                self.assertEqual(self.run_to_halt(), 2)
+                self.assertEqual(self.cpu.regs.AL, 0)
+                
+    def test_jump_can_be_backward(self):
+        """
+        location: inc al
+        hlt
+        jle location
+        hlt
+        """
+        self.cpu.flags.zero = True
+        self.load_code_string("FE C0 F4 7E FB F4")
+        self.assertEqual(self.run_to_halt(starting_ip = 0x0003), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        

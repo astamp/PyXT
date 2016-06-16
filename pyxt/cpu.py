@@ -514,6 +514,7 @@ class CPU(object):
             self.opcode_jnp,
             self.opcode_jl,
             self.opcode_jnl,
+            self.opcode_jle,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -1079,6 +1080,12 @@ class CPU(object):
         """ JNL/JGE - Jump short if the sign flag is equal to the overflow flag. """
         distance = self.get_byte_immediate()
         if self.flags.sign == self.flags.overflow:
+            self.regs.IP += signed_byte(distance)
+            
+    def opcode_jle(self, _opcode):
+        """ JLE/JNG - Jump short if the sign flag is not equal to the overflow flag or the zero flag is set. """
+        distance = self.get_byte_immediate()
+        if self.flags.zero or (self.flags.sign != self.flags.overflow):
             self.regs.IP += signed_byte(distance)
             
     def opcode_jcxz(self):
