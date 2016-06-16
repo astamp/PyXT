@@ -4221,6 +4221,66 @@ class JlOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(starting_ip = 0x0002), 3)
         self.assertEqual(self.cpu.regs.AL, 1)
         
+class JnlOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_jump_not_taken_only_overflow_set(self):
+        """
+        jnl location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.overflow = True
+        self.load_code_string("7D 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0)
+        
+    def test_jump_not_taken_only_sign_set(self):
+        """
+        jnl location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.sign = True
+        self.load_code_string("7D 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0)
+        
+    def test_jump_taken_both_clear(self):
+        """
+        jnl location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.load_code_string("7D 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
+    def test_jump_taken_both_set(self):
+        """
+        jnl location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.sign = True
+        self.cpu.flags.overflow = True
+        self.load_code_string("7D 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
+    def test_jump_can_be_backward(self):
+        """
+        location: inc ax
+        hlt
+        jnl location
+        hlt
+        """
+        self.load_code_string("40 F4 7D FC F4")
+        self.assertEqual(self.run_to_halt(starting_ip = 0x0002), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
 class CbwOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_cbw_zero(self):
         """
