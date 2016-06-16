@@ -622,7 +622,7 @@ class CPU(object):
             self.opcode_mov_moffs16_ax()
             
         elif opcode == 0x76:
-            self._jna()
+            self.opcode_jna(opcode)
         elif opcode == 0x77:
             self._ja()
         elif opcode == 0x79:
@@ -1021,10 +1021,11 @@ class CPU(object):
         if not self.flags.zero:
             self.regs.IP += signed_byte(distance)
             
-    def _jna(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
+    def opcode_jna(self, _opcode):
+        """ JNA/JBE - Jump short if zero or carry are set. """
+        distance = self.get_byte_immediate()
         if self.flags.zero or self.flags.carry:
-            self.regs.IP += distance
+            self.regs.IP += signed_byte(distance)
             
     def _ja(self):
         distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
