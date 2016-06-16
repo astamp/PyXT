@@ -626,9 +626,9 @@ class CPU(object):
         elif opcode == 0x77:
             self.opcode_ja(opcode)
         elif opcode == 0x79:
-            self._jns()
+            self.opcode_jns(opcode)
         elif opcode == 0x78:
-            self._js()
+            self.opcode_js(opcode)
         elif opcode == 0xE3:
             self.opcode_jcxz()
             
@@ -1051,15 +1051,17 @@ class CPU(object):
         if self.flags.parity:
             self.regs.IP += signed_byte(distance)
             
-    def _jns(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
+    def opcode_jns(self, _opcode):
+        """ JNS - Jump short if the sign flag is clear. """
+        distance = self.get_byte_immediate()
         if not self.flags.sign:
-            self.regs.IP += distance
+            self.regs.IP += signed_byte(distance)
             
-    def _js(self):
-        distance = struct.unpack("<b", struct.pack("<B", self.get_byte_immediate()))[0]
+    def opcode_js(self, _opcode):
+        """ JS - Jump short if the sign flag is set. """
+        distance = self.get_byte_immediate()
         if self.flags.sign:
-            self.regs.IP += distance
+            self.regs.IP += signed_byte(distance)
             
     def opcode_jno(self, _opcode):
         """ Jump short if the overflow flag is clear. """

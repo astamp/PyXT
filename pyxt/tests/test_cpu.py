@@ -5718,3 +5718,77 @@ class JaOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(starting_ip = 0x0002), 3)
         self.assertEqual(self.cpu.regs.AL, 1)
         
+class JsOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_jump_taken(self):
+        """
+        js location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.sign = True
+        self.load_code_string("78 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
+    def test_jump_not_taken(self):
+        """
+        js location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.sign = False
+        self.load_code_string("78 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0)
+        
+    def test_jump_can_be_backward(self):
+        """
+        location: inc al
+        hlt
+        js location
+        hlt
+        """
+        self.cpu.flags.sign = True
+        self.load_code_string("FE C0 F4 78 FB F4")
+        self.assertEqual(self.run_to_halt(starting_ip = 0x0003), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
+class JnsOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_jump_taken(self):
+        """
+        jns location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.sign = False
+        self.load_code_string("79 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
+    def test_jump_not_taken(self):
+        """
+        jns location
+        hlt
+        location: inc al
+        hlt
+        """
+        self.cpu.flags.sign = True
+        self.load_code_string("79 01 F4 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0)
+        
+    def test_jump_can_be_backward(self):
+        """
+        location: inc al
+        hlt
+        jns location
+        hlt
+        """
+        self.cpu.flags.sign = False
+        self.load_code_string("FE C0 F4 79 FB F4")
+        self.assertEqual(self.run_to_halt(starting_ip = 0x0003), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        
