@@ -389,7 +389,7 @@ class CPU(object):
             self.opcode_group_or,
             self.opcode_group_or,
             lambda _opcode: self.internal_push(self.regs.CS),
-            None, # There is no POP CS (0x0F is used for two-byte opcodes in 286+).
+            self.signal_invalid_opcode, # There is no POP CS (0x0F is used for two-byte opcodes in 286+).
             
             # 0x10 - 0x1F
             self.opcode_group_adc,
@@ -482,22 +482,22 @@ class CPU(object):
             self.opcode_group_pop,
             
             # 0x60 - 0x6F (All invalid on 808x).
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
             
             # 0x70 - 0x7F
             self.opcode_jo,
@@ -734,7 +734,7 @@ class CPU(object):
             
     def signal_invalid_opcode(self, opcode, message = None):
         """ Invalid opcode handler. """
-        log.error("Invalid opcode: 0x%02x at CS:IP 0x%04x:0x%04x", opcode, self.regs.CS, self.regs.IP)
+        log.error("Invalid opcode: 0x%02x at CS:IP %04x:%04x", opcode, self.regs.CS, self.regs.IP)
         if self.repeat_prefix != REPEAT_NONE:
             log.error("Repeat prefix was: 0x%02x", self.repeat_prefix)
         if message is not None:
