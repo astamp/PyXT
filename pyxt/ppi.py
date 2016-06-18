@@ -99,6 +99,10 @@ class ProgrammablePeripheralInterface(Device, KeyboardController):
         """ Writes a value to the PORT B output, 0x061. """
         self.port_b_output = value
         
+        # Clear the last scancode "shift register".
+        if value & PORT_B_CLEAR_KEYBOARD:
+            self.last_scancode = 0x00
+            
     def read_port_c(self):
         """ Reads the value from the PORT C input, 0x062. """
         value = 0x00

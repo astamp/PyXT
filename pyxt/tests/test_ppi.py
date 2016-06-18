@@ -46,3 +46,12 @@ class PPITests(unittest.TestCase):
         self.ppi.io_write_byte(0x061, 0x08)
         self.assertEqual(self.ppi.io_read_byte(0x062), 0x0A)
         
+    def test_clear_keyboard(self):
+        self.ppi.last_scancode = 0x01
+        
+        self.ppi.io_write_byte(0x061, 0x00) # Clear keyboard not asserted.
+        self.assertEqual(self.ppi.last_scancode, 0x01) # Should be unmodified.
+        
+        self.ppi.io_write_byte(0x061, 0x80) # Clear keyboard asserted.
+        self.assertEqual(self.ppi.last_scancode, 0x00)
+        
