@@ -63,7 +63,9 @@ class FloppyDisketteController(Device):
     def io_read_byte(self, port):
         offset = port - self.base
         if offset == FDC_STATUS:
-            return self.read_status_register()
+            status = self.read_status_register()
+            log.debug("Read status register: 0x%02x.", status)
+            return status
         elif offset == FDC_DATA:
             log.warning("Invalid FDC data register read: 0x%03x, returning 0x00.", port)
             return 0
