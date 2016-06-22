@@ -27,16 +27,17 @@ CONTROL_DMA_ENABLE = 0x08
 CONTROL_N_RESET = 0x04
 CONTROL_DRIVE_SELECT = 0x03 # Mask for drive number.
 
-STATUS_DRIVE0_BUSY = 0x01
-STATUS_DRIVE1_BUSY = 0x02
-STATUS_DRIVE2_BUSY = 0x04
-STATUS_DRIVE3_BUSY = 0x08
-STATUS_FDC_BUSY = 0x10
-STATUS_NON_DMA_MODE = 0x20
-STATUS_DIRECTION = 0x40
-STATUS_READY = 0x80
+# MSR - Main status register.
+MSR_DRIVE0_BUSY = 0x01
+MSR_DRIVE1_BUSY = 0x02
+MSR_DRIVE2_BUSY = 0x04
+MSR_DRIVE3_BUSY = 0x08
+MSR_FDC_BUSY = 0x10
+MSR_NON_DMA_MODE = 0x20
+MSR_DIRECTION = 0x40
+MSR_READY = 0x80
 
-# Use these with STATUS_DIRECTION.
+# Use these with MSR_DIRECTION.
 DIRECTION_FDC_TO_CPU = 0x40
 DIRECTION_CPU_TO_FDC = 0x00
 
@@ -96,6 +97,6 @@ class FloppyDisketteController(Device):
         """ Helper for building the response to a status request. """
         value = 0x00
         if self.enabled:
-            value |= STATUS_READY
+            value |= MSR_READY
         return value
         
