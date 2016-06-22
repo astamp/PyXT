@@ -43,8 +43,8 @@ DIRECTION_CPU_TO_FDC = 0x00
 
 # Top-level FDC commands.
 COMMAND_READ_DATA = 0x06
-COMMAND_WRITE_DATA = 0x05
 COMMAND_READ_DELETED_DATA = 0x0C
+COMMAND_WRITE_DATA = 0x05
 COMMAND_WRITE_DELETED_DATA = 0x09
 COMMAND_READ_A_TRACK = 0x02
 COMMAND_READ_ID = 0x0A
@@ -121,4 +121,11 @@ class FloppyDisketteController(Device):
         if self.enabled:
             value |= MSR_READY
         return value
+        
+class FloppyDisketteDrive(object):
+    """ Maintains the "physical state" of an attached diskette drive. """
+    def __init__(self, fdc, drive_type):
+        self.fdc = fdc
+        self.drive_type = drive_type
+        self.present_cylinder_number = 0
         

@@ -56,3 +56,11 @@ class FDCTests(unittest.TestCase):
         self.fdc.io_write_byte(0x3F2, 0x04)
         self.assertEqual(self.fdc.io_read_byte(0x3F4), 0x80)
         
+class FDDTests(unittest.TestCase):
+    def setUp(self):
+        self.fdc = FloppyDisketteController(0x3F0)
+        self.fdd = FloppyDisketteDrive(self.fdc, 0)
+        
+    def test_initial_state(self):
+        self.assertEqual(self.fdd.present_cylinder_number, 0)
+        
