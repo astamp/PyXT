@@ -64,7 +64,12 @@ COMMAND_MFM_MASK = 0x40
 COMMAND_SKIP_MASK = 0x20
 
 # Command states.
-ST_READY = 0
+ST_READ_MASK = 0x8000
+ST_READY = 0x0000
+
+# SIS - Sense interrupt status.
+ST_SIS_READ_STATUS_REG_0 = ST_READ_MASK | 0x0010
+ST_SIS_READ_PRESENT_CYLINDER = ST_READ_MASK | 0x0011
 
 # Classes
 class FloppyDisketteController(Device):
@@ -74,6 +79,18 @@ class FloppyDisketteController(Device):
         self.base = base
         self.enabled = False
         self.state = ST_READY
+        
+        self.states = {
+            # state, : (read_function, write_function, next_state)
+            ST_READY : (None, self.write_toplevel_command, ST_READY),
+            ST_SIS_READ_STATUS_REG_0 : (self.read_status_register_0, None, ST_SIS_READ_PRESENT_CYLINDER),
+            ST_SIS_READ_PRESENT_CYLINDER : (self.read_present_cylinder_number, None, ST_READY),
+        }
+        
+        self.drive_select = 0
+        self.head_select = 0
+        
+        self.drives = [None, None, None, None]
         
     # Device interface.
     def get_ports_list(self):
@@ -90,8 +107,7 @@ class FloppyDisketteController(Device):
             log.debug("Main status register: 0x%02x.", status)
             return status
         elif offset == FDC_DATA:
-            log.warning("Invalid FDC data register read: 0x%03x, returning 0x00.", port)
-            return 0
+            return self.read_data_register()
         else:
             log.warning("Invalid FDC port read: 0x%03x, returning 0x00.", port)
             return 0x00
@@ -101,8 +117,7 @@ class FloppyDisketteController(Device):
         if offset == FDC_CONTROL:
             self.write_control_register(value)
         elif offset == FDC_DATA:
-            log.warning("FDC data register write: 0x%03x, with: 0x%02x.", port, value)
-            pass
+            self.write_data_register(value)
         else:
             log.warning("Invalid FDC port write: 0x%03x, with: 0x%02x.", port, value)
             
@@ -126,6 +141,50 @@ class FloppyDisketteController(Device):
             value |= MSR_READY
         return value
         
+    def write_data_register(self, value):
+        """ Helper for handling writes to the data register. """
+        read_function, write_function, self.state = self.states[self.state]
+        if write_function:
+            write_function(value)
+        else:
+            log.warning("Attempted to WRITE a READ-ONLY state (0x%04x) with 0x%02x.", self.state, value)
+            
+    def read_data_register(self):
+        """ Helper for handling reads from the data register. """
+        read_function, write_function, self.state = self.states[self.state]
+        if read_function:
+            return read_function()
+        else:
+            log.warning("Attempted to READ a WRITE-ONLY state (0x%04x), you get 0x00.", self.state)
+            return 0x00
+            
+    def write_toplevel_command(self, value):
+        """ Kicks off a top-level FDC command, overwrites state. """
+        if value == COMMAND_SENSE_INTERRUPT_STATUS:
+            self.state = ST_SIS_READ_STATUS_REG_0
+        else:
+            log.debug("Invalid command: 0x%02x", value)
+            
+            # For now, stop in the debugger when we hit an invalid command.
+            if self.bus:
+                self.bus.force_debugger_break("Invalid FDC command: 0x%02x" % value)
+                
+    def read_status_register_0(self):
+        """ Builds a status register 0 response. """
+        value = self.drive_select
+        if self.head_select == 1:
+            value |= 0x04
+        # TODO: The rest of this.
+        return value
+        
+    def read_present_cylinder_number(self):
+        """ Returns the present cylinder number for the selected drive. """
+        drive = self.drives[self.drive_select]
+        if drive:
+            return drive.present_cylinder_number
+        else:
+            return 0
+            
 class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """
     def __init__(self, drive_type):
