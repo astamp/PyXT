@@ -1218,6 +1218,7 @@ class CPU(object):
             immediate = sign_extend_byte_to_word(immediate)
             
         set_value = True
+        logical = False
         if sub_opcode == 0x00:
             result = value + immediate
         elif sub_opcode == 0x01:
@@ -1228,6 +1229,9 @@ class CPU(object):
             result = value & immediate
         elif sub_opcode == 0x05:
             result = value - immediate
+        elif sub_opcode == 0x06:
+            result = value ^ immediate
+            logical = True
         elif sub_opcode == 0x07:
             if word_reg:
                 result = self.operator_sub_16(value, immediate)
@@ -1245,6 +1249,9 @@ class CPU(object):
             self.flags.set_from_alu_byte(result)
             if set_value:
                 self._set_rm8(rm_type, rm_value, result)
+            
+        if logical:
+            self.flags.clear_logical()
             
     # Bitwise opcodes.
     def opcode_group_or(self, opcode):

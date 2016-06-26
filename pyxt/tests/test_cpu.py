@@ -4470,6 +4470,41 @@ class XorOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assert_flags("oszpc") # ODITSZAPC
         
+    def test_xor_8x_8_bit(self):
+        """
+        xor bl, 0x07
+        hlt
+        """
+        self.cpu.regs.BH = 0xA5
+        self.cpu.regs.BL = 0x1E
+        self.load_code_string("80 F3 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BH, 0xA5) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.BL, 0x19)
+        
+    def test_xor_8x_16_bit(self):
+        """
+        xor bx, 0xCFFF
+        hlt
+        """
+        self.cpu.regs.BX = 0x0501
+        self.load_code_string("81 F3 FF CF F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 0xCAFE)
+        
+    def test_xor_8x_clears_carry_overflow(self):
+        """
+        xor bx, 0xCFFF
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.flags.overflow = True
+        self.cpu.regs.BX = 0x0501
+        self.load_code_string("81 F3 FF CF F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 0xCAFE)
+        self.assert_flags("oSzpc") # ODITSZAPC
+        
 class FlagsOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_pushf_simple(self):
         """
