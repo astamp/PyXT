@@ -58,9 +58,9 @@ class FDCTests(unittest.TestCase):
         
 class FDDTests(unittest.TestCase):
     def setUp(self):
-        self.fdc = FloppyDisketteController(0x3F0)
-        self.fdd = FloppyDisketteDrive(self.fdc, 0)
+        self.fdd = FloppyDisketteDrive(1234)
         
     def test_initial_state(self):
+        self.assertEqual(self.fdd.drive_type, 1234)
         self.assertEqual(self.fdd.present_cylinder_number, 0)
         

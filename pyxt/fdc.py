@@ -107,6 +107,10 @@ class FloppyDisketteController(Device):
             log.warning("Invalid FDC port write: 0x%03x, with: 0x%02x.", port, value)
             
     # Local functions.
+    def attach_drive(self, drive, number):
+        """ Attach a drive to the diskette controller. """
+        self.drives[number] = drive
+        
     def write_control_register(self, value):
         """ Helper for performing actions when the control register is written. """
         previously_enabled = self.enabled
@@ -124,8 +128,7 @@ class FloppyDisketteController(Device):
         
 class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """
-    def __init__(self, fdc, drive_type):
-        self.fdc = fdc
+    def __init__(self, drive_type):
         self.drive_type = drive_type
         self.present_cylinder_number = 0
         
