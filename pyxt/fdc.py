@@ -65,11 +65,16 @@ COMMAND_SKIP_MASK = 0x20
 
 # Command states.
 ST_READ_MASK = 0x8000
+ST_EXECUTE_MASK = 0x4000
 ST_READY = 0x0000
 
 # SIS - Sense interrupt status.
 ST_SIS_READ_STATUS_REG_0 = ST_READ_MASK | 0x0010
 ST_SIS_READ_PRESENT_CYLINDER = ST_READ_MASK | 0x0011
+
+# RECAL - Recalibrate.
+ST_RECAL_SELECT_DRIVE = 0x0020
+ST_RECAL_EXECUTE = ST_EXECUTE_MASK | 0x0021
 
 # Classes
 class FloppyDisketteController(Device):
@@ -81,10 +86,12 @@ class FloppyDisketteController(Device):
         self.state = ST_READY
         
         self.states = {
-            # state, : (read_function, write_function, next_state)
-            ST_READY : (None, self.write_toplevel_command, ST_READY),
-            ST_SIS_READ_STATUS_REG_0 : (self.read_status_register_0, None, ST_SIS_READ_PRESENT_CYLINDER),
-            ST_SIS_READ_PRESENT_CYLINDER : (self.read_present_cylinder_number, None, ST_READY),
+            # state, : (read_function, write_function, execute_function, next_state)
+            ST_READY : (None, self.write_toplevel_command, None, ST_READY),
+            ST_SIS_READ_STATUS_REG_0 : (self.read_status_register_0, None, None, ST_SIS_READ_PRESENT_CYLINDER),
+            ST_SIS_READ_PRESENT_CYLINDER : (self.read_present_cylinder_number, None, None, ST_READY),
+            ST_RECAL_SELECT_DRIVE : (None, self.write_drive_head_select, None, ST_RECAL_EXECUTE),
+            ST_RECAL_EXECUTE : (None, None, self.recalibrate, ST_READY),
         }
         
         self.drive_select = 0
@@ -147,15 +154,20 @@ class FloppyDisketteController(Device):
         
     def write_data_register(self, value):
         """ Helper for handling writes to the data register. """
-        read_function, write_function, self.state = self.states[self.state]
+        read_function, write_function, execute_function, self.state = self.states[self.state]
         if write_function:
             write_function(value)
         else:
             log.warning("Attempted to WRITE a READ-ONLY state (0x%04x) with 0x%02x.", self.state, value)
             
+        # If this was the last write for a command, check if we are in an execute state.
+        if self.state & ST_EXECUTE_MASK == ST_EXECUTE_MASK:
+            read_function, write_function, execute_function, self.state = self.states[self.state]
+            execute_function()
+        
     def read_data_register(self):
         """ Helper for handling reads from the data register. """
-        read_function, write_function, self.state = self.states[self.state]
+        read_function, write_function, execute_function, self.state = self.states[self.state]
         if read_function:
             return read_function()
         else:
@@ -166,6 +178,8 @@ class FloppyDisketteController(Device):
         """ Kicks off a top-level FDC command, overwrites state. """
         if value == COMMAND_SENSE_INTERRUPT_STATUS:
             self.state = ST_SIS_READ_STATUS_REG_0
+        elif value == COMMAND_RECALIBRATE:
+            self.state = ST_RECAL_SELECT_DRIVE
         else:
             log.debug("Invalid command: 0x%02x", value)
             
@@ -194,6 +208,12 @@ class FloppyDisketteController(Device):
         self.drive_select = value & 0x03
         self.head_select = 1 if value & 0x04 else 0
         
+    def recalibrate(self):
+        """ Performs a recalibrate on the selected drive. """
+        drive = self.drives[self.drive_select]
+        if drive:
+            drive.present_cylinder_number = 0
+            
 class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """
     def __init__(self, drive_type):

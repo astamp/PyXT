@@ -82,6 +82,20 @@ class FDCTests(unittest.TestCase):
         self.assertEqual(self.fdc.drive_select, 3)
         self.assertEqual(self.fdc.head_select, 1)
         
+    def test_recalibrate(self):
+        drive0 = FloppyDisketteDrive(0)
+        drive0.present_cylinder_number = 33
+        self.fdc.attach_drive(drive0, 0)
+        drive1 = FloppyDisketteDrive(0)
+        drive1.present_cylinder_number = 34
+        self.fdc.attach_drive(drive1, 1)
+        
+        self.fdc.drive_select = 1
+        self.fdc.recalibrate()
+        
+        self.assertEqual(drive0.present_cylinder_number, 33)
+        self.assertEqual(drive1.present_cylinder_number, 0)
+        
 class FDDTests(unittest.TestCase):
     def setUp(self):
         self.fdd = FloppyDisketteDrive(1234)
@@ -109,4 +123,16 @@ class FDCAcceptanceTests(unittest.TestCase):
         
         self.assertEqual(self.fdc.io_read_byte(0x3F5), 27) # Present cylinder.
         self.assertEqual(self.fdc.state, ST_READY)
+        
+    def test_recalibrate(self):
+        self.fdd0.present_cylinder_number = 27
+        self.fdd1.present_cylinder_number = 33
+        
+        self.fdc.io_write_byte(0x3F5, 0x07) # Recalibrate.
+        self.assertEqual(self.fdc.state, ST_RECAL_SELECT_DRIVE)
+        
+        self.fdc.io_write_byte(0x3F5, 0x01) # Select drive 1.
+        self.assertEqual(self.fdc.state, ST_READY)
+        
+        self.assertEqual(self.fdd1.present_cylinder_number, 0)
         
