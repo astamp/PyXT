@@ -189,6 +189,11 @@ class FloppyDisketteController(Device):
         else:
             return 0
             
+    def write_drive_head_select(self, value):
+        """ Configures the FDC drive and head select lines. """
+        self.drive_select = value & 0x03
+        self.head_select = 1 if value & 0x04 else 0
+        
 class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """
     def __init__(self, drive_type):

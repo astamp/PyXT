@@ -77,6 +77,11 @@ class FDCTests(unittest.TestCase):
         self.fdc.drive_select = 2
         self.assertEqual(self.fdc.read_present_cylinder_number(), 0)
         
+    def test_write_drive_head_select(self):
+        self.fdc.write_drive_head_select(0x07)
+        self.assertEqual(self.fdc.drive_select, 3)
+        self.assertEqual(self.fdc.head_select, 1)
+        
 class FDDTests(unittest.TestCase):
     def setUp(self):
         self.fdd = FloppyDisketteDrive(1234)
