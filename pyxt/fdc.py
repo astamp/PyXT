@@ -139,6 +139,10 @@ class FloppyDisketteController(Device):
         value = 0x00
         if self.enabled:
             value |= MSR_READY
+        if self.state != ST_READY:
+            value |= MSR_FDC_BUSY
+        if self.state & ST_READ_MASK == ST_READ_MASK:
+            value |= DIRECTION_FDC_TO_CPU
         return value
         
     def write_data_register(self, value):

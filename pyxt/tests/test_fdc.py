@@ -56,6 +56,11 @@ class FDCTests(unittest.TestCase):
         self.fdc.io_write_byte(0x3F2, 0x04)
         self.assertEqual(self.fdc.io_read_byte(0x3F4), 0x80)
         
+    def test_main_status_busy_command_in_progress(self):
+        self.fdc.enabled = True
+        self.fdc.state = ST_SIS_READ_STATUS_REG_0
+        self.assertEqual(self.fdc.io_read_byte(0x3F4), 0xD0)
+        
     # Read/write helper tests.
     def test_read_status_register_0(self):
         self.fdc.drive_select = 2
