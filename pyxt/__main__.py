@@ -24,7 +24,7 @@ from pyxt.memory import RAM, ROM
 from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MDA_START_ADDRESS
 from pyxt.ui import PygameManager
 
-from pyxt.fdc import FloppyDisketteController
+from pyxt.fdc import FloppyDisketteController, FloppyDisketteDrive
 from pyxt.dma import DmaController
 from pyxt.nmi_mask import NMIMaskRegister
 from pyxt.ppi import *
@@ -88,6 +88,8 @@ def main():
     
     diskette_controller = FloppyDisketteController(0x3F0)
     bus.install_device(None, diskette_controller)
+    a_drive = FloppyDisketteDrive(0)
+    diskette_controller.attach_drive(a_drive, 0)
     
     bus.install_device(None, dma_controller)
     nmi_mask = NMIMaskRegister(0x0A0)
