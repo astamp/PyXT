@@ -89,6 +89,10 @@ ST_SIS_READ_PRESENT_CYLINDER = ST_READ_MASK | 0x0011
 ST_RECAL_SELECT_DRIVE = 0x0020
 ST_RECAL_EXECUTE = ST_EXECUTE_MASK | 0x0021
 
+# SPEC - Specify.
+ST_SPEC_HEAD_UNLOAD_STEP_RATE = 0x0030
+ST_SPEC_HEAD_LOAD_NON_DMA = 0x0031
+
 # Drive type definitions.
 DriveInfo = namedtuple("DriveInfo", ["bytes_per_sector", "sectors_per_track", "tracks_per_side", "sides"])
 
@@ -109,14 +113,23 @@ class FloppyDisketteController(Device):
         self.states = {
             # state, : (read_function, write_function, execute_function, next_state)
             ST_READY : (None, self.write_toplevel_command, None, ST_READY),
+            
+            # Sense interrupt status.
             ST_SIS_READ_STATUS_REG_0 : (self.read_status_register_0, None, None, ST_SIS_READ_PRESENT_CYLINDER),
             ST_SIS_READ_PRESENT_CYLINDER : (self.read_present_cylinder_number, None, None, ST_READY),
+            
+            # Recalibrate.
             ST_RECAL_SELECT_DRIVE : (None, self.write_drive_head_select, None, ST_RECAL_EXECUTE),
             ST_RECAL_EXECUTE : (None, None, self.recalibrate, ST_READY),
+            
+            # Specify.
+            ST_SPEC_HEAD_UNLOAD_STEP_RATE : (None, self.write_head_unload_step_rate, None, ST_SPEC_HEAD_LOAD_NON_DMA),
+            ST_SPEC_HEAD_LOAD_NON_DMA : (None, self.write_head_load_and_dma, None, ST_READY),
         }
         
         self.drive_select = 0
         self.head_select = 0
+        self.dma_enable = False
         
         self.interrupt_code = SR0_INT_CODE_NORMAL
         
@@ -128,6 +141,7 @@ class FloppyDisketteController(Device):
         
     def reset(self):
         self.state = ST_READY
+        self.dma_enable = False
         self.signal_interrupt(SR0_INT_CODE_READY_CHANGE)
         
     def io_read_byte(self, port):
@@ -207,6 +221,8 @@ class FloppyDisketteController(Device):
             self.state = ST_SIS_READ_STATUS_REG_0
         elif value == COMMAND_RECALIBRATE:
             self.state = ST_RECAL_SELECT_DRIVE
+        elif value == COMMAND_SPECIFY:
+            self.state = ST_SPEC_HEAD_UNLOAD_STEP_RATE
         else:
             log.debug("Invalid command: 0x%02x", value)
             
@@ -234,6 +250,16 @@ class FloppyDisketteController(Device):
         """ Configures the FDC drive and head select lines. """
         self.drive_select = value & 0x03
         self.head_select = 1 if value & 0x04 else 0
+        
+    def write_head_unload_step_rate(self, value):
+        """ Configures the FDC head unload time and step rate. """
+        # TODO: Should these be stored/used for something?
+        
+    def write_head_load_and_dma(self, value):
+        """ Configures the FDC head load time and DMA configuration. """
+        # TODO: Should the head load time be stored/used for something?
+        # Bit 0 indicates NON-DMA mode.
+        self.dma_enable = value & 0x01 == 0x00
         
     def recalibrate(self):
         """ Performs a recalibrate on the selected drive. """

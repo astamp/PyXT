@@ -17,6 +17,7 @@ class FDCTests(unittest.TestCase):
         
     def test_initial_state(self):
         self.assertFalse(self.fdc.enabled)
+        self.assertFalse(self.fdc.dma_enable)
         self.assertEqual(self.fdc.state, ST_READY)
         self.assertEqual(self.fdc.drive_select, 0)
         self.assertEqual(self.fdc.head_select, 0)
@@ -25,7 +26,9 @@ class FDCTests(unittest.TestCase):
         
     def test_reset(self):
         self.fdc.state = 5643
+        self.fdc.dma_enable = True
         self.fdc.reset()
+        self.assertFalse(self.fdc.dma_enable)
         self.assertEqual(self.fdc.state, ST_READY)
         self.assertEqual(self.fdc.interrupt_code, SR0_INT_CODE_READY_CHANGE)
         self.assertEqual(self.bus.get_irq_log(), [6])
@@ -141,4 +144,28 @@ class FDCAcceptanceTests(unittest.TestCase):
         self.assertEqual(self.fdc.state, ST_READY)
         
         self.assertEqual(self.fdd1.present_cylinder_number, 0)
+        
+    def test_specify_non_dma(self):
+        self.fdc.io_write_byte(0x3F5, 0x03) # Specify.
+        self.assertEqual(self.fdc.state, ST_SPEC_HEAD_UNLOAD_STEP_RATE)
+        
+        self.fdc.io_write_byte(0x3F5, 0xA5) # Head unload/step time.
+        self.assertEqual(self.fdc.state, ST_SPEC_HEAD_LOAD_NON_DMA)
+        
+        self.fdc.io_write_byte(0x3F5, 0x01) # Head load time/dma mode select.
+        self.assertEqual(self.fdc.state, ST_READY)
+        
+        self.assertFalse(self.fdc.dma_enable)
+        
+    def test_specify_enable_dma(self):
+        self.fdc.io_write_byte(0x3F5, 0x03) # Specify.
+        self.assertEqual(self.fdc.state, ST_SPEC_HEAD_UNLOAD_STEP_RATE)
+        
+        self.fdc.io_write_byte(0x3F5, 0xA5) # Head unload/step time.
+        self.assertEqual(self.fdc.state, ST_SPEC_HEAD_LOAD_NON_DMA)
+        
+        self.fdc.io_write_byte(0x3F5, 0x00) # Head load time/dma mode select.
+        self.assertEqual(self.fdc.state, ST_READY)
+        
+        self.assertTrue(self.fdc.dma_enable)
         
