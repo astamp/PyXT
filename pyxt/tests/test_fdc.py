@@ -20,12 +20,14 @@ class FDCTests(unittest.TestCase):
         self.assertEqual(self.fdc.state, ST_READY)
         self.assertEqual(self.fdc.drive_select, 0)
         self.assertEqual(self.fdc.head_select, 0)
+        self.assertEqual(self.fdc.interrupt_code, 0)
         self.assertEqual(self.fdc.drives, [None, None, None, None])
         
     def test_reset(self):
         self.fdc.state = 5643
         self.fdc.reset()
         self.assertEqual(self.fdc.state, ST_READY)
+        self.assertEqual(self.fdc.interrupt_code, SR0_INT_CODE_READY_CHANGE)
         self.assertEqual(self.bus.get_irq_log(), [6])
         
     def test_enable_fdc(self):
@@ -93,6 +95,7 @@ class FDCTests(unittest.TestCase):
         self.fdc.drive_select = 1
         self.fdc.recalibrate()
         
+        self.assertEqual(self.fdc.interrupt_code, 0x20) # Normal termination, seek end.
         self.assertEqual(drive0.present_cylinder_number, 33)
         self.assertEqual(drive1.present_cylinder_number, 0)
         

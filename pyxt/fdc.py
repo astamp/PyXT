@@ -41,6 +41,18 @@ MSR_READY = 0x80
 DIRECTION_FDC_TO_CPU = 0x40
 DIRECTION_CPU_TO_FDC = 0x00
 
+# SR0 - Status register 0.
+SR0_DRIVE_SELECT_MASK = 0x03
+SR0_HEAD_SELECT = 0x04
+SR0_NOT_READY = 0x08
+SR0_EQUIPMENT_CHECK = 0x10
+SR0_SEEK_END = 0x20
+SR0_INT_CODE_MASK = 0xC0
+SR0_INT_CODE_NORMAL = 0x00
+SR0_INT_CODE_ABNORMAL = 0x40
+SR0_INT_CODE_INVALID = 0x80
+SR0_INT_CODE_READY_CHANGE = 0xC0
+
 # Top-level FDC commands.
 COMMAND_READ_DATA = 0x06
 COMMAND_READ_DELETED_DATA = 0x0C
@@ -97,6 +109,8 @@ class FloppyDisketteController(Device):
         self.drive_select = 0
         self.head_select = 0
         
+        self.interrupt_code = SR0_INT_CODE_NORMAL
+        
         self.drives = [None, None, None, None]
         
     # Device interface.
@@ -105,7 +119,7 @@ class FloppyDisketteController(Device):
         
     def reset(self):
         self.state = ST_READY
-        self.bus.pic.interrupt_request(FDC_IRQ_LINE)
+        self.signal_interrupt(SR0_INT_CODE_READY_CHANGE)
         
     def io_read_byte(self, port):
         offset = port - self.base
@@ -154,6 +168,8 @@ class FloppyDisketteController(Device):
         
     def write_data_register(self, value):
         """ Helper for handling writes to the data register. """
+        # self.bus.force_debugger_break("FDC WRITE")
+        log.debug("WRITE 0x%02x to state 0x%04x", value, self.state)
         read_function, write_function, execute_function, self.state = self.states[self.state]
         if write_function:
             write_function(value)
@@ -167,6 +183,8 @@ class FloppyDisketteController(Device):
         
     def read_data_register(self):
         """ Helper for handling reads from the data register. """
+        # self.bus.force_debugger_break("FDC READ")
+        log.debug("READ from state 0x%04x", self.state)
         read_function, write_function, execute_function, self.state = self.states[self.state]
         if read_function:
             return read_function()
@@ -189,7 +207,7 @@ class FloppyDisketteController(Device):
                 
     def read_status_register_0(self):
         """ Builds a status register 0 response. """
-        value = self.drive_select
+        value = self.drive_select | self.interrupt_code
         if self.head_select == 1:
             value |= 0x04
         # TODO: The rest of this.
@@ -213,7 +231,14 @@ class FloppyDisketteController(Device):
         drive = self.drives[self.drive_select]
         if drive:
             drive.present_cylinder_number = 0
+            self.signal_interrupt(SR0_INT_CODE_NORMAL | SR0_SEEK_END)
             
+    def signal_interrupt(self, reason):
+        """ Signal the FDC IRQ line and set the last interrupt reason. """
+        self.interrupt_code = reason
+        if self.bus:
+            self.bus.pic.interrupt_request(FDC_IRQ_LINE)
+        
 class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """
     def __init__(self, drive_type):
