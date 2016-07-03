@@ -85,10 +85,10 @@ class FDCTests(unittest.TestCase):
         self.assertEqual(self.fdc.head_select, 1)
         
     def test_recalibrate(self):
-        drive0 = FloppyDisketteDrive(0)
+        drive0 = FloppyDisketteDrive(FIVE_INCH_360_KB)
         drive0.present_cylinder_number = 33
         self.fdc.attach_drive(drive0, 0)
-        drive1 = FloppyDisketteDrive(0)
+        drive1 = FloppyDisketteDrive(FIVE_INCH_360_KB)
         drive1.present_cylinder_number = 34
         self.fdc.attach_drive(drive1, 1)
         
@@ -101,18 +101,21 @@ class FDCTests(unittest.TestCase):
         
 class FDDTests(unittest.TestCase):
     def setUp(self):
-        self.fdd = FloppyDisketteDrive(1234)
+        self.fdd = FloppyDisketteDrive(FIVE_INCH_360_KB)
         
     def test_initial_state(self):
-        self.assertEqual(self.fdd.drive_type, 1234)
+        self.assertEqual(self.fdd.drive_info.bytes_per_sector, 512)
+        self.assertEqual(self.fdd.drive_info.sectors_per_track, 9)
+        self.assertEqual(self.fdd.drive_info.tracks_per_side, 40)
+        self.assertEqual(self.fdd.drive_info.sides, 2)
         self.assertEqual(self.fdd.present_cylinder_number, 0)
         
 class FDCAcceptanceTests(unittest.TestCase):
     def setUp(self):
         self.fdc = FloppyDisketteController(0x3F0)
-        self.fdd0 = FloppyDisketteDrive(0)
+        self.fdd0 = FloppyDisketteDrive(FIVE_INCH_360_KB)
         self.fdc.attach_drive(self.fdd0, 0)
-        self.fdd1 = FloppyDisketteDrive(0)
+        self.fdd1 = FloppyDisketteDrive(FIVE_INCH_360_KB)
         self.fdc.attach_drive(self.fdd1, 1)
         
     def test_command_sense_interrupt_status(self):

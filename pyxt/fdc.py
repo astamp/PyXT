@@ -3,6 +3,7 @@ pyxt.fdc - Floppy diskette controller for PyXT.
 """
 
 # Standard library imports
+from collections import namedtuple
 
 # PyXT imports
 from pyxt.bus import Device
@@ -87,6 +88,14 @@ ST_SIS_READ_PRESENT_CYLINDER = ST_READ_MASK | 0x0011
 # RECAL - Recalibrate.
 ST_RECAL_SELECT_DRIVE = 0x0020
 ST_RECAL_EXECUTE = ST_EXECUTE_MASK | 0x0021
+
+# Drive type definitions.
+DriveInfo = namedtuple("DriveInfo", ["bytes_per_sector", "sectors_per_track", "tracks_per_side", "sides"])
+
+FIVE_INCH_360_KB = DriveInfo(512, 9, 40, 2)
+FIVE_INCH_1_2_MB = DriveInfo(512, 15, 80, 2)
+THREE_INCH_720_KB = DriveInfo(512, 9, 80, 2)
+THREE_INCH_1_4_MB = DriveInfo(512, 18, 80, 2)
 
 # Classes
 class FloppyDisketteController(Device):
@@ -241,7 +250,7 @@ class FloppyDisketteController(Device):
         
 class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """
-    def __init__(self, drive_type):
-        self.drive_type = drive_type
+    def __init__(self, drive_info):
+        self.drive_info = drive_info
         self.present_cylinder_number = 0
         
