@@ -1144,11 +1144,11 @@ class CPU(object):
         offset = signed_word(self.get_word_immediate())
         self.internal_push(self.regs.IP)
         self.regs.IP += offset
-        log.debug("CALL incremented IP by 0x%04x to 0x%04x", offset, self.regs.IP)
+        # log.debug("CALL incremented IP by 0x%04x to 0x%04x", offset, self.regs.IP)
         
     def _ret(self):
         self.regs.IP = self.internal_pop()
-        log.debug("RET back to 0x%04x", self.regs.IP)
+        # log.debug("RET back to 0x%04x", self.regs.IP)
         
     def opcode_retf(self):
         """ RETF - Far return, pops IP and CS. """
