@@ -93,6 +93,11 @@ ST_RECAL_EXECUTE = ST_EXECUTE_MASK | 0x0021
 ST_SPEC_HEAD_UNLOAD_STEP_RATE = 0x0030
 ST_SPEC_HEAD_LOAD_NON_DMA = 0x0031
 
+# Seek.
+ST_SEEK_SELECT_DRIVE_HEAD = 0x0040
+ST_SEEK_WRITE_NEW_CYLINDER = 0x0041
+ST_SEEK_EXECUTE = ST_EXECUTE_MASK | 0x0042
+
 # Drive type definitions.
 DriveInfo = namedtuple("DriveInfo", ["bytes_per_sector", "sectors_per_track", "tracks_per_side", "sides"])
 
@@ -125,6 +130,11 @@ class FloppyDisketteController(Device):
             # Specify.
             ST_SPEC_HEAD_UNLOAD_STEP_RATE : (None, self.write_head_unload_step_rate, None, ST_SPEC_HEAD_LOAD_NON_DMA),
             ST_SPEC_HEAD_LOAD_NON_DMA : (None, self.write_head_load_and_dma, None, ST_READY),
+            
+            # Seek.
+            ST_SEEK_SELECT_DRIVE_HEAD : (None, self.write_drive_head_select, None, ST_SEEK_WRITE_NEW_CYLINDER),
+            ST_SEEK_WRITE_NEW_CYLINDER : (None, self.write_new_cylinder_number, None, ST_SEEK_EXECUTE),
+            ST_SEEK_EXECUTE : (None, None, self.seek, ST_READY),
         }
         
         self.drive_select = 0
@@ -223,6 +233,8 @@ class FloppyDisketteController(Device):
             self.state = ST_RECAL_SELECT_DRIVE
         elif value == COMMAND_SPECIFY:
             self.state = ST_SPEC_HEAD_UNLOAD_STEP_RATE
+        elif value == COMMAND_SEEK:
+            self.state = ST_SEEK_SELECT_DRIVE_HEAD
         else:
             log.debug("Invalid command: 0x%02x", value)
             
@@ -261,6 +273,22 @@ class FloppyDisketteController(Device):
         # Bit 0 indicates NON-DMA mode.
         self.dma_enable = value & 0x01 == 0x00
         
+    def write_new_cylinder_number(self, value):
+        """ Sets the new target cylinder for the currently selected drive. """
+        drive = self.drives[self.drive_select]
+        if drive:
+            drive.target_cylinder_number = value
+            
+    def seek(self):
+        """ Performs a seek on the selected drive. """
+        drive = self.drives[self.drive_select]
+        if drive:
+            if drive.target_cylinder_number < drive.drive_info.tracks_per_side:
+                drive.present_cylinder_number = drive.target_cylinder_number
+                self.signal_interrupt(SR0_INT_CODE_NORMAL | SR0_SEEK_END)
+            else:
+                self.signal_interrupt(SR0_INT_CODE_ABNORMAL | SR0_SEEK_END)
+            
     def recalibrate(self):
         """ Performs a recalibrate on the selected drive. """
         drive = self.drives[self.drive_select]
@@ -279,4 +307,5 @@ class FloppyDisketteDrive(object):
     def __init__(self, drive_info):
         self.drive_info = drive_info
         self.present_cylinder_number = 0
+        self.target_cylinder_number = 0
         
