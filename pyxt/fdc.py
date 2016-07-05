@@ -309,3 +309,8 @@ class FloppyDisketteDrive(object):
         self.present_cylinder_number = 0
         self.target_cylinder_number = 0
         
+    @property
+    def size_in_bytes(self):
+        """ Returns the diskette size in bytes based on the drive geometry. """
+        return (self.drive_info.bytes_per_sector * self.drive_info.sectors_per_track *
+                self.drive_info.tracks_per_side * self.drive_info.sides)

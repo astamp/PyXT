@@ -151,6 +151,9 @@ class FDDTests(unittest.TestCase):
         self.assertEqual(self.fdd.present_cylinder_number, 0)
         self.assertEqual(self.fdd.target_cylinder_number, 0)
         
+    def test_size_in_bytes(self):
+        self.assertEqual(self.fdd.size_in_bytes, 368640)
+        
 class FDCAcceptanceTests(unittest.TestCase):
     def setUp(self):
         self.fdc = FloppyDisketteController(0x3F0)
