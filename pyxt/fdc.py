@@ -339,3 +339,11 @@ class FloppyDisketteDrive(object):
             for index, byte in enumerate(six.iterbytes(data)):
                 self.contents[index] = byte
                 
+    def store_diskette(self, filename):
+        """ Write the content of the virtual diskette back to an image file. """
+        log.info("Writing diskette to: %s", filename)
+        
+        if self.contents is not None:
+            with open(self.filename, "wb") as fileptr:
+                self.contents.tofile(fileptr)
+                
