@@ -51,6 +51,8 @@ def parse_cmdline():
                       help = "DIP switch byte to use.", default = DEFAULT_DIP_SWITCHES)
     parser.add_option("--skip-memory-test", action = "store_true", dest = "skip_memory_test",
                       help = "Set the flag to skip the POST memory test.")
+    parser.add_option("--diskette", action = "store", dest = "diskette",
+                      help = "Diskette image to load into the first drive (A:).")
     return parser.parse_args()
     
 def main():
@@ -91,6 +93,9 @@ def main():
     a_drive = FloppyDisketteDrive(FIVE_INCH_360_KB)
     diskette_controller.attach_drive(a_drive, 0)
     
+    if options.diskette:
+        a_drive.load_diskette(options.diskette)
+        
     bus.install_device(None, dma_controller)
     nmi_mask = NMIMaskRegister(0x0A0)
     bus.install_device(None, nmi_mask)

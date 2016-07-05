@@ -323,6 +323,7 @@ class FloppyDisketteDrive(object):
                 
     def load_diskette(self, filename):
         """ Load a diskette image, "ejecting" a previous one if present. """
+        log.info("Loading diskette from: %s", filename)
         self.contents = None
         
         if filename is not None:
