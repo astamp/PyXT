@@ -143,6 +143,30 @@ class FDCTests(unittest.TestCase):
         self.fdc.write_cylinder_parameter(22)
         self.assertEqual(self.fdc.parameters.cylinder, 22)
         
+    def test_write_head_parameter(self):
+        self.fdc.write_head_parameter(1)
+        self.assertEqual(self.fdc.parameters.head, 1)
+        
+    def test_write_sector_parameter(self):
+        self.fdc.write_sector_parameter(4)
+        self.assertEqual(self.fdc.parameters.sector, 4)
+        
+    def test_write_bytes_per_sector_parameter(self):
+        self.fdc.write_bytes_per_sector_parameter(64)
+        self.assertEqual(self.fdc.parameters.bytes_per_sector, 64)
+        
+    def test_write_end_of_track_parameter(self):
+        self.fdc.write_end_of_track_parameter(512)
+        self.assertEqual(self.fdc.parameters.end_of_track, 512)
+        
+    def test_write_gap_length_parameter(self):
+        self.fdc.write_gap_length_parameter(27)
+        self.assertEqual(self.fdc.parameters.gap_length, 27)
+        
+    def test_write_data_length_parameter(self):
+        self.fdc.write_data_length_parameter(32)
+        self.assertEqual(self.fdc.parameters.data_length, 32)
+        
 class FDDTests(unittest.TestCase):
     def setUp(self):
         self.fdd = FloppyDisketteDrive(FIVE_INCH_360_KB)

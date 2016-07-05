@@ -329,6 +329,30 @@ class FloppyDisketteController(Device):
         """ Writes the cylinder parameter to the command buffer. """
         self.parameters.cylinder = value
         
+    def write_head_parameter(self, value):
+        """ Writes the head parameter to the command buffer. """
+        self.parameters.head = value
+        
+    def write_sector_parameter(self, value):
+        """ Writes the sector parameter to the command buffer. """
+        self.parameters.sector = value
+        
+    def write_bytes_per_sector_parameter(self, value):
+        """ Writes the bytes per sector parameter to the command buffer. """
+        self.parameters.bytes_per_sector = value
+        
+    def write_end_of_track_parameter(self, value):
+        """ Writes the end of track parameter to the command buffer. """
+        self.parameters.end_of_track = value
+        
+    def write_gap_length_parameter(self, value):
+        """ Writes the gap length parameter to the command buffer. """
+        self.parameters.gap_length = value
+        
+    def write_data_length_parameter(self, value):
+        """ Writes the data length parameter to the command buffer. """
+        self.parameters.data_length = value
+        
 class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """
     def __init__(self, drive_info):
