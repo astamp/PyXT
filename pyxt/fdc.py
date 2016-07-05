@@ -110,6 +110,22 @@ FIVE_INCH_1_2_MB = DriveInfo(512, 15, 80, 2)
 THREE_INCH_720_KB = DriveInfo(512, 9, 80, 2)
 THREE_INCH_1_4_MB = DriveInfo(512, 18, 80, 2)
 
+# Command parameters.
+class CommandParameters(object):
+    """ Parameters for an FDC read/write/scan command. """
+    def __init__(self):
+        self.multi_track = False # MT
+        self.mfm = False # MFM
+        self.skip_deleted = False # SK
+        self.cylinder = 0 # C
+        self.head = 0 # H
+        self.sector = 0 # R
+        self.bytes_per_sector = 0 # N
+        self.sectors_per_cylinder = 0 # SC
+        self.end_of_track = 0 # EOT
+        self.gap_length = 0 # GPL
+        self.data_length = 0 # DTL
+        
 # Classes
 class FloppyDisketteController(Device):
     """ Floppy diskette controller based on the NEC uPD765/Intel 8272A controllers. """
@@ -143,6 +159,9 @@ class FloppyDisketteController(Device):
         
         self.drive_select = 0
         self.head_select = 0
+        
+        self.parameters = CommandParameters()
+        
         self.dma_enable = False
         
         self.interrupt_code = SR0_INT_CODE_NORMAL
@@ -305,6 +324,10 @@ class FloppyDisketteController(Device):
         self.interrupt_code = reason
         if self.bus:
             self.bus.pic.interrupt_request(FDC_IRQ_LINE)
+            
+    def write_cylinder_parameter(self, value):
+        """ Writes the cylinder parameter to the command buffer. """
+        self.parameters.cylinder = value
         
 class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """

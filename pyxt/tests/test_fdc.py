@@ -21,6 +21,7 @@ class FDCTests(unittest.TestCase):
         self.assertEqual(self.fdc.state, ST_READY)
         self.assertEqual(self.fdc.drive_select, 0)
         self.assertEqual(self.fdc.head_select, 0)
+        self.assertIsNotNone(self.fdc.parameters)
         self.assertEqual(self.fdc.interrupt_code, 0)
         self.assertEqual(self.fdc.drives, [None, None, None, None])
         
@@ -137,6 +138,10 @@ class FDCTests(unittest.TestCase):
         self.assertEqual(drive.present_cylinder_number, 33)
         self.assertEqual(self.bus.get_irq_log(), [6])
         self.assertEqual(self.fdc.interrupt_code, 0x60) # Abnormal termination, seek end.
+        
+    def test_write_cylinder_parameter(self):
+        self.fdc.write_cylinder_parameter(22)
+        self.assertEqual(self.fdc.parameters.cylinder, 22)
         
 class FDDTests(unittest.TestCase):
     def setUp(self):
