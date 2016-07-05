@@ -1,6 +1,6 @@
 import unittest
 
-from pyxt.tests.utils import SystemBusTestable
+from pyxt.tests.utils import SystemBusTestable, get_test_file
 from pyxt.fdc import *
 
 class FDCTests(unittest.TestCase):
@@ -150,10 +150,26 @@ class FDDTests(unittest.TestCase):
         
         self.assertEqual(self.fdd.present_cylinder_number, 0)
         self.assertEqual(self.fdd.target_cylinder_number, 0)
+        self.assertIsNone(self.fdd.contents)
         
     def test_size_in_bytes(self):
         self.assertEqual(self.fdd.size_in_bytes, 368640)
         
+    def test_load_diskette(self):
+        test_file = get_test_file(self, "diskette.img")
+        self.fdd.load_diskette(test_file)
+        self.assertEqual(self.fdd.contents[0], 0x64)
+        self.assertEqual(len(self.fdd.contents), 368640) # Ensure it is padded to the full size.
+        
+        self.fdd.load_diskette(None)
+        self.assertIsNone(self.fdd.contents)
+        
+    def test_load_diskette_too_big(self):
+        test_fdd = FloppyDisketteDrive(DriveInfo(5, 1, 1, 2)) # As much data as I can count on my hands.
+        test_file = get_test_file(self, "diskette.img")
+        with self.assertRaises(ValueError):
+            test_fdd.load_diskette(test_file)
+            
 class FDCAcceptanceTests(unittest.TestCase):
     def setUp(self):
         self.fdc = FloppyDisketteController(0x3F0)

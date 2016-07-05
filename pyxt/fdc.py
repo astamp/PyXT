@@ -3,7 +3,11 @@ pyxt.fdc - Floppy diskette controller for PyXT.
 """
 
 # Standard library imports
+import array
 from collections import namedtuple
+
+# Six imports
+import six
 
 # PyXT imports
 from pyxt.bus import Device
@@ -306,11 +310,31 @@ class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """
     def __init__(self, drive_info):
         self.drive_info = drive_info
+        
         self.present_cylinder_number = 0
         self.target_cylinder_number = 0
+        self.contents = None
         
     @property
     def size_in_bytes(self):
         """ Returns the diskette size in bytes based on the drive geometry. """
         return (self.drive_info.bytes_per_sector * self.drive_info.sectors_per_track *
                 self.drive_info.tracks_per_side * self.drive_info.sides)
+                
+    def load_diskette(self, filename):
+        """ Load a diskette image, "ejecting" a previous one if present. """
+        self.contents = None
+        
+        if filename is not None:
+            self.contents = array.array("B", (0,) * self.size_in_bytes)
+            with open(filename, "rb") as fileptr:
+                data = fileptr.read()
+                
+                if len(data) > self.size_in_bytes:
+                    raise ValueError("Disk image (%d byte) is larger than supported by the drive (%d bytes)!" % (
+                        len(data), self.size_in_bytes,
+                    ))
+                    
+            for index, byte in enumerate(six.iterbytes(data)):
+                self.contents[index] = byte
+                
