@@ -3,6 +3,24 @@ import unittest
 from pyxt.tests.utils import SystemBusTestable, get_test_file
 from pyxt.fdc import *
 
+class HelperTests(unittest.TestCase):
+    def test_chs_to_lba(self):
+        test_data = (
+            # C, H, S, LBA
+            (0, 0, 1, 0), # First sector on a 360KB diskette.
+            (0, 0, 2, 1),
+            (0, 1, 1, 9),
+            (1, 0, 1, 18),
+            (39, 1, 9, 719), # Last sector on a 360KB diskette.
+        )
+        for (c, h, s, lba) in test_data:
+            print c, h, s, lba
+            self.assertEqual(chs_to_lba(FIVE_INCH_360_KB, c, h, s), lba)
+            
+    def test_chs_to_lba_invalid(self):
+        with self.assertRaises(ValueError):
+            chs_to_lba(FIVE_INCH_360_KB, 0, 0, 0)
+            
 class FDCTests(unittest.TestCase):
     def setUp(self):
         self.fdc = FloppyDisketteController(0x3F0)

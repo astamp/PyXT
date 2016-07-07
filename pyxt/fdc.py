@@ -122,6 +122,13 @@ FIVE_INCH_1_2_MB = DriveInfo(512, 15, 80, 2)
 THREE_INCH_720_KB = DriveInfo(512, 9, 80, 2)
 THREE_INCH_1_4_MB = DriveInfo(512, 18, 80, 2)
 
+# Functions
+def chs_to_lba(drive_info, cylinder, head, sector):
+    """ Converts a cylinder/head/sector address to a logical block address for a given drive geometry. """
+    if sector == 0:
+        raise ValueError("Sectors start counting at 1!")
+    return (((cylinder * drive_info.sides) + head) * drive_info.sectors_per_track) + (sector - 1)
+    
 # Command parameters.
 class CommandParameters(object):
     """ Parameters for an FDC read/write/scan command. """
