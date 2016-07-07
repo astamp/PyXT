@@ -173,3 +173,9 @@ class SystemBus(object):
         if self.pic and 0 <= irq <= 7:
             self.pic.interrupt_request(irq)
             
+    def dma_request(self, channel):
+        """ Signals the appropriate DMA channel on the DMA controller. """
+        # First, and only, DMA controller on the XT.
+        if self.dma and 0 <= channel <= 3:
+            self.dma.dma_request(channel)
+            

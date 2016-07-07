@@ -102,6 +102,7 @@ class DmaController(Device):
         if self.enable:
             for channel in self.channels:
                 if channel.requested and channel.word_count > 0:
+                    # TODO: Actually transfer some data here!
                     channel.word_count -= 1
                     channel.address += channel.increment
                     
@@ -206,3 +207,7 @@ class DmaController(Device):
         for index, channel in enumerate(self.channels):
             print(self.enable, index, channel.word_count, channel.address)
             
+    def dma_request(self, channel):
+        """ Signal from the bus to indicate that DMA service has been requested for a given channel. """
+        self.channels[channel].requested = True
+        
