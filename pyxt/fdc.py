@@ -23,6 +23,7 @@ FDC_STATUS = 4
 FDC_DATA = 5
 
 FDC_IRQ_LINE = 6
+FDC_DMA_CHANNEL = 2
 
 CONTROL_DRIVE0_MOTOR = 0x10 # A:
 CONTROL_DRIVE1_MOTOR = 0x20 # B:
@@ -137,6 +138,22 @@ class CommandParameters(object):
         self.gap_length = 0 # GPL
         self.data_length = 0 # DTL
         
+    def dump(self):
+        """ Return a string containing all of the command parameters. """
+        return "\r\n".join([
+            "multi_track = %r" % self.multi_track,
+            "mfm = %r" % self.mfm,
+            "skip_deleted = %r" % self.skip_deleted,
+            "cylinder = %r" % self.cylinder,
+            "head = %r" % self.head,
+            "sector = %r" % self.sector,
+            "bytes_per_sector = %r" % self.bytes_per_sector,
+            "sectors_per_cylinder = %r" % self.sectors_per_cylinder,
+            "end_of_track = %r" % self.end_of_track,
+            "gap_length = %r" % self.gap_length,
+            "data_length = %r" % self.data_length,
+        ])
+        
 # Classes
 class FloppyDisketteController(Device):
     """ Floppy diskette controller based on the NEC uPD765/Intel 8272A controllers. """
@@ -176,7 +193,7 @@ class FloppyDisketteController(Device):
             ST_RDDATA_SET_END_OF_TRACK : (None, self.write_end_of_track_parameter, None, ST_RDDATA_SET_GAP_LENGTH),
             ST_RDDATA_SET_GAP_LENGTH : (None, self.write_gap_length_parameter, None, ST_RDDATA_SET_DATA_LENGTH),
             ST_RDDATA_SET_DATA_LENGTH : (None, self.write_data_length_parameter, None, ST_RDDATA_EXECUTE),
-            ST_RDDATA_EXECUTE : (None, None, self.read_data, ST_READY),
+            ST_RDDATA_EXECUTE : (None, None, self.begin_read_data, ST_READY),
         }
         
         self.drive_select = 0
@@ -382,9 +399,14 @@ class FloppyDisketteController(Device):
         """ Writes the data length parameter to the command buffer. """
         self.parameters.data_length = value
         
-    def read_data(self):
+    def begin_read_data(self):
         """ Reads data from the diskette and writes it out via DMA/interrupts. """
+        # self.bus.force_debugger_break("BEGIN READ DATA")
+        # print self.parameters.dump()
         
+        if self.dma_enable:
+            self.bus.dma_request(FDC_DMA_CHANNEL)
+            
 class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """
     def __init__(self, drive_info):
