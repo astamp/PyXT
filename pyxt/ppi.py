@@ -84,7 +84,7 @@ class ProgrammablePeripheralInterface(Device, KeyboardController):
     def key_pressed(self, scancodes):
         # Scancode could be a tuple of multiple bytes in an AT keyboard, we will only ever have 1 byte.
         self.last_scancode = scancodes[0]
-        self.bus.pic.interrupt_request(KEYBOARD_IRQ_LINE)
+        self.bus.interrupt_request(KEYBOARD_IRQ_LINE)
         
     # Local functions.
     def write_diag_port(self, value):
