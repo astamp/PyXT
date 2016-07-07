@@ -149,7 +149,7 @@ class DmaController(Device):
                 
         # Write the command register.
         elif offset == 0x08:
-            self.enable = value & 0x04 == 0x04
+            self.enable = value & 0x04 == 0x00
             
         # Write a single mask bit.
         elif offset == 0x0A:

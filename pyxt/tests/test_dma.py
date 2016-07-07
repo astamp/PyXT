@@ -14,8 +14,8 @@ class DMATests(unittest.TestCase):
         
     def test_initial_state(self):
         self.assertEqual(self.dma.state, STATE_SI)
-        self.assertEqual(self.dma.low_byte, True)
-        self.assertEqual(self.dma.enable, False)
+        self.assertTrue(self.dma.low_byte)
+        self.assertFalse(self.dma.enable)
         self.assertEqual(len(self.dma.channels), 4)
         
         for channel in self.dma.channels:
@@ -130,9 +130,9 @@ class DMATests(unittest.TestCase):
         self.assertEqual(self.dma.io_read_byte(0x08), 0x24)
         
     def test_command_register_enable_disable(self):
-        self.dma.io_write_byte(0x08, 0x04)
-        self.assertTrue(self.dma.enable)
         self.dma.io_write_byte(0x08, 0x00)
+        self.assertTrue(self.dma.enable)
+        self.dma.io_write_byte(0x08, 0x04)
         self.assertFalse(self.dma.enable)
         
     def test_master_clear(self):
