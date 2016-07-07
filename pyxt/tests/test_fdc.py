@@ -1,5 +1,7 @@
 import unittest
 
+import array
+
 from pyxt.tests.utils import SystemBusTestable, get_test_file
 from pyxt.fdc import *
 
@@ -281,9 +283,16 @@ class FDCAcceptanceTests(unittest.TestCase):
     def setUp(self):
         self.fdc = FloppyDisketteController(0x3F0)
         self.fdd0 = FloppyDisketteDrive(FIVE_INCH_360_KB)
+        
         self.fdc.attach_drive(self.fdd0, 0)
         self.fdd1 = FloppyDisketteDrive(FIVE_INCH_360_KB)
         self.fdc.attach_drive(self.fdd1, 1)
+        
+        self.bus = SystemBusTestable()
+        self.bus.install_device(None, self.fdc)
+        
+    def install_test_data_diskette(self, fdd):
+        fdd.contents = array.array("B", (0xAA, 0x55, 0xCA, 0xFE,) * (368640 / 4))
         
     def test_command_sense_interrupt_status(self):
         self.fdd0.present_cylinder_number = 27
@@ -389,8 +398,45 @@ class FDCAcceptanceTests(unittest.TestCase):
         self.assertEqual(self.fdc.state, ST_RDDATA_SET_DATA_LENGTH)
         self.assertEqual(self.fdc.parameters.gap_length, 33)
         
+        self.assertEqual(self.bus.get_irq_log(), []) # Should be no interrupts yet.
+        
         self.fdc.io_write_byte(0x3F5, 64) # Data length 64.
         
         self.assertEqual(self.fdc.state, ST_RDDATA_IN_PROGRESS)
         self.assertEqual(self.fdc.parameters.data_length, 64)
+        self.assertEqual(self.bus.get_irq_log(), [6]) # Since this is non-DMA mode, we get an interrupt here.
+        
+    def test_read_data_reading(self):
+        self.install_test_data_diskette(self.fdd0)
+        
+        parameters = (
+            0xE6, # Read data, multitrack, mfm, skip deleted
+            0x00, # Drive 0, head 0
+            0x00, # Cylinder 0
+            0x00, # Head 0
+            0x01, # Sector 1 (they start at 1)
+            0x02, # 512 bytes per sector
+            0x09, # Read up to track 9.
+            0x2A, # Gap length (not really applicable)
+            0xFF, # Data length (unused if bytes per sector is non-zero?)
+        )
+        for byte in parameters:
+            self.fdc.io_write_byte(0x3F5, byte)
+            
+        self.assertEqual(self.bus.get_irq_log(), [6]) # Byte was ready... IRQ!
+        self.assertEqual(self.fdc.state, ST_RDDATA_IN_PROGRESS)
+        self.assertEqual(self.fdc.io_read_byte(0x3F5), 0xAA)
+        
+        self.assertEqual(self.bus.get_irq_log(), [6, 6]) # Another byte was ready... IRQ!
+        self.assertEqual(self.fdc.state, ST_RDDATA_IN_PROGRESS)
+        self.assertEqual(self.fdc.io_read_byte(0x3F5), 0x55)
+        
+        # And so on...
+        
+        # Pretend we read all but ther last byte of the data.
+        self.fdc.cursor = 9215
+        self.assertEqual(self.bus.get_irq_log(), [6, 6, 6]) # Assume there would have been one for all bytes ready to have been read.
+        self.assertEqual(self.fdc.io_read_byte(0x3F5), 0xFE)
+        
+        self.assertEqual(self.fdc.state, ST_RDDATA_READ_STATUS_REG_0)
         
