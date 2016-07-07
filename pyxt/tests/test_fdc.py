@@ -267,3 +267,47 @@ class FDCAcceptanceTests(unittest.TestCase):
         
         self.assertTrue(self.fdd0.present_cylinder_number, 20)
         
+    def test_read_data(self):
+        self.fdc.io_write_byte(0x3F5, 0xE6) # Read data.
+        
+        self.assertEqual(self.fdc.state, ST_RDDATA_SELECT_DRIVE_HEAD)
+        self.assertTrue(self.fdc.parameters.multi_track)
+        self.assertTrue(self.fdc.parameters.mfm)
+        self.assertTrue(self.fdc.parameters.skip_deleted)
+        
+        self.fdc.io_write_byte(0x3F5, 0x05) # Select drive 1, head 1.
+        
+        self.assertEqual(self.fdc.state, ST_RDDATA_SELECT_CYLINDER)
+        self.assertTrue(self.fdc.drive_select, 1)
+        self.assertTrue(self.fdc.head_select, 1)
+        
+        self.fdc.io_write_byte(0x3F5, 20) # Select cylinder 20.
+        
+        self.assertEqual(self.fdc.state, ST_RDDATA_SELECT_HEAD)
+        self.assertEqual(self.fdc.parameters.cylinder, 20)
+        
+        self.fdc.io_write_byte(0x3F5, 1) # Select head 1.
+        
+        self.assertEqual(self.fdc.state, ST_RDDATA_SELECT_SECTOR)
+        self.assertEqual(self.fdc.parameters.head, 1)
+        
+        self.fdc.io_write_byte(0x3F5, 5) # Select sector 5.
+        
+        self.assertEqual(self.fdc.state, ST_RDDATA_SET_BYTES_PER_SECTOR)
+        self.assertEqual(self.fdc.parameters.sector, 5)
+        
+        self.fdc.io_write_byte(0x3F5, 512) # 512 bytes per sector.
+        
+        self.assertEqual(self.fdc.state, ST_RDDATA_SET_GAP_LENGTH)
+        self.assertEqual(self.fdc.parameters.bytes_per_sector, 512)
+        
+        self.fdc.io_write_byte(0x3F5, 33) # Gap length 33
+        
+        self.assertEqual(self.fdc.state, ST_RDDATA_SET_DATA_LENGTH)
+        self.assertEqual(self.fdc.parameters.gap_length, 33)
+        
+        self.fdc.io_write_byte(0x3F5, 64) # Data length 64.
+        
+        # self.assertEqual(self.fdc.state, ST_RDDATA_EXECUTE)
+        self.assertEqual(self.fdc.parameters.data_length, 64)
+        

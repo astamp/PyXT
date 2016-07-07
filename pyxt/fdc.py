@@ -102,6 +102,16 @@ ST_SEEK_SELECT_DRIVE_HEAD = 0x0040
 ST_SEEK_WRITE_NEW_CYLINDER = 0x0041
 ST_SEEK_EXECUTE = ST_EXECUTE_MASK | 0x0042
 
+# RDDATA - Read data.
+ST_RDDATA_SELECT_DRIVE_HEAD = 0x0050
+ST_RDDATA_SELECT_CYLINDER = 0x0051
+ST_RDDATA_SELECT_HEAD = 0x0052
+ST_RDDATA_SELECT_SECTOR = 0x0053
+ST_RDDATA_SET_BYTES_PER_SECTOR = 0x0054
+ST_RDDATA_SET_GAP_LENGTH = 0x0055
+ST_RDDATA_SET_DATA_LENGTH = 0x0056
+ST_RDDATA_EXECUTE = ST_EXECUTE_MASK | 0x0057
+
 # Drive type definitions.
 DriveInfo = namedtuple("DriveInfo", ["bytes_per_sector", "sectors_per_track", "tracks_per_side", "sides"])
 
@@ -155,6 +165,16 @@ class FloppyDisketteController(Device):
             ST_SEEK_SELECT_DRIVE_HEAD : (None, self.write_drive_head_select, None, ST_SEEK_WRITE_NEW_CYLINDER),
             ST_SEEK_WRITE_NEW_CYLINDER : (None, self.write_new_cylinder_number, None, ST_SEEK_EXECUTE),
             ST_SEEK_EXECUTE : (None, None, self.seek, ST_READY),
+            
+            # Read data.
+            ST_RDDATA_SELECT_DRIVE_HEAD : (None, self.write_drive_head_select, None, ST_RDDATA_SELECT_CYLINDER),
+            ST_RDDATA_SELECT_CYLINDER : (None, self.write_cylinder_parameter, None, ST_RDDATA_SELECT_HEAD),
+            ST_RDDATA_SELECT_HEAD : (None, self.write_head_parameter, None, ST_RDDATA_SELECT_SECTOR),
+            ST_RDDATA_SELECT_SECTOR : (None, self.write_sector_parameter, None, ST_RDDATA_SET_BYTES_PER_SECTOR),
+            ST_RDDATA_SET_BYTES_PER_SECTOR : (None, self.write_bytes_per_sector_parameter, None, ST_RDDATA_SET_GAP_LENGTH),
+            ST_RDDATA_SET_GAP_LENGTH : (None, self.write_gap_length_parameter, None, ST_RDDATA_SET_DATA_LENGTH),
+            ST_RDDATA_SET_DATA_LENGTH : (None, self.write_data_length_parameter, None, ST_RDDATA_EXECUTE),
+            ST_RDDATA_EXECUTE : (None, None, self.read_data, ST_READY),
         }
         
         self.drive_select = 0
@@ -250,6 +270,11 @@ class FloppyDisketteController(Device):
             
     def write_toplevel_command(self, value):
         """ Kicks off a top-level FDC command, overwrites state. """
+        # The top 3 bits of the command are used as flags.
+        self.parameters.multi_track = value & COMMAND_MULTITRACK_MASK == COMMAND_MULTITRACK_MASK
+        self.parameters.mfm = value & COMMAND_MFM_MASK == COMMAND_MFM_MASK
+        self.parameters.skip_deleted = value & COMMAND_SKIP_MASK == COMMAND_SKIP_MASK
+        
         if value == COMMAND_SENSE_INTERRUPT_STATUS:
             self.state = ST_SIS_READ_STATUS_REG_0
         elif value == COMMAND_RECALIBRATE:
@@ -258,6 +283,8 @@ class FloppyDisketteController(Device):
             self.state = ST_SPEC_HEAD_UNLOAD_STEP_RATE
         elif value == COMMAND_SEEK:
             self.state = ST_SEEK_SELECT_DRIVE_HEAD
+        elif value & COMMAND_OPCODE_MASK == COMMAND_READ_DATA:
+            self.state = ST_RDDATA_SELECT_DRIVE_HEAD
         else:
             log.debug("Invalid command: 0x%02x", value)
             
@@ -352,6 +379,9 @@ class FloppyDisketteController(Device):
     def write_data_length_parameter(self, value):
         """ Writes the data length parameter to the command buffer. """
         self.parameters.data_length = value
+        
+    def read_data(self):
+        """ Reads data from the diskette and writes it out via DMA/interrupts. """
         
 class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """
