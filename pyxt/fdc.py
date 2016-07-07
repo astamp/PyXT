@@ -108,9 +108,10 @@ ST_RDDATA_SELECT_CYLINDER = 0x0051
 ST_RDDATA_SELECT_HEAD = 0x0052
 ST_RDDATA_SELECT_SECTOR = 0x0053
 ST_RDDATA_SET_BYTES_PER_SECTOR = 0x0054
-ST_RDDATA_SET_GAP_LENGTH = 0x0055
-ST_RDDATA_SET_DATA_LENGTH = 0x0056
-ST_RDDATA_EXECUTE = ST_EXECUTE_MASK | 0x0057
+ST_RDDATA_SET_END_OF_TRACK = 0x0055
+ST_RDDATA_SET_GAP_LENGTH = 0x0056
+ST_RDDATA_SET_DATA_LENGTH = 0x0057
+ST_RDDATA_EXECUTE = ST_EXECUTE_MASK | 0x0058
 
 # Drive type definitions.
 DriveInfo = namedtuple("DriveInfo", ["bytes_per_sector", "sectors_per_track", "tracks_per_side", "sides"])
@@ -171,7 +172,8 @@ class FloppyDisketteController(Device):
             ST_RDDATA_SELECT_CYLINDER : (None, self.write_cylinder_parameter, None, ST_RDDATA_SELECT_HEAD),
             ST_RDDATA_SELECT_HEAD : (None, self.write_head_parameter, None, ST_RDDATA_SELECT_SECTOR),
             ST_RDDATA_SELECT_SECTOR : (None, self.write_sector_parameter, None, ST_RDDATA_SET_BYTES_PER_SECTOR),
-            ST_RDDATA_SET_BYTES_PER_SECTOR : (None, self.write_bytes_per_sector_parameter, None, ST_RDDATA_SET_GAP_LENGTH),
+            ST_RDDATA_SET_BYTES_PER_SECTOR : (None, self.write_bytes_per_sector_parameter, None, ST_RDDATA_SET_END_OF_TRACK),
+            ST_RDDATA_SET_END_OF_TRACK : (None, self.write_end_of_track_parameter, None, ST_RDDATA_SET_GAP_LENGTH),
             ST_RDDATA_SET_GAP_LENGTH : (None, self.write_gap_length_parameter, None, ST_RDDATA_SET_DATA_LENGTH),
             ST_RDDATA_SET_DATA_LENGTH : (None, self.write_data_length_parameter, None, ST_RDDATA_EXECUTE),
             ST_RDDATA_EXECUTE : (None, None, self.read_data, ST_READY),

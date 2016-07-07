@@ -298,8 +298,13 @@ class FDCAcceptanceTests(unittest.TestCase):
         
         self.fdc.io_write_byte(0x3F5, 512) # 512 bytes per sector.
         
-        self.assertEqual(self.fdc.state, ST_RDDATA_SET_GAP_LENGTH)
+        self.assertEqual(self.fdc.state, ST_RDDATA_SET_END_OF_TRACK)
         self.assertEqual(self.fdc.parameters.bytes_per_sector, 512)
+        
+        self.fdc.io_write_byte(0x3F5, 8) # Last sector number in cylinder.
+        
+        self.assertEqual(self.fdc.state, ST_RDDATA_SET_GAP_LENGTH)
+        self.assertEqual(self.fdc.parameters.end_of_track, 8)
         
         self.fdc.io_write_byte(0x3F5, 33) # Gap length 33
         
