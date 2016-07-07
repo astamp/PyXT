@@ -152,8 +152,17 @@ class FDCTests(unittest.TestCase):
         self.assertEqual(self.fdc.parameters.sector, 4)
         
     def test_write_bytes_per_sector_parameter(self):
-        self.fdc.write_bytes_per_sector_parameter(64)
-        self.assertEqual(self.fdc.parameters.bytes_per_sector, 64)
+        self.fdc.write_bytes_per_sector_parameter(0)
+        self.assertEqual(self.fdc.parameters.bytes_per_sector, 128)
+        self.fdc.write_bytes_per_sector_parameter(1)
+        self.assertEqual(self.fdc.parameters.bytes_per_sector, 256)
+        self.fdc.write_bytes_per_sector_parameter(2)
+        self.assertEqual(self.fdc.parameters.bytes_per_sector, 512)
+        self.fdc.write_bytes_per_sector_parameter(3)
+        self.assertEqual(self.fdc.parameters.bytes_per_sector, 1024)
+        self.fdc.write_bytes_per_sector_parameter(4)
+        self.assertEqual(self.fdc.parameters.bytes_per_sector, 2048)
+        # And so on...
         
     def test_write_end_of_track_parameter(self):
         self.fdc.write_end_of_track_parameter(512)
@@ -267,7 +276,7 @@ class FDCAcceptanceTests(unittest.TestCase):
         
         self.assertTrue(self.fdd0.present_cylinder_number, 20)
         
-    def test_read_data(self):
+    def test_read_data_parse_parameters(self):
         self.fdc.io_write_byte(0x3F5, 0xE6) # Read data.
         
         self.assertEqual(self.fdc.state, ST_RDDATA_SELECT_DRIVE_HEAD)
@@ -296,7 +305,7 @@ class FDCAcceptanceTests(unittest.TestCase):
         self.assertEqual(self.fdc.state, ST_RDDATA_SET_BYTES_PER_SECTOR)
         self.assertEqual(self.fdc.parameters.sector, 5)
         
-        self.fdc.io_write_byte(0x3F5, 512) # 512 bytes per sector.
+        self.fdc.io_write_byte(0x3F5, 2) # 512 bytes per sector.
         
         self.assertEqual(self.fdc.state, ST_RDDATA_SET_END_OF_TRACK)
         self.assertEqual(self.fdc.parameters.bytes_per_sector, 512)
@@ -313,6 +322,6 @@ class FDCAcceptanceTests(unittest.TestCase):
         
         self.fdc.io_write_byte(0x3F5, 64) # Data length 64.
         
-        # self.assertEqual(self.fdc.state, ST_RDDATA_EXECUTE)
+        self.assertEqual(self.fdc.state, ST_RDDATA_IN_PROGRESS)
         self.assertEqual(self.fdc.parameters.data_length, 64)
         

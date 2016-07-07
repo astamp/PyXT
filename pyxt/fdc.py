@@ -385,7 +385,7 @@ class FloppyDisketteController(Device):
         
     def write_bytes_per_sector_parameter(self, value):
         """ Writes the bytes per sector parameter to the command buffer. """
-        self.parameters.bytes_per_sector = value
+        self.parameters.bytes_per_sector = 128 << value
         
     def write_end_of_track_parameter(self, value):
         """ Writes the end of track parameter to the command buffer. """
