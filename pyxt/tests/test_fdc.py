@@ -14,13 +14,64 @@ class HelperTests(unittest.TestCase):
             (39, 1, 9, 719), # Last sector on a 360KB diskette.
         )
         for (c, h, s, lba) in test_data:
-            print c, h, s, lba
             self.assertEqual(chs_to_lba(FIVE_INCH_360_KB, c, h, s), lba)
             
     def test_chs_to_lba_invalid(self):
         with self.assertRaises(ValueError):
             chs_to_lba(FIVE_INCH_360_KB, 0, 0, 0)
             
+    def test_calculate_parameters_one_sector(self):
+        # First row in the data sheet.
+        parms = CommandParameters()
+        parms.multi_track = False
+        parms.mfm = False
+        parms.bytes_per_sector = 128
+        parms.cylinder = 0
+        parms.head = 0
+        parms.sector = 1
+        parms.end_of_track = 1
+        drive_info = DriveInfo(128, 26, 0, 2)
+        self.assertEqual(calculate_parameters(drive_info, parms), (0, 128))
+        
+    def test_calculate_parameters_one_track(self):
+        # First row in the data sheet.
+        parms = CommandParameters()
+        parms.multi_track = False
+        parms.mfm = False
+        parms.bytes_per_sector = 128
+        parms.cylinder = 0
+        parms.head = 0
+        parms.sector = 1
+        parms.end_of_track = 26
+        drive_info = DriveInfo(128, 26, 0, 2)
+        self.assertEqual(calculate_parameters(drive_info, parms), (0, 3328))
+        
+    def test_calculate_parameters_mfm(self):
+        # Second row in the data sheet.
+        parms = CommandParameters()
+        parms.multi_track = False
+        parms.mfm = True
+        parms.bytes_per_sector = 256
+        parms.cylinder = 0
+        parms.head = 0
+        parms.sector = 1
+        parms.end_of_track = 26
+        drive_info = DriveInfo(256, 26, 0, 2)
+        self.assertEqual(calculate_parameters(drive_info, parms), (0, 6656))
+        
+    def test_calculate_parameters_multi_track(self):
+        # Third row in the data sheet.
+        parms = CommandParameters()
+        parms.multi_track = True
+        parms.mfm = False
+        parms.bytes_per_sector = 128
+        parms.cylinder = 0
+        parms.head = 0
+        parms.sector = 1
+        parms.end_of_track = 1
+        drive_info = DriveInfo(128, 26, 0, 2)
+        self.assertEqual(calculate_parameters(drive_info, parms), (0, 6656))
+        
 class FDCTests(unittest.TestCase):
     def setUp(self):
         self.fdc = FloppyDisketteController(0x3F0)

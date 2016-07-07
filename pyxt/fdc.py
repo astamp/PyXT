@@ -122,12 +122,28 @@ FIVE_INCH_1_2_MB = DriveInfo(512, 15, 80, 2)
 THREE_INCH_720_KB = DriveInfo(512, 9, 80, 2)
 THREE_INCH_1_4_MB = DriveInfo(512, 18, 80, 2)
 
-# Functions
+# Helper functions
+# See: https://en.wikipedia.org/wiki/Cylinder-head-sector#CHS_to_LBA_mapping
 def chs_to_lba(drive_info, cylinder, head, sector):
     """ Converts a cylinder/head/sector address to a logical block address for a given drive geometry. """
     if sector == 0:
         raise ValueError("Sectors start counting at 1!")
     return (((cylinder * drive_info.sides) + head) * drive_info.sectors_per_track) + (sector - 1)
+    
+def calculate_parameters(drive_info, command_parms):
+    """ Return the offset and length to index into the disk data based on the supplied drive geometry and parameters. """
+    if command_parms.multi_track:
+        starting_sector = 1
+        final_sector = drive_info.sectors_per_track * drive_info.sides
+    else:
+        starting_sector = command_parms.sector
+        final_sector = command_parms.end_of_track
+        
+    lba = chs_to_lba(drive_info, command_parms.cylinder, command_parms.head, starting_sector)
+    offset = lba * drive_info.bytes_per_sector
+    sectors = (final_sector - starting_sector) + 1
+    length = sectors * drive_info.bytes_per_sector
+    return offset, length
     
 # Command parameters.
 class CommandParameters(object):
@@ -138,10 +154,10 @@ class CommandParameters(object):
         self.skip_deleted = False # SK
         self.cylinder = 0 # C
         self.head = 0 # H
-        self.sector = 0 # R
+        self.sector = 1 # R (Starts at 1)
         self.bytes_per_sector = 0 # N
         self.sectors_per_cylinder = 0 # SC
-        self.end_of_track = 0 # EOT
+        self.end_of_track = 1 # EOT (Starts at 1)
         self.gap_length = 0 # GPL
         self.data_length = 0 # DTL
         
