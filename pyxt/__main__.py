@@ -66,7 +66,7 @@ def main():
     # The PIC and DMA controller are integral to the ISA/XT bus and need to be part of the bus.
     # They will also be installed below so they can be configured via I/O ports.
     pic = ProgrammableInterruptController(0x020)
-    dma_controller = DmaController(0x0000)
+    dma_controller = DmaController(0x0000, (0x087, 0x083, 0x081, 0x082))
     
     bus = SystemBus(pic, dma_controller)
     
