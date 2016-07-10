@@ -6086,4 +6086,72 @@ class LeaTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.AX, 0x1006)
         
+class CmpsOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_cmpsb_incrementing(self):
+        """
+        cmpsb
+        hlt
+        foo: db "foo", 0
+        bar: db "bar", 0
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.SI = 0x0002
+        self.cpu.regs.DI = 0x0006
+        self.load_code_string("A6 F4 66 6F 6F 00 62 61 72 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SI, 0x0003)
+        self.assertEqual(self.cpu.regs.DI, 0x0007)
+        self.assertEqual(self.memory.mem_read_byte(0x0002), 0x66) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x0006), 0x62) # Should be unmodified
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_cmpsb_decrementing(self):
+        """
+        cmpsb
+        hlt
+        foo: db "foo", 0
+        bar: db "bar", 0
+        """
+        self.cpu.flags.direction = True
+        self.cpu.regs.SI = 0x0002
+        self.cpu.regs.DI = 0x0006
+        self.load_code_string("A6 F4 66 6F 6F 00 62 61 72 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SI, 0x0001)
+        self.assertEqual(self.cpu.regs.DI, 0x0005)
+        self.assertEqual(self.memory.mem_read_byte(0x0002), 0x66) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x0006), 0x62) # Should be unmodified
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_cmpsb_zero(self):
+        """
+        cmpsb
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.SI = 0x0010
+        self.cpu.regs.DI = 0x0020
+        self.load_code_string("A6 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SI, 0x0011)
+        self.assertEqual(self.cpu.regs.DI, 0x0021)
+        self.assert_flags("osZPc") # ODITSZAPC
+        
+    def test_cmpsb_negative(self):
+        """
+        cmpsb
+        hlt
+        foo: db "foo", 0
+        bar: db "bar", 0
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.SI = 0x0006 # Switched SI and DI from previous tests.
+        self.cpu.regs.DI = 0x0002
+        self.load_code_string("A6 F4 66 6F 6F 00 62 61 72 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SI, 0x0007)
+        self.assertEqual(self.cpu.regs.DI, 0x0003)
+        self.assertEqual(self.memory.mem_read_byte(0x0002), 0x66) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x0006), 0x62) # Should be unmodified
+        self.assert_flags("oSzPC") # ODITSZAPC
         

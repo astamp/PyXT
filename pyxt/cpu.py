@@ -717,6 +717,8 @@ class CPU(object):
             self.opcode_lodsw()
         elif opcode == 0xAE:
             self.opcode_scasb()
+        elif opcode == 0xA6:
+            self.opcode_cmpsb()
             
         elif opcode == 0x8F:
             self.opcode_pop_rm16()
@@ -1800,6 +1802,17 @@ class CPU(object):
             self.bus.mem_read_word(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
         )
         self.flags.set_from_alu_byte(result)
+        self.regs.DI += -1 if self.flags.direction else 1
+        
+    @supports_repz_repnz_prefix
+    def opcode_cmpsb(self):
+        """ Compare the byte at ES:DI with the byte at DS:SI and update the flags. """
+        result = self.operator_sub_8(
+            self.bus.mem_read_word(segment_offset_to_address(self.get_data_segment(), self.regs.SI)),
+            self.bus.mem_read_word(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
+        )
+        self.flags.set_from_alu_byte(result)
+        self.regs.SI += -1 if self.flags.direction else 1
         self.regs.DI += -1 if self.flags.direction else 1
         
     # ********** Memory access helpers. **********
