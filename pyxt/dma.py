@@ -84,21 +84,34 @@ class DmaChannel(object):
         self.masked = True
         
         self.port = 0
+        self.page_register_port = 0x000
+        self.page_register_value = 0x0000
         
 class DmaController(Device):
     """ A Device emulating an 8237 DMA controller. """
     
-    def __init__(self, base, **kwargs):
+    def __init__(self, base, page_register_map, **kwargs):
         super(DmaController, self).__init__(**kwargs)
         self.base = base
         self.state = STATE_SI
         self.low_byte = True
-        self.channels = [DmaChannel() for _unused in range(4)]
         self.enable = False
         
+        # Configuration information for each DMA channel.
+        self.channels = [DmaChannel() for _unused in range(4)]
+        
+        # Create a dictionary lookup for the correct channel for each page register.
+        if len(page_register_map) != 4:
+            raise ValueError("Page register map length does not match number of channels!")
+            
+        self.page_register_channel_lookup = {}
+        for index, page_register in enumerate(page_register_map):
+            self.channels[index].page_register_port = page_register
+            self.page_register_channel_lookup[page_register] = self.channels[index]
+            
     # Device interface.
     def get_ports_list(self):
-        return [x for x in range(self.base, self.base + 16)]
+        return [x for x in range(self.base, self.base + 16)] + [channel.page_register_port for channel in self.channels]
         
     def clock(self):
         if self.enable:
@@ -115,6 +128,10 @@ class DmaController(Device):
                         channel.requested = False
                         
     def io_read_byte(self, port):
+        # If it was a page register read, do that and get out.
+        if port in self.page_register_channel_lookup:
+            return self.page_register_channel_lookup[port].page_register_value
+            
         offset = port - self.base
         
         # Read from the DMA address and word count registers.
@@ -142,6 +159,11 @@ class DmaController(Device):
             raise NotImplementedError("offset = 0x%02x" % offset)
             
     def io_write_byte(self, port, value):
+        # If it was a page register write, do that and get out.
+        if port in self.page_register_channel_lookup:
+            self.page_register_channel_lookup[port].page_register_value = value
+            return
+            
         offset = port - self.base
         # print "offset = 0x%02x, value = 0x%02x" % (offset, value)
         

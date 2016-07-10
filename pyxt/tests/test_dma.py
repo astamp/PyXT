@@ -4,13 +4,14 @@ from pyxt.dma import *
 
 class DMATests(unittest.TestCase):
     def setUp(self):
-        self.dma = DmaController(0x0000)
+        self.dma = DmaController(0x0000, (0x087, 0x083, 0x081, 0x082))
         
     def test_address_list(self):
         self.assertEqual(self.dma.get_ports_list(), [0x0000, 0x0001, 0x0002, 0x0003,
                                                      0x0004, 0x0005, 0x0006, 0x0007,
                                                      0x0008, 0x0009, 0x000A, 0x000B,
-                                                     0x000C, 0x000D, 0x000E, 0x000F])
+                                                     0x000C, 0x000D, 0x000E, 0x000F,
+                                                     0x087, 0x083, 0x081, 0x082])
         
     def test_initial_state(self):
         self.assertEqual(self.dma.state, STATE_SI)
@@ -216,4 +217,25 @@ class DMATests(unittest.TestCase):
         self.dma.clock()
         self.assertEqual(self.dma.channels[0].word_count, 0xFFFF) # Terminal count.
         self.assertEqual(self.dma.channels[0].address, 5)
+        
+    def test_writing_page_registers(self):
+        self.dma.io_write_byte(0x087, 0xCA)
+        self.assertEqual(self.dma.channels[0].page_register_value, 0xCA)
+        self.dma.io_write_byte(0x083, 0xFE)
+        self.assertEqual(self.dma.channels[1].page_register_value, 0xFE)
+        self.dma.io_write_byte(0x081, 0xFA)
+        self.assertEqual(self.dma.channels[2].page_register_value, 0xFA)
+        self.dma.io_write_byte(0x082, 0xCE)
+        self.assertEqual(self.dma.channels[3].page_register_value, 0xCE)
+        
+    def test_reading_page_registers(self):
+        self.dma.channels[0].page_register_value = 0x11
+        self.assertEqual(self.dma.io_read_byte(0x87), 0x11)
+        self.dma.channels[1].page_register_value = 0x22
+        self.assertEqual(self.dma.io_read_byte(0x83), 0x22)
+        self.dma.channels[2].page_register_value = 0x33
+        self.assertEqual(self.dma.io_read_byte(0x81), 0x33)
+        self.dma.channels[3].page_register_value = 0x44
+        self.assertEqual(self.dma.io_read_byte(0x82), 0x44)
+        
         
