@@ -83,6 +83,8 @@ class DmaChannel(object):
         self.requested = False
         self.masked = True
         
+        self.port = 0
+        
 class DmaController(Device):
     """ A Device emulating an 8237 DMA controller. """
     
@@ -207,7 +209,9 @@ class DmaController(Device):
         for index, channel in enumerate(self.channels):
             print(self.enable, index, channel.word_count, channel.address)
             
-    def dma_request(self, channel):
-        """ Signal from the bus to indicate that DMA service has been requested for a given channel. """
+    def dma_request(self, channel, port):
+        """ Signal from the bus to indicate that DMA service has been requested for a given channel and I/O port """
         self.channels[channel].requested = True
+        # HACK: How does the real hardware know what port to use?!
+        self.channels[channel].port = port
         

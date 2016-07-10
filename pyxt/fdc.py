@@ -442,7 +442,7 @@ class FloppyDisketteController(Device):
             
         # Signal the DMA request or trigger an interrupt so data can be read by the CPU.
         if self.dma_enable:
-            self.bus.dma_request(FDC_DMA_CHANNEL)
+            self.bus.dma_request(FDC_DMA_CHANNEL, self.base + FDC_DATA)
         else:
             self.signal_interrupt(SR0_INT_CODE_NORMAL)
             
