@@ -6048,3 +6048,26 @@ class JnleOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(starting_ip = 0x0003), 3)
         self.assertEqual(self.cpu.regs.AL, 1)
         
+class LeaTests(BaseOpcodeAcceptanceTests):
+    def test_lea_direct(self):
+        """
+        lea ax, [foo]
+        hlt
+        foo:
+            db 72
+        """
+        self.load_code_string("8D 06 05 00 F4 48")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 5)
+        
+    def test_lea_indirect(self):
+        """
+        lea ax, [bx + 6]
+        hlt
+        """
+        self.cpu.regs.BX = 0x1000
+        self.load_code_string("8D 47 06 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x1006)
+        
+        

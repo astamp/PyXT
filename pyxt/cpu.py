@@ -695,6 +695,8 @@ class CPU(object):
             self.opcode_les()
         elif opcode == 0xC5:
             self.opcode_lds()
+        elif opcode == 0x8D:
+            self.opcode_lea()
         elif opcode == 0x98:
             self.opcode_cbw()
         elif opcode == 0xD7:
@@ -951,6 +953,13 @@ class CPU(object):
         
         self.regs[register] = offset
         self.regs.DS = segment
+        
+    def opcode_lea(self):
+        """ Load the destination register with the offset from r/m16. """
+        register, rm_type, rm_value = self.get_modrm_operands(16)
+        assert rm_type == ADDRESS
+        
+        self.regs[register] = rm_value
         
     # ********** Stack opcodes. **********
     def opcode_group_push(self, opcode):
