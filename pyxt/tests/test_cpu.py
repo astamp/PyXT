@@ -3956,6 +3956,22 @@ class JmpOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.BX, 0xFFFF) # Should have been decremented.
         self.assertEqual(self.cpu.regs.SP, 0x0100) # Should be unmodified.
         
+    def test_jmp_far(self):
+        """
+        jmp far [cs : 0x0c]
+        TIMES (0x0C - ($ - $$)) hlt
+        dw 0x0002 ; IP
+        dw 0x0001 ; CS
+        TIMES (0x12 - ($ - $$)) hlt
+        inc ax
+        hlt
+        """
+        self.load_code_string("2E FF 2E 0C 00 F4 90 90 90 90 90 90 02 00 01 00 90 90 40 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AX, 0x0001)
+        self.assertEqual(self.cpu.regs.CS, 0x0001)
+        self.assertEqual(self.cpu.regs.IP, 0x0004) # Pointing after final hlt.
+        
 class IretOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_iret(self):
         """

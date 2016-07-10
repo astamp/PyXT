@@ -1576,6 +1576,10 @@ class CPU(object):
         elif sub_opcode == 4: # JMP
             self.regs.IP = value
             
+        elif sub_opcode == 5: # JMPF - Jump far to an IP:CS pointer located at the address specified.
+            self.regs.IP = value
+            self.regs.CS = self._get_rm16(rm_type, rm_value + 2)
+            
         elif sub_opcode == 6: # PUSH
             self.internal_push(value)
             
