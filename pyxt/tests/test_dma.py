@@ -214,6 +214,6 @@ class DMATests(unittest.TestCase):
         
         # Nothing more to do.
         self.dma.clock()
-        self.assertEqual(self.dma.channels[0].word_count, 0)
-        self.assertEqual(self.dma.channels[0].address, 4)
+        self.assertEqual(self.dma.channels[0].word_count, 0xFFFF) # Terminal count.
+        self.assertEqual(self.dma.channels[0].address, 5)
         

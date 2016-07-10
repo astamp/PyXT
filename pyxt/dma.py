@@ -103,11 +103,17 @@ class DmaController(Device):
     def clock(self):
         if self.enable:
             for channel in self.channels:
-                if channel.requested and channel.word_count > 0:
-                    # TODO: Actually transfer some data here!
-                    channel.word_count -= 1
+                if channel.requested:
+                    # TODO: Support DMA page register.
+                    if channel.transfer_type == TYPE_WRITE:
+                        self.bus.mem_write_byte(channel.address, self.bus.io_read_byte(channel.port))
+                        
+                    channel.word_count = (channel.word_count - 1) & 0xFFFF
                     channel.address += channel.increment
                     
+                    if channel.word_count == 0xFFFF:
+                        channel.requested = False
+                        
     def io_read_byte(self, port):
         offset = port - self.base
         
