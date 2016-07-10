@@ -143,7 +143,9 @@ def calculate_parameters(drive_info, command_parms):
         
     lba = chs_to_lba(drive_info, command_parms.cylinder, command_parms.head, starting_sector)
     offset = lba * drive_info.bytes_per_sector
-    sectors = (final_sector - starting_sector) + 1
+    # TODO: How is the number of sectors calculated, is it always 1?!
+    sectors = 1
+    # sectors = (final_sector - starting_sector) + 1
     length = sectors * drive_info.bytes_per_sector
     return offset, length
     
@@ -309,7 +311,7 @@ class FloppyDisketteController(Device):
     def read_data_register(self):
         """ Helper for handling reads from the data register. """
         # self.bus.force_debugger_break("FDC READ")
-        log.debug("READ from state 0x%04x", self.state)
+        # log.debug("READ from state 0x%04x", self.state)
         read_function, write_function, execute_function, self.state = self.states[self.state]
         if read_function:
             return read_function()
@@ -453,6 +455,7 @@ class FloppyDisketteController(Device):
         
         # We need to signal the interrupt on completion for DMA mode or always for non-DMA mode.
         if self.cursor == len(self.buffer):
+            log.debug("Read data complete!")
             self.state = ST_RDDATA_READ_STATUS_REG_0
             self.signal_interrupt(SR0_INT_CODE_NORMAL)
         elif not self.dma_enable:
