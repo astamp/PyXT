@@ -117,9 +117,11 @@ class DmaController(Device):
         if self.enable:
             for channel in self.channels:
                 if channel.requested:
-                    # TODO: Support DMA page register.
+                    # Prefix the address with the page register (not like segment+offset though).
+                    full_address = (channel.page_register_value << 16) | channel.address
+                    
                     if channel.transfer_type == TYPE_WRITE:
-                        self.bus.mem_write_byte(channel.address, self.bus.io_read_byte(channel.port))
+                        self.bus.mem_write_byte(full_address, self.bus.io_read_byte(channel.port))
                         
                     channel.word_count = (channel.word_count - 1) & 0xFFFF
                     channel.address += channel.increment
