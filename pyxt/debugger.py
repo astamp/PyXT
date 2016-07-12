@@ -151,6 +151,11 @@ class Debugger(object):
         elif len(cmd) == 2 and cmd[0] in ("stack", "st"):
             self.dump_stack(int(cmd[1]))
             
+        elif len(cmd) == 1 and cmd[0] == "ram-dump":
+            with open("ram-dump.bin", "wb") as fileptr:
+                for index in xrange(10):
+                    fileptr.write(self.bus.devices[index].contents.tostring())
+                    
         elif len(cmd) == 2 and cmd[0] in ("lc", "location-counter"):
             for location, count in self.location_counter.most_common(int(cmd[1])):
                 cs, ip = location
