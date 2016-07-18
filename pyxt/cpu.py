@@ -689,6 +689,8 @@ class CPU(object):
             self._out_dx_al()
         elif opcode == 0xA8:
             self.opcode_test_al_imm8()
+        elif opcode == 0xA9:
+            self.opcode_test_ax_imm16()
         elif opcode == 0x84:
             self.opcode_test_rm8_r8()
         elif opcode == 0xC4:
@@ -1286,6 +1288,12 @@ class CPU(object):
         """ AND al with imm8, update the flags, but don't store the value. """
         value = self.regs.AL & self.get_byte_immediate()
         self.flags.set_from_alu_byte(value)
+        
+    def opcode_test_ax_imm16(self):
+        """ AND ax with imm16, update the flags, but don't store the value. """
+        value = self.regs.AX & self.get_word_immediate()
+        self.flags.set_from_alu_word(value)
+        self.flags.clear_logical()
         
     def opcode_test_rm8_r8(self):
         """ AND an r/m8 value and a register value, update the flags, but don't store the value. """

@@ -2702,6 +2702,38 @@ class TestOpcodeTests(BaseOpcodeAcceptanceTests):
         
         self.assert_flags("oc") # ODITSZAPC
         
+    def test_test_ax_imm16_zero(self):
+        """
+        test ax, 0x8000
+        hlt
+        """
+        self.cpu.regs.AX = 0x7FFF
+        self.load_code_string("A9 00 80 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assert_flags("osZPc") # ODITSZAPC
+        
+    def test_test_ax_imm16_nonzero(self):
+        """
+        test ax, 0x8000
+        hlt
+        """
+        self.cpu.regs.AX = 0xF000
+        self.load_code_string("A9 00 80 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assert_flags("oSzPc") # ODITSZAPC
+        # NOTE: Parity is set because it is only calculated over the lower byte.
+        
+    def test_test_ax_imm16_clears_overflow_and_carry(self):
+        """
+        test ax, 0x8000
+        hlt
+        """
+        self.cpu.flags.overflow = True
+        self.cpu.flags.carry = True
+        self.load_code_string("A9 00 80 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assert_flags("oc") # ODITSZAPC
+        
 class RolOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_rol_rm8_1_simple(self):
         """
