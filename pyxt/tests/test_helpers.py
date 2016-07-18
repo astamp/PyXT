@@ -324,3 +324,33 @@ class RotateThruCarryTests(unittest.TestCase):
     def test_rotate_thru_carry_left_16_bits_by_more_than_17(self):
         self.assertEqual(rotate_thru_carry_left_16_bits(0x1248, False, 18), (0x2490, False))
         
+    # Rotate right 8 bits.
+    def test_rotate_thru_carry_right_8_bits_by_1(self):
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x00, True, 1),  (0x80, False))
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x80, False, 1), (0x40, False))
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x40, False, 1), (0x20, False))
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x20, False, 1), (0x10, False))
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x10, False, 1), (0x08, False))
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x08, False, 1), (0x04, False))
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x04, False, 1), (0x02, False))
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x02, False, 1), (0x01, False))
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x01, False, 1), (0x00, True))
+        
+    def test_rotate_thru_carry_right_8_bits_by_3(self):
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x7, False, 3), (0xC0, True))
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x80, True, 3), (0x30, False))
+        
+    # Rotate by zero will be handled by the caller.
+    def test_rotate_thru_carry_right_8_bits_by_0_doesnt_crash(self):
+        self.assertEqual(rotate_thru_carry_right_8_bits(0xEF, False, 0), (0xEF, False))
+        
+    def test_rotate_thru_carry_right_8_bits_by_8(self):
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x80, False, 8), (0x00, True))
+        
+    def test_rotate_thru_carry_right_8_bits_by_9(self):
+        self.assertEqual(rotate_thru_carry_right_8_bits(0xEF, False, 9), (0xEF, False))
+        
+    def test_rotate_thru_carry_right_8_bits_by_more_than_9(self):
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x00, True, 10), (0x80, False))
+        self.assertEqual(rotate_thru_carry_right_8_bits(0x01, False, 10), (0x00, True))
+        
