@@ -6155,3 +6155,40 @@ class CmpsOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(0x0006), 0x62) # Should be unmodified
         self.assert_flags("oSzPC") # ODITSZAPC
         
+class CwdOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_cwd_zero(self):
+        """
+        cwd
+        hlt
+        """
+        self.cpu.regs.DX = 0xAA55
+        self.cpu.regs.AX = 0x0000
+        self.load_code_string("99 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DX, 0x0000)
+        self.assertEqual(self.cpu.regs.AX, 0x0000) # Should be unmodified.
+        
+    def test_cwd_positive(self):
+        """
+        cwd
+        hlt
+        """
+        self.cpu.regs.DX = 0xAA55
+        self.cpu.regs.AX = 0x7FFF
+        self.load_code_string("99 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DX, 0x0000)
+        self.assertEqual(self.cpu.regs.AX, 0x7FFF) # Should be unmodified.
+        
+    def test_cwd_negative(self):
+        """
+        cwd
+        hlt
+        """
+        self.cpu.regs.DX = 0xAA55
+        self.cpu.regs.AX = 0x8000
+        self.load_code_string("99 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DX, 0xFFFF)
+        self.assertEqual(self.cpu.regs.AX, 0x8000) # Should be unmodified.
+        

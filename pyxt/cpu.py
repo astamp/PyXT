@@ -699,6 +699,8 @@ class CPU(object):
             self.opcode_lea()
         elif opcode == 0x98:
             self.opcode_cbw()
+        elif opcode == 0x99:
+            self.opcode_cwd()
         elif opcode == 0xD7:
             self.opcode_xlat()
             
@@ -1463,6 +1465,10 @@ class CPU(object):
     def opcode_cbw(self):
         """ Sign extends the byte in AL to a word in AX. """
         self.regs.AX = sign_extend_byte_to_word(self.regs.AL)
+        
+    def opcode_cwd(self):
+        """ Sign extends the word in AX to a double word in DX:AX. """
+        self.regs.DX = 0xFFFF if self.regs.AX & 0x8000 == 0x8000 else 0x0000
         
     def opcode_xlat(self):
         """ Fetches the value at DS:[BX+AL] into AL. """
