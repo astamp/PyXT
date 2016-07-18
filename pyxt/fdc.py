@@ -134,12 +134,12 @@ def chs_to_lba(drive_info, cylinder, head, sector):
     
 def calculate_parameters(drive_info, command_parms):
     """ Return the offset and length to index into the disk data based on the supplied drive geometry and parameters. """
-    if command_parms.multi_track:
-        starting_sector = 1
-        final_sector = drive_info.sectors_per_track * drive_info.sides
-    else:
-        starting_sector = command_parms.sector
-        final_sector = command_parms.end_of_track
+    # if command_parms.multi_track:
+        # starting_sector = 1
+        # final_sector = drive_info.sectors_per_track * drive_info.sides
+    # else:
+    starting_sector = command_parms.sector
+    final_sector = command_parms.end_of_track
         
     lba = chs_to_lba(drive_info, command_parms.cylinder, command_parms.head, starting_sector)
     offset = lba * drive_info.bytes_per_sector
