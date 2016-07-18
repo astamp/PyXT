@@ -501,7 +501,7 @@ class FloppyDisketteDrive(object):
         log.info("Writing diskette to: %s", filename)
         
         if self.contents is not None:
-            with open(self.filename, "wb") as fileptr:
+            with open(filename, "wb") as fileptr:
                 self.contents.tofile(fileptr)
                 
     def read(self, parms):
