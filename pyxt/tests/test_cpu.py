@@ -2734,6 +2734,43 @@ class TestOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assert_flags("oc") # ODITSZAPC
         
+    def test_test_rm16_r16_zero(self):
+        """
+        test bx, [value]
+        hlt
+        value:
+            dw 0x8000
+        """
+        self.cpu.regs.BX = 0x7FFF
+        self.load_code_string("85 1E 05 00 F4 00 80")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assert_flags("osZPc") # ODITSZAPC
+        
+    def test_test_rm16_r16_nonzero(self):
+        """
+        test bx, [value]
+        hlt
+        value:
+            dw 0x8000
+        """
+        self.cpu.regs.BX = 0xF000
+        self.load_code_string("85 1E 05 00 F4 00 80")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assert_flags("oSzPc") # ODITSZAPC
+        
+    def test_test_rm16_r16_clears_overflow_and_carry(self):
+        """
+        test bx, [value]
+        hlt
+        value:
+            dw 0x8000
+        """
+        self.cpu.flags.overflow = True
+        self.cpu.flags.carry = True
+        self.load_code_string("85 1E 05 00 F4 00 80")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assert_flags("oc") # ODITSZAPC
+        
 class RolOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_rol_rm8_1_simple(self):
         """
