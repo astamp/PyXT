@@ -264,3 +264,29 @@ def rotate_thru_carry_right_8_bits(value, carry_in, count):
     )
     return new_value, value & new_carry_mask == new_carry_mask
     
+def rotate_thru_carry_right_16_bits(value, carry_in, count):
+    """
+    Rotate an 16-bit value right through the carry flag by count and return the result and the new carry flag.
+    
+    This is essentially a 17-bit rotate where the top bit is the carry flag.
+    """
+    # It doesn't make sense to rotate more than 17 bits.
+    count = count % 17
+    
+    # A rotate of zero is a no-op.
+    if count == 0:
+        return value, carry_in
+        
+    # Calculate the masks.
+    carry_rotate_mask = 0x10000 >> count # Bit location to place the carry in.
+    left_rotate_mask = 0xFFFF ^ (1 << (17 - count)) - 1  # Mask for left side of new value.
+    right_rotate_mask = (~(left_rotate_mask | carry_rotate_mask)) & 0xFFFF # Mask for right side of new value.
+    new_carry_mask = 1 << (count - 1) # Bit location in old value of carry out.
+    
+    new_value = (
+        ((value << (17 - count)) & left_rotate_mask) |
+        ((value >> count) & right_rotate_mask) |
+        (carry_rotate_mask if carry_in else 0x00)
+    )
+    return new_value, value & new_carry_mask == new_carry_mask
+    

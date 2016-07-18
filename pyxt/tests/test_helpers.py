@@ -354,3 +354,30 @@ class RotateThruCarryTests(unittest.TestCase):
         self.assertEqual(rotate_thru_carry_right_8_bits(0x00, True, 10), (0x80, False))
         self.assertEqual(rotate_thru_carry_right_8_bits(0x01, False, 10), (0x00, True))
         
+    # Rotate right 16 bits.
+    def test_rotate_thru_carry_right_16_bits_by_1(self):
+        self.assertEqual(rotate_thru_carry_right_16_bits(0x0000, True, 1), (0x8000, False))
+        self.assertEqual(rotate_thru_carry_right_16_bits(0x8000, False, 1), (0x4000, False))
+        self.assertEqual(rotate_thru_carry_right_16_bits(0x0100, True, 1), (0x8080, False))
+        self.assertEqual(rotate_thru_carry_right_16_bits(0x0001, False, 1), (0x0000, True))
+        
+    def test_rotate_thru_carry_right_16_bits_by_3(self):
+        self.assertEqual(rotate_thru_carry_right_16_bits(0x1234, False, 3), (0x0246, True))
+        self.assertEqual(rotate_thru_carry_right_16_bits(0x2345, True, 3), (0x6468, True))
+        
+    # Rotate by zero will be handled by the caller.
+    def test_rotate_thru_carry_right_16_bits_by_0_doesnt_crash(self):
+        self.assertEqual(rotate_thru_carry_right_16_bits(0xCAFE, True, 0), (0xCAFE, True))
+        
+    def test_rotate_thru_carry_right_16_bits_by_8(self):
+        self.assertEqual(rotate_thru_carry_right_16_bits(0xFACE, False, 8), (0x9CFA, True))
+        
+    def test_rotate_thru_carry_right_16_bits_by_16(self):
+        self.assertEqual(rotate_thru_carry_right_16_bits(0xBEEF, True, 16), (0x7DDF, True))
+        
+    def test_rotate_thru_carry_right_16_bits_by_17(self):
+        self.assertEqual(rotate_thru_carry_right_16_bits(0xBEEF, True, 17), (0xBEEF, True))
+        
+    def test_rotate_thru_carry_right_16_bits_by_more_than_17(self):
+        self.assertEqual(rotate_thru_carry_right_16_bits(0x1248, False, 18), (0x0924, False))
+        
