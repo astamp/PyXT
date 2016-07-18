@@ -22,6 +22,13 @@ log.addHandler(logging.NullHandler())
 
 # Constants
 GDB_EXAMINE_REGEX = re.compile("^x\\/(\\d+)([xduotacfs])([bwd])$")
+RETURN_OPCODES = (
+    0xCF, # IRET
+    0xC3, # RET
+    0xC2, # RET imm16
+    0xCB, # RETF
+    0xCA, # RETF imm16
+)
 
 # Classes
 class Debugger(object):
@@ -35,6 +42,7 @@ class Debugger(object):
         self.single_step = False
         self.debugger_shortcut = []
         self.dump_enabled = False
+        self.step_out = False
         
         self.location_counter = Counter()
         
@@ -44,6 +52,15 @@ class Debugger(object):
         if self.dump_enabled:
             self.dump_all()
             
+        # Check if we are trying to step out of a CALL-ed function.
+        if self.step_out:
+            next_instruction = self.peek_instruction_byte()
+            if next_instruction in RETURN_OPCODES:
+                log.debug("Return detected!")
+                # At this point we want to drop to the debugger and not step out any longer.
+                self.step_out = False
+                self.single_step = True
+                
         if self.should_break():
             self.enter_debugger()
             
@@ -156,6 +173,12 @@ class Debugger(object):
                 for index in xrange(10):
                     fileptr.write(self.bus.devices[index].contents.tostring())
                     
+        elif len(cmd) == 1 and cmd[0] in ("step-out", "out"):
+            # Set the step out flag and disable single stepping so we run to the next return.
+            self.step_out = True
+            self.single_step = False
+            return True
+            
         elif len(cmd) == 2 and cmd[0] in ("lc", "location-counter"):
             for location, count in self.location_counter.most_common(int(cmd[1])):
                 cs, ip = location
