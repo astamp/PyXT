@@ -2207,6 +2207,19 @@ class LoopOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 4)
         self.assertEqual(self.cpu.regs.CX, 0x00)
         
+    def test_loop_with_body(self):
+        """
+        again:
+            inc ax
+            loop again
+        hlt
+        """
+        self.cpu.regs.CX = 3
+        self.load_code_string("40 E2 FD F4")
+        self.assertEqual(self.run_to_halt(), 7)
+        self.assertEqual(self.cpu.regs.AX, 3)
+        self.assertEqual(self.cpu.regs.CX, 0x00)
+        
     def test_loop_does_not_modify_flags(self):
         """
         again:
@@ -2220,6 +2233,54 @@ class LoopOpcodeTests(BaseOpcodeAcceptanceTests):
         self.cpu.regs.CX = 3
         self.load_code_string("E2 FE F4")
         self.assertEqual(self.run_to_halt(), 4)
+        
+        self.assertFalse(self.cpu.flags.zero)
+        self.assertTrue(self.cpu.flags.sign)
+        self.assertTrue(self.cpu.flags.carry)
+        
+    def test_loop_collapsed(self):
+        """
+        again:
+            loop again
+        hlt
+        """
+        self.cpu.collapse_delay_loops(True)
+        
+        self.cpu.regs.CX = 3
+        self.load_code_string("E2 FE F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.CX, 0x00)
+        
+    def test_loop_with_body_cant_be_collapsed(self):
+        """
+        again:
+            inc ax
+            loop again
+        hlt
+        """
+        self.cpu.collapse_delay_loops(True)
+        
+        self.cpu.regs.CX = 3
+        self.load_code_string("40 E2 FD F4")
+        self.assertEqual(self.run_to_halt(), 7)
+        self.assertEqual(self.cpu.regs.AX, 3)
+        self.assertEqual(self.cpu.regs.CX, 0x00)
+        
+    def test_loop_does_not_modify_flags_collapsed(self):
+        """
+        again:
+            loop again
+        hlt
+        """
+        self.cpu.collapse_delay_loops(True)
+        
+        self.cpu.flags.zero = False
+        self.cpu.flags.sign = True
+        self.cpu.flags.carry = True
+        
+        self.cpu.regs.CX = 3
+        self.load_code_string("E2 FE F4")
+        self.assertEqual(self.run_to_halt(), 2)
         
         self.assertFalse(self.cpu.flags.zero)
         self.assertTrue(self.cpu.flags.sign)

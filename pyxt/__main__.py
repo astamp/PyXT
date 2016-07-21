@@ -51,6 +51,8 @@ def parse_cmdline():
                       help = "DIP switch byte to use.", default = DEFAULT_DIP_SWITCHES)
     parser.add_option("--skip-memory-test", action = "store_true", dest = "skip_memory_test",
                       help = "Set the flag to skip the POST memory test.")
+    parser.add_option("--no-collapse-delay-loops", action = "store_false", dest = "collapse_delay_loops", default = True,
+                      help = "Set this flag to use the proper LOOP handler that doesn't optimize LOOP back to itself.")
     parser.add_option("--diskette", action = "store", dest = "diskette",
                       help = "Diskette image to load into the first drive (A:).")
     return parser.parse_args()
@@ -119,6 +121,9 @@ def main():
     
     cpu = CPU()
     cpu.install_bus(bus)
+    
+    # Select the desired LOOP instruction handler.
+    cpu.collapse_delay_loops(options.collapse_delay_loops)
     
     debugger = Debugger(cpu, bus)
     for breakpoint in args:

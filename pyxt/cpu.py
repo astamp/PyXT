@@ -521,6 +521,10 @@ class CPU(object):
         while len(self.opcode_vector) < 256:
             self.opcode_vector.append(None)
             
+        # Set the default LOOP opcode handler.
+        # TODO: This can be removed when LOOP is moved to the fancy new vector table.
+        self.opcode_loop = self.opcode_loop_no_shortcuts
+        
     def install_bus(self, bus):
         """ Register the bus with the CPU. """
         self.bus = bus
@@ -1183,8 +1187,12 @@ class CPU(object):
         self.regs.CS = new_cs
         self.regs.SP += adjustment
         
-    def opcode_loop(self):
-        """ LOOP - Decrement CX and jump short if it is non-zero. """
+    def opcode_loop_no_shortcuts(self):
+        """
+        LOOP - Decrement CX and jump short if it is non-zero.
+        
+        This version does not optimize away delay loops.
+        """
         distance = self.get_byte_immediate()
         
         value = self.regs.CX - 1
@@ -1193,6 +1201,31 @@ class CPU(object):
         if value != 0:
             self.regs.IP += signed_byte(distance)
             
+    def opcode_loop_collapse_delay_loops(self):
+        """
+        LOOP - Decrement CX and jump short if it is non-zero.
+        
+        In this version if the distance is 0xFE (-2) meaning that it will just jump back to this instruction
+        it will set CX to zero and jump out immediately.  This may cause issues for applications that are waiting
+        for a DMA or timer operation to occur during a delay loop.
+        """
+        distance = self.get_byte_immediate()
+        
+        value = self.regs.CX - 1
+        self.regs.CX = value
+        
+        if value != 0 and distance != 0xFE: # Skip delay loops that only jump back to this instruction.
+            self.regs.IP += signed_byte(distance)
+        elif distance == 0xFE:
+            self.regs.CX = 0
+            
+    def collapse_delay_loops(self, value):
+        """ API to enable/disable LOOP instruction optimizations. """
+        if value:
+            self.opcode_loop = self.opcode_loop_collapse_delay_loops
+        else:
+            self.opcode_loop = self.opcode_loop_no_shortcuts
+        
     def opcode_loopz(self):
         """ LOOPZ/LOOPE - Decrement CX and jump short if it is non-zero and the zero flag is set. """
         distance = self.get_byte_immediate()
