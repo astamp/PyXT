@@ -2436,6 +2436,7 @@ class IncOpcodeTests(BaseOpcodeAcceptanceTests):
             self.cpu.regs[register] = before
             self.assertEqual(self.run_to_halt(), 2)
             self.assertEqual(self.cpu.regs[register], after)
+            self.assertFalse(self.cpu.flags.carry) # Should be unmodified.
             
     def test_inc_ax(self):
         """
@@ -2493,6 +2494,90 @@ class IncOpcodeTests(BaseOpcodeAcceptanceTests):
         """
         self.run_inc_16_bit_test("47 F4", "DI")
         
+    def test_inc_rm8_register(self):
+        """
+        inc al
+        hlt
+        """
+        self.load_code_string("FE C0 F4")
+        
+        test_data = (
+            (0, 1), # Start from zero.
+            (0xFF, 0x00), # Byte rollover.
+            (77, 78), # Random value.
+        )
+        
+        self.cpu.regs.AH = 0xA5
+        for (before, after) in test_data:
+            self.cpu.regs.AL = before
+            self.assertEqual(self.run_to_halt(), 2)
+            self.assertEqual(self.cpu.regs.AL, after)
+            self.assertEqual(self.cpu.regs.AH, 0xA5) # Should be unmodified.
+            self.assertFalse(self.cpu.flags.carry) # Should be unmodified.
+            
+    def test_inc_rm8_memory(self):
+        """
+        inc byte [foo]
+        hlt
+        foo:
+            db 0x99
+        """
+        self.load_code_string("FE 06 05 00 F4 99")
+        
+        test_data = (
+            (0, 1), # Start from zero.
+            (0xFF, 0x00), # Byte rollover.
+            (77, 78), # Random value.
+        )
+        
+        for (before, after) in test_data:
+            self.memory.mem_write_byte(5, before)
+            self.assertEqual(self.run_to_halt(), 2)
+            self.assertEqual(self.memory.mem_read_byte(5), after)
+            self.assertFalse(self.cpu.flags.carry) # Should be unmodified.
+            
+    def test_inc_rm16_register(self):
+        """
+        db 0xFF, 0xC0 ; Extended form of inc AX.
+        hlt
+        """
+        self.load_code_string("FF C0 F4")
+        
+        test_data = (
+            (0, 1), # Start from zero.
+            (0xFF, 0x0100), # Byte rollover.
+            (5643, 5644), # Random value.
+            (0xFFFF, 0), # Word rollover.
+        )
+        
+        for (before, after) in test_data:
+            self.cpu.regs.AX = before
+            self.assertEqual(self.run_to_halt(), 2)
+            self.assertEqual(self.cpu.regs.AX, after)
+            self.assertFalse(self.cpu.flags.carry) # Should be unmodified.
+            
+    def test_inc_rm16_memory(self):
+        """
+        inc word [foo]
+        hlt
+        foo:
+            dw 0x9999
+        """
+        self.load_code_string("FF 06 05 00 F4 99 99")
+        
+        test_data = (
+            (0, 1), # Start from zero.
+            (0xFF, 0x0100), # Byte rollover.
+            (5643, 5644), # Random value.
+            (0xFFFF, 0), # Word rollover.
+        )
+        
+        for (before, after) in test_data:
+            self.memory.mem_write_word(5, before)
+            self.assertEqual(self.run_to_halt(), 2)
+            self.assertEqual(self.memory.mem_read_word(5), after)
+            self.assertFalse(self.cpu.flags.carry) # Should be unmodified.
+            
 class DecOpcodeTests(BaseOpcodeAcceptanceTests):
     def run_dec_16_bit_test(self, code_string, register):
         """
@@ -2511,6 +2596,7 @@ class DecOpcodeTests(BaseOpcodeAcceptanceTests):
             self.cpu.regs[register] = before
             self.assertEqual(self.run_to_halt(), 2)
             self.assertEqual(self.cpu.regs[register], after)
+            self.assertFalse(self.cpu.flags.carry) # Should be unmodified.
             
     def test_dec_ax(self):
         """
@@ -2568,6 +2654,90 @@ class DecOpcodeTests(BaseOpcodeAcceptanceTests):
         """
         self.run_dec_16_bit_test("4F F4", "DI")
         
+    def test_dec_rm8_register(self):
+        """
+        dec al
+        hlt
+        """
+        self.load_code_string("FE C8 F4")
+        
+        test_data = (
+            (0, 0xFF), # Byte rollover.
+            (77, 76), # Random value.
+            (0xFF, 0xFE), # Start from "-1".
+        )
+        
+        self.cpu.regs.AH = 0xA5
+        for (before, after) in test_data:
+            self.cpu.regs.AL = before
+            self.assertEqual(self.run_to_halt(), 2)
+            self.assertEqual(self.cpu.regs.AL, after)
+            self.assertEqual(self.cpu.regs.AH, 0xA5) # Should be unmodified.
+            self.assertFalse(self.cpu.flags.carry) # Should be unmodified.
+            
+    def test_dec_rm8_memory(self):
+        """
+        dec byte [foo]
+        hlt
+        foo:
+            db 0x99
+        """
+        self.load_code_string("FE 0E 05 00 F4 99")
+        
+        test_data = (
+            (0, 0xFF), # Byte rollover.
+            (77, 76), # Random value.
+            (0xFF, 0xFE), # Start from "-1".
+        )
+        
+        for (before, after) in test_data:
+            self.memory.mem_write_byte(5, before)
+            self.assertEqual(self.run_to_halt(), 2)
+            self.assertEqual(self.memory.mem_read_byte(5), after)
+            self.assertFalse(self.cpu.flags.carry) # Should be unmodified.
+            
+    def test_dec_rm16_register(self):
+        """
+        db 0xFF, 0xC8 ; Extended form of dec AX.
+        hlt
+        """
+        self.load_code_string("FF C8 F4")
+        
+        test_data = (
+            (0, 0xFFFF), # Word rollover.
+            (0x0100, 0x00FF), # Byte rollover.
+            (5643, 5642), # Random value.
+            (0xFFFF, 0xFFFE), # Start from "-1".
+        )
+        
+        for (before, after) in test_data:
+            self.cpu.regs.AX = before
+            self.assertEqual(self.run_to_halt(), 2)
+            self.assertEqual(self.cpu.regs.AX, after)
+            self.assertFalse(self.cpu.flags.carry) # Should be unmodified.
+            
+    def test_dec_rm16_memory(self):
+        """
+        dec word [foo]
+        hlt
+        foo:
+            dw 0x9999
+        """
+        self.load_code_string("FF 0E 05 00 F4 99 99")
+        
+        test_data = (
+            (0, 0xFFFF), # Word rollover.
+            (0x0100, 0x00FF), # Byte rollover.
+            (5643, 5642), # Random value.
+            (0xFFFF, 0xFFFE), # Start from "-1".
+        )
+        
+        for (before, after) in test_data:
+            self.memory.mem_write_word(5, before)
+            self.assertEqual(self.run_to_halt(), 2)
+            self.assertEqual(self.memory.mem_read_word(5), after)
+            self.assertFalse(self.cpu.flags.carry) # Should be unmodified.
+            
 class LodsOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_lodsb_incrementing(self):
         """
