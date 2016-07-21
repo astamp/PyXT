@@ -492,6 +492,41 @@ class PITCounterTests(unittest.TestCase):
         self.assertTrue(self.counter.output)
         # ... and so on.
         
+    def test_clock_mode_3_starting_at_zero(self):
+        self.counter.reconfigure(PIT_READ_WRITE_BOTH, 3, 0)
+        
+        # Gate low stops counting and raises output.
+        self.counter.gate = False
+        self.assertTrue(self.counter.output)
+        self.assertFalse(self.counter.enabled)
+        
+        # Writing the value enables counting.
+        self.counter.write(0x00)
+        self.counter.write(0x00)
+        self.assertTrue(self.counter.enabled)
+        
+        # These should not have changed.
+        self.assertEqual(self.counter.value, 0x0000)
+        self.assertTrue(self.counter.output)
+        
+        # Gate high reloads and starts.
+        self.counter.gate = True
+        self.assertEqual(self.counter.value, 0x0000)
+        self.assertTrue(self.counter.output)
+        self.assertTrue(self.counter.enabled)
+        
+        # Output high and even should decrement by 2, should roll over not go negative.
+        self.counter.clock()
+        self.assertEqual(self.counter.value, 0xFFFE)
+        self.assertTrue(self.counter.output)
+        
+        # Output high and even should decrement by 2.
+        self.counter.clock()
+        self.assertEqual(self.counter.value, 0xFFFC)
+        self.assertTrue(self.counter.output)
+        
+        # ... and so on.
+        
     def test_output_changed_callback_not_called_at_creation(self):
         self.assertIsNone(self.last_callback)
         

@@ -250,11 +250,11 @@ class Counter(object):
         elif self.mode == 3:
             if self.value & 0x0001:
                 if self.output:
-                    self.value -= 1
+                    self.value = (self.value - 1) & 0xFFFF
                 else:
-                    self.value -= 3
+                    self.value = (self.value - 3) & 0xFFFF
             else:
-                self.value -= 2
+                self.value = (self.value - 2) & 0xFFFF
                 
             if self.value == 0:
                 self.output = not self.output
@@ -368,8 +368,7 @@ class ProgrammableIntervalTimer(Device):
             self.divisor = self.CLOCK_DIVISOR
             for channel in self.channels:
                 channel.clock()
-        # else:
-            
+                
     def get_ports_list(self):
         return [x for x in range(self.base, self.base + 4)]
         
