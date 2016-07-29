@@ -478,6 +478,11 @@ class FloppyDisketteDrive(object):
         return (self.drive_info.bytes_per_sector * self.drive_info.sectors_per_track *
                 self.drive_info.tracks_per_side * self.drive_info.sides)
                 
+    @property
+    def diskette_present(self):
+        """ Returns True if a diskette is present in the drive. """
+        return self.contents is not None
+        
     def load_diskette(self, filename):
         """ Load a diskette image, "ejecting" a previous one if present. """
         log.info("Loading diskette from: %s", filename)

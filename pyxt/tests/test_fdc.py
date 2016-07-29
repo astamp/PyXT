@@ -261,6 +261,8 @@ class FDDTests(unittest.TestCase):
         self.assertEqual(self.fdd.target_cylinder_number, 0)
         self.assertIsNone(self.fdd.contents)
         
+        self.assertFalse(self.fdd.diskette_present)
+        
     def test_size_in_bytes(self):
         self.assertEqual(self.fdd.size_in_bytes, 368640)
         
@@ -269,9 +271,12 @@ class FDDTests(unittest.TestCase):
         self.fdd.load_diskette(test_file)
         self.assertEqual(self.fdd.contents[0], 0x64)
         self.assertEqual(len(self.fdd.contents), 368640) # Ensure it is padded to the full size.
+        self.assertTrue(self.fdd.diskette_present)
         
         self.fdd.load_diskette(None)
         self.assertIsNone(self.fdd.contents)
+        self.assertFalse(self.fdd.diskette_present)
+        
         
     def test_load_diskette_too_big(self):
         test_fdd = FloppyDisketteDrive(DriveInfo(5, 1, 1, 2)) # As much data as I can count on my hands.
