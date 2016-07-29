@@ -45,6 +45,7 @@ class Debugger(object):
         self.step_out = False
         
         self.location_counter = Counter()
+        self.instruction_counter = Counter()
         
     # ********** Debugger functions. **********
     def fetch(self):
@@ -52,9 +53,10 @@ class Debugger(object):
         if self.dump_enabled:
             self.dump_all()
             
+        next_instruction = self.peek_instruction_byte()
+        
         # Check if we are trying to step out of a CALL-ed function.
         if self.step_out:
-            next_instruction = self.peek_instruction_byte()
             if next_instruction in RETURN_OPCODES:
                 log.debug("Return detected!")
                 # At this point we want to drop to the debugger and not step out any longer.
@@ -65,6 +67,7 @@ class Debugger(object):
             self.enter_debugger()
             
         self.location_counter.update({(self.cpu.regs.CS, self.cpu.regs.IP) : 1})
+        self.instruction_counter.update({next_instruction : 1})
         self.cpu.fetch()
         
     def dump_all(self, level = logging.DEBUG):
@@ -180,9 +183,19 @@ class Debugger(object):
             return True
             
         elif len(cmd) == 2 and cmd[0] in ("lc", "location-counter"):
-            for location, count in self.location_counter.most_common(int(cmd[1])):
-                cs, ip = location
-                print("location = %04x:%04x, count = %d" % (cs, ip, count))
+            if cmd[1] == "clear":
+                self.location_counter.clear()
+            else:
+                for location, count in self.location_counter.most_common(int(cmd[1])):
+                    cs, ip = location
+                    print("location = %04x:%04x, count = %d" % (cs, ip, count))
+                
+        elif len(cmd) == 2 and cmd[0] in ("ic", "instruction-counter"):
+            if cmd[1] == "clear":
+                self.instruction_counter.clear()
+            else:
+                for instruction, count in self.instruction_counter.most_common(int(cmd[1])):
+                    print("instruction = 0x%02x, count = %d" % (instruction, count))
                 
         elif len(cmd) == 1 and cmd[0] in ("vector", "vt"):
             for vector in range(0, 256):
