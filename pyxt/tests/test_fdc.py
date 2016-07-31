@@ -250,6 +250,22 @@ class FDCTests(unittest.TestCase):
         self.fdc.write_data_length_parameter(32)
         self.assertEqual(self.fdc.parameters.data_length, 32)
         
+    def test_read_status_register_3_unit_select(self):
+        self.fdc.drive_select = 2
+        self.fdc.head_select = 1
+        self.assertEqual(self.fdc.read_status_register_3(), 0x06)
+        
+    def test_read_status_register_3_track_0(self):
+        drive = FloppyDisketteDrive(FIVE_INCH_360_KB)
+        drive.present_cylinder_number = 1
+        self.fdc.attach_drive(drive, 0)
+        self.fdc.drive_select = 0
+        self.fdc.head_select = 0
+        self.assertEqual(self.fdc.read_status_register_3(), 0x00)
+        
+        drive.present_cylinder_number = 0
+        self.assertEqual(self.fdc.read_status_register_3(), 0x10)
+        
 class FDDTests(unittest.TestCase):
     def setUp(self):
         self.fdd = FloppyDisketteDrive(FIVE_INCH_360_KB)

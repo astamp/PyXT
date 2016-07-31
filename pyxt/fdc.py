@@ -59,6 +59,15 @@ SR0_INT_CODE_ABNORMAL = 0x40
 SR0_INT_CODE_INVALID = 0x80
 SR0_INT_CODE_READY_CHANGE = 0xC0
 
+# SR3 - Status register 3.
+SR3_DRIVE_SELECT_MASK = 0x03
+SR3_HEAD_SELECT = 0x04
+SR3_TWO_SIDED = 0x08
+SR3_TRACK_ZERO = 0x10
+SR3_READY = 0x20
+SR3_WRITE_PROTECTED = 0x40
+SR3_FAULT = 0x80
+
 # Top-level FDC commands.
 COMMAND_READ_DATA = 0x06
 COMMAND_READ_DELETED_DATA = 0x0C
@@ -115,6 +124,10 @@ ST_RDDATA_SET_DATA_LENGTH = 0x0057
 ST_RDDATA_BEGIN_EXECUTION = ST_EXECUTE_MASK | 0x0058
 ST_RDDATA_IN_PROGRESS = ST_READ_MASK | 0x0059
 ST_RDDATA_READ_STATUS_REG_0 = ST_READ_MASK | 0x005A
+
+# SDS - Sense drive status.
+ST_SDS_SELECT_DRIVE_HEAD = 0x0060
+ST_SDS_READ_STATUS_REG_3 = ST_READ_MASK | 0x0061
 
 # Drive type definitions.
 DriveInfo = namedtuple("DriveInfo", ["bytes_per_sector", "sectors_per_track", "tracks_per_side", "sides"])
@@ -223,6 +236,11 @@ class FloppyDisketteController(Device):
             ST_RDDATA_BEGIN_EXECUTION : (None, None, self.begin_read_data, ST_RDDATA_IN_PROGRESS),
             ST_RDDATA_IN_PROGRESS : (self.read_data, None, None, ST_RDDATA_IN_PROGRESS),
             ST_RDDATA_READ_STATUS_REG_0 : (self.read_status_register_0, None, None, ST_READY),
+            
+            # Sense drive status.
+            ST_SDS_SELECT_DRIVE_HEAD : (None, self.write_drive_head_select, None, ST_SDS_READ_STATUS_REG_3),
+            ST_SDS_READ_STATUS_REG_3 : (self.read_status_register_3, None, None, ST_READY),
+            
         }
         
         self.drive_select = 0
@@ -334,6 +352,8 @@ class FloppyDisketteController(Device):
             self.state = ST_SPEC_HEAD_UNLOAD_STEP_RATE
         elif value == COMMAND_SEEK:
             self.state = ST_SEEK_SELECT_DRIVE_HEAD
+        elif value == COMMAND_SENSE_DRIVE_STATUS:
+            self.state = ST_SDS_SELECT_DRIVE_HEAD
         elif value & COMMAND_OPCODE_MASK == COMMAND_READ_DATA:
             self.state = ST_RDDATA_SELECT_DRIVE_HEAD
         else:
@@ -345,11 +365,35 @@ class FloppyDisketteController(Device):
                 
     def read_status_register_0(self):
         """ Builds a status register 0 response. """
-        # Start with unit select and last interrupt code.
+        # Start with unit select and last interrupt code (and not ready/seek end).
         value = self.drive_select | self.interrupt_code
         if self.head_select == 1:
-            value |= 0x04
-        # TODO: The rest of this.
+            value |= SR0_HEAD_SELECT
+            
+        return value
+        
+    def read_status_register_1(self):
+        """ Builds a status register 1 response. """
+        # TODO: Implement this.
+        return 0x00
+        
+    def read_status_register_2(self):
+        """ Builds a status register 2 response. """
+        # TODO: Implement this.
+        return 0x00
+        
+    def read_status_register_3(self):
+        """ Builds a status register 3 response. """
+        value = self.drive_select
+        if self.head_select == 1:
+            value |= SR3_HEAD_SELECT
+            
+        drive = self.drives[self.drive_select]
+        if drive:
+            if drive.present_cylinder_number == 0:
+                value |= SR3_TRACK_ZERO
+                
+        # TODO: FAULT, WRITE PROTECTED, READY, TWO SIDE?
         return value
         
     def read_present_cylinder_number(self):
