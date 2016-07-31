@@ -65,7 +65,7 @@ SR3_HEAD_SELECT = 0x04
 SR3_TWO_SIDED = 0x08
 SR3_TRACK_ZERO = 0x10
 SR3_READY = 0x20
-SR3_WRITE_PROTECTED = 0x40
+SR3_WRITE_PROTECT = 0x40
 SR3_FAULT = 0x80
 
 # Top-level FDC commands.
@@ -392,8 +392,10 @@ class FloppyDisketteController(Device):
         if drive:
             if drive.present_cylinder_number == 0:
                 value |= SR3_TRACK_ZERO
+            if drive.write_protect:
+                value |= SR3_WRITE_PROTECT
                 
-        # TODO: FAULT, WRITE PROTECTED, READY, TWO SIDE?
+        # TODO: FAULT, READY, TWO SIDE?
         return value
         
     def read_present_cylinder_number(self):
@@ -524,6 +526,7 @@ class FloppyDisketteDrive(object):
         self.present_cylinder_number = 0
         self.target_cylinder_number = 0
         self.contents = None
+        self.write_protect = False
         
     @property
     def size_in_bytes(self):
@@ -536,10 +539,11 @@ class FloppyDisketteDrive(object):
         """ Returns True if a diskette is present in the drive. """
         return self.contents is not None
         
-    def load_diskette(self, filename):
+    def load_diskette(self, filename, write_protect = False):
         """ Load a diskette image, "ejecting" a previous one if present. """
         log.info("Loading diskette from: %s", filename)
         self.contents = None
+        self.write_protect = write_protect
         
         if filename is not None:
             self.contents = array.array("B", (0,) * self.size_in_bytes)

@@ -266,6 +266,18 @@ class FDCTests(unittest.TestCase):
         drive.present_cylinder_number = 0
         self.assertEqual(self.fdc.read_status_register_3(), 0x10)
         
+    def test_read_status_register_3_write_protect(self):
+        drive = FloppyDisketteDrive(FIVE_INCH_360_KB)
+        drive.present_cylinder_number = 1
+        self.fdc.attach_drive(drive, 0)
+        self.fdc.drive_select = 0
+        self.fdc.head_select = 0
+        drive.write_protect = False
+        self.assertEqual(self.fdc.read_status_register_3(), 0x00)
+        
+        drive.write_protect = True
+        self.assertEqual(self.fdc.read_status_register_3(), 0x40)
+        
 class FDDTests(unittest.TestCase):
     def setUp(self):
         self.fdd = FloppyDisketteDrive(FIVE_INCH_360_KB)
@@ -279,6 +291,7 @@ class FDDTests(unittest.TestCase):
         self.assertEqual(self.fdd.present_cylinder_number, 0)
         self.assertEqual(self.fdd.target_cylinder_number, 0)
         self.assertIsNone(self.fdd.contents)
+        self.assertFalse(self.fdd.write_protect)
         
         self.assertFalse(self.fdd.diskette_present)
         
@@ -296,6 +309,11 @@ class FDDTests(unittest.TestCase):
         self.assertIsNone(self.fdd.contents)
         self.assertFalse(self.fdd.diskette_present)
         
+    def test_load_diskette_write_protect(self):
+        test_file = get_test_file(self, "diskette.img")
+        self.fdd.load_diskette(test_file, write_protect = True)
+        self.assertEqual(self.fdd.contents[0], 0x64)
+        self.assertTrue(self.fdd.write_protect)
         
     def test_load_diskette_too_big(self):
         test_fdd = FloppyDisketteDrive(DriveInfo(5, 1, 1, 2)) # As much data as I can count on my hands.
@@ -485,4 +503,17 @@ class FDCAcceptanceTests(unittest.TestCase):
         
         self.assertEqual(self.fdc.state, ST_RDDATA_READ_STATUS_REG_0)
         self.assertEqual(self.fdc.io_read_byte(0x3F5), 0x48) # Abnormal exit, not ready.
+        
+    def test_sense_drive_status(self):
+        self.fdc.io_write_byte(0x3F5, 0x04) # Sense drive status.
+        self.assertEqual(self.fdc.state, ST_SDS_SELECT_DRIVE_HEAD)
+        
+        self.fdc.io_write_byte(0x3F5, 0x05) # Select drive 1, head 1.
+        self.assertEqual(self.fdc.state, ST_SDS_READ_STATUS_REG_3)
+        self.assertTrue(self.fdc.drive_select, 1)
+        self.assertTrue(self.fdc.head_select, 1)
+        
+        self.assertEqual(self.fdc.io_read_byte(0x3F5), 0x15) # Not write protected, track 0.
+        self.assertEqual(self.fdc.state, ST_READY)
+        
         
