@@ -337,7 +337,7 @@ class FloppyDisketteController(Device):
         elif value & COMMAND_OPCODE_MASK == COMMAND_READ_DATA:
             self.state = ST_RDDATA_SELECT_DRIVE_HEAD
         else:
-            log.debug("Invalid command: 0x%02x", value)
+            log.warning("Invalid command: 0x%02x", value)
             
             # For now, stop in the debugger when we hit an invalid command.
             if self.bus:
@@ -345,6 +345,7 @@ class FloppyDisketteController(Device):
                 
     def read_status_register_0(self):
         """ Builds a status register 0 response. """
+        # Start with unit select and last interrupt code.
         value = self.drive_select | self.interrupt_code
         if self.head_select == 1:
             value |= 0x04
@@ -450,6 +451,14 @@ class FloppyDisketteController(Device):
             
     def read_data(self):
         """ Called when a byte is read from the internal buffer. """
+        # If no data is available and we get to this state, we must not have a diskette in the drive.
+        # Throw an interrupt and get out.
+        if len(self.buffer) == 0:
+            self.signal_interrupt(SR0_INT_CODE_ABNORMAL | SR0_NOT_READY)
+            self.state = ST_RDDATA_READ_STATUS_REG_0
+            return 0x00 
+            
+        # log.debug("read_data, cursor = %d, len(buffer) = %d", self.cursor, len(self.buffer))
         byte = self.buffer[self.cursor]
         self.cursor += 1
         
@@ -513,6 +522,7 @@ class FloppyDisketteDrive(object):
         """ Perform a diskette "read" operation based on the given parameters. """
         offset, length = calculate_parameters(self.drive_info, parms)
         if self.contents:
+            # log.debug("Reading from image file, offset = %d, length = %d", offset, length)
             return self.contents[offset : offset + length]
         else:
             return array.array("B")
