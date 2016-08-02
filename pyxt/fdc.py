@@ -489,6 +489,13 @@ class FloppyDisketteController(Device):
             self.buffer = drive.read(self.parameters)
             self.cursor = 0
             
+            # If no data is available and we get to this state, we must not have a diskette in the drive.
+            # Throw an interrupt and get out.
+            if len(self.buffer) == 0:
+                self.signal_interrupt(SR0_INT_CODE_ABNORMAL | SR0_NOT_READY)
+                self.state = ST_RDDATA_READ_STATUS_REG_0
+                return
+                
         # Signal the DMA request or trigger an interrupt so data can be read by the CPU.
         if self.dma_enable:
             self.bus.dma_request(FDC_DMA_CHANNEL, self.base + FDC_DATA)
@@ -497,13 +504,6 @@ class FloppyDisketteController(Device):
             
     def read_data(self):
         """ Called when a byte is read from the internal buffer. """
-        # If no data is available and we get to this state, we must not have a diskette in the drive.
-        # Throw an interrupt and get out.
-        if len(self.buffer) == 0:
-            self.signal_interrupt(SR0_INT_CODE_ABNORMAL | SR0_NOT_READY)
-            self.state = ST_RDDATA_READ_STATUS_REG_0
-            return 0x00 
-            
         # log.debug("read_data, cursor = %d, len(buffer) = %d", self.cursor, len(self.buffer))
         byte = self.buffer[self.cursor]
         self.cursor += 1

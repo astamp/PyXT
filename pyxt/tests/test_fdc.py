@@ -397,6 +397,9 @@ class FDCAcceptanceTests(unittest.TestCase):
         self.assertTrue(self.fdd0.present_cylinder_number, 20)
         
     def test_read_data_parse_parameters(self):
+        # If there is no diskette in the drive, the read will fail.
+        self.install_test_data_diskette(self.fdd1)
+        
         self.fdc.io_write_byte(0x3F5, 0xE6) # Read data.
         
         self.assertEqual(self.fdc.state, ST_RDDATA_SELECT_DRIVE_HEAD)
@@ -498,9 +501,6 @@ class FDCAcceptanceTests(unittest.TestCase):
             self.fdc.io_write_byte(0x3F5, byte)
             
         self.assertEqual(self.bus.get_irq_log(), [6]) # Abnormal termination... IRQ!
-        self.assertEqual(self.fdc.state, ST_RDDATA_IN_PROGRESS)
-        self.assertEqual(self.fdc.io_read_byte(0x3F5), 0x00) # Garbage data.
-        
         self.assertEqual(self.fdc.state, ST_RDDATA_READ_STATUS_REG_0)
         self.assertEqual(self.fdc.io_read_byte(0x3F5), 0x48) # Abnormal exit, not ready.
         
