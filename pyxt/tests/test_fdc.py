@@ -77,6 +77,33 @@ class HelperTests(unittest.TestCase):
         drive_info = DriveInfo(128, 26, 0, 2)
         self.assertEqual(calculate_parameters(drive_info, parms), (0, 6656))
         
+    def test_calculate_next_sector(self):
+        # Assume 9 cylinders per track.
+        test_data = [
+            # multi_track, cylinder, head, sector, new_cylinder, new_head, new_sector
+            (False, 1, 0, 1, 1, 0, 2), # Next sector.
+            (False, 1, 0, 9, 2, 0, 1), # Last sector, next cylinder.
+            (False, 1, 1, 1, 1, 1, 2), # Next sector.
+            (False, 1, 1, 9, 2, 1, 1), # Last sector, next cylinder.
+            (True, 1, 0, 1, 1, 0, 2), # Next sector.
+            (True, 1, 0, 9, 1, 1, 1), # Last sector, next head.
+            (True, 1, 1, 1, 1, 1, 2), # Next sector.
+            (True, 1, 1, 9, 2, 0, 1), # Last sector, next cylinder.
+        ]
+        for multi_track, cylinder, head, sector, new_cylinder, new_head, new_sector in test_data:
+            # print multi_track, cylinder, head, sector, new_cylinder, new_head, new_sector
+            parms = CommandParameters()
+            parms.multi_track = multi_track
+            parms.cylinder = cylinder
+            parms.head = head
+            parms.sector = sector
+            parms.end_of_track = 9
+            parms.next_sector()
+            
+            self.assertEqual(parms.cylinder, new_cylinder)
+            self.assertEqual(parms.head, new_head)
+            self.assertEqual(parms.sector, new_sector)
+            
 class FDCTests(unittest.TestCase):
     def setUp(self):
         self.fdc = FloppyDisketteController(0x3F0)

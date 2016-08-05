@@ -194,6 +194,22 @@ class CommandParameters(object):
             "data_length = %r" % self.data_length,
         ])
         
+    def next_sector(self):
+        """ Increments the command parameters to point at the next sector on disk. """
+        if self.sector == self.end_of_track:
+            if self.multi_track:
+                self.sector = 1
+                if self.head == 0:
+                    self.head = 1
+                else:
+                    self.head = 0
+                    self.cylinder += 1
+            else:
+                self.sector = 1
+                self.cylinder += 1
+        else:
+            self.sector += 1
+            
 # Classes
 class FloppyDisketteController(Device):
     """ Floppy diskette controller based on the NEC uPD765/Intel 8272A controllers. """
