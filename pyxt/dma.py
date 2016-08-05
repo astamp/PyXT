@@ -86,6 +86,7 @@ class DmaChannel(object):
         self.port = 0
         self.page_register_port = 0x000
         self.page_register_value = 0x0000
+        self.terminal_count_callback = None
         
 class DmaController(Device):
     """ A Device emulating an 8237 DMA controller. """
@@ -128,7 +129,9 @@ class DmaController(Device):
                     
                     if channel.word_count == 0xFFFF:
                         channel.requested = False
-                        
+                        if callable(channel.terminal_count_callback):
+                            channel.terminal_count_callback()
+                            
     def io_read_byte(self, port):
         # If it was a page register read, do that and get out.
         if port in self.page_register_channel_lookup:
@@ -239,9 +242,11 @@ class DmaController(Device):
         for index, channel in enumerate(self.channels):
             print(self.enable, index, channel.word_count, channel.address)
             
-    def dma_request(self, channel, port):
+    def dma_request(self, channel, port, terminal_count_callback = None):
         """ Signal from the bus to indicate that DMA service has been requested for a given channel and I/O port """
         self.channels[channel].requested = True
         # HACK: How does the real hardware know what port to use?!
         self.channels[channel].port = port
+        # TODO: Proper DREQ/DACK handshaking.
+        self.channels[channel].terminal_count_callback = terminal_count_callback
         

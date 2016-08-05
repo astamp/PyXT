@@ -5,6 +5,7 @@ from pyxt.dma import *
 class DMATests(unittest.TestCase):
     def setUp(self):
         self.dma = DmaController(0x0000, (0x087, 0x083, 0x081, 0x082))
+        self.terminal_count = False
         
     def test_address_list(self):
         self.assertEqual(self.dma.get_ports_list(), [0x0000, 0x0001, 0x0002, 0x0003,
@@ -237,5 +238,36 @@ class DMATests(unittest.TestCase):
         self.assertEqual(self.dma.io_read_byte(0x81), 0x33)
         self.dma.channels[3].page_register_value = 0x44
         self.assertEqual(self.dma.io_read_byte(0x82), 0x44)
+        
+    def signal_terminal_count(self):
+        self.terminal_count = True
+        
+    def test_terminal_count(self):
+        self.dma.enable = True
+        self.dma.channels[0].mode = MODE_SINGLE
+        self.dma.channels[0].word_count = 3
+        self.dma.channels[0].address = 0
+        self.dma.dma_request(0, 5643, self.signal_terminal_count)
+        
+        self.dma.clock()
+        self.assertEqual(self.dma.channels[0].word_count, 2)
+        self.assertEqual(self.dma.channels[0].address, 1)
+        self.assertFalse(self.terminal_count)
+        
+        self.dma.clock()
+        self.assertEqual(self.dma.channels[0].word_count, 1)
+        self.assertEqual(self.dma.channels[0].address, 2)
+        self.assertFalse(self.terminal_count)
+        
+        self.dma.clock()
+        self.assertEqual(self.dma.channels[0].word_count, 0)
+        self.assertEqual(self.dma.channels[0].address, 3)
+        self.assertFalse(self.terminal_count)
+        
+        # Should call the terminal count callback.
+        self.dma.clock()
+        self.assertEqual(self.dma.channels[0].word_count, 0xFFFF) # Terminal count.
+        self.assertEqual(self.dma.channels[0].address, 4)
+        self.assertTrue(self.terminal_count)
         
         
