@@ -35,48 +35,6 @@ class HelperTests(unittest.TestCase):
         drive_info = DriveInfo(128, 26, 0, 2)
         self.assertEqual(calculate_parameters(drive_info, parms), (0, 128))
         
-    @unittest.skip("Not sure how this is supposed to work yet.")
-    def test_calculate_parameters_one_track(self):
-        # First row in the data sheet.
-        parms = CommandParameters()
-        parms.multi_track = False
-        parms.mfm = False
-        parms.bytes_per_sector = 128
-        parms.cylinder = 0
-        parms.head = 0
-        parms.sector = 1
-        parms.end_of_track = 26
-        drive_info = DriveInfo(128, 26, 0, 2)
-        self.assertEqual(calculate_parameters(drive_info, parms), (0, 3328))
-        
-    @unittest.skip("Not sure how this is supposed to work yet.")
-    def test_calculate_parameters_mfm(self):
-        # Second row in the data sheet.
-        parms = CommandParameters()
-        parms.multi_track = False
-        parms.mfm = True
-        parms.bytes_per_sector = 256
-        parms.cylinder = 0
-        parms.head = 0
-        parms.sector = 1
-        parms.end_of_track = 26
-        drive_info = DriveInfo(256, 26, 0, 2)
-        self.assertEqual(calculate_parameters(drive_info, parms), (0, 6656))
-        
-    @unittest.skip("Not sure how this is supposed to work yet.")
-    def test_calculate_parameters_multi_track(self):
-        # Third row in the data sheet.
-        parms = CommandParameters()
-        parms.multi_track = True
-        parms.mfm = False
-        parms.bytes_per_sector = 128
-        parms.cylinder = 0
-        parms.head = 0
-        parms.sector = 1
-        parms.end_of_track = 1
-        drive_info = DriveInfo(128, 26, 0, 2)
-        self.assertEqual(calculate_parameters(drive_info, parms), (0, 6656))
-        
     def test_calculate_next_sector(self):
         # Assume 9 cylinders per track.
         test_data = [
@@ -509,6 +467,46 @@ class FDCAcceptanceTests(unittest.TestCase):
         self.fdc.cursor = 511 # TODO: Was 9215, which is right?!
         self.assertEqual(self.bus.get_irq_log(), [6, 6, 6]) # Assume there would have been one for all bytes ready to have been read.
         self.assertEqual(self.fdc.io_read_byte(0x3F5), 0xFE)
+        
+        # At this point if we have not reached terminal count, we should prepare the next sector.
+        self.assertEqual(self.fdc.cursor, 0)
+        self.assertEqual(self.bus.get_irq_log(), [6, 6, 6, 6]) # Byte was ready... IRQ!
+        self.assertEqual(self.fdc.state, ST_RDDATA_IN_PROGRESS)
+        self.assertEqual(self.fdc.io_read_byte(0x3F5), 0xAA)
+        
+    def test_read_data_multiple_sectors(self):
+        self.install_test_data_diskette(self.fdd0)
+        
+        parameters = (
+            0xE6, # Read data, multitrack, mfm, skip deleted
+            0x00, # Drive 0, head 0
+            0x00, # Cylinder 0
+            0x00, # Head 0
+            0x01, # Sector 1 (they start at 1)
+            0x02, # 512 bytes per sector
+            0x09, # Read up to track 9.
+            0x2A, # Gap length (not really applicable)
+            0xFF, # Data length (unused if bytes per sector is non-zero?)
+        )
+        for byte in parameters:
+            self.fdc.io_write_byte(0x3F5, byte)
+            
+        self.assertEqual(self.bus.get_irq_log(), [6]) # Byte was ready... IRQ!
+        self.assertEqual(self.fdc.state, ST_RDDATA_IN_PROGRESS)
+        self.assertEqual(self.fdc.io_read_byte(0x3F5), 0xAA)
+        
+        self.assertEqual(self.bus.get_irq_log(), [6, 6]) # Another byte was ready... IRQ!
+        self.assertEqual(self.fdc.state, ST_RDDATA_IN_PROGRESS)
+        self.assertEqual(self.fdc.io_read_byte(0x3F5), 0x55)
+        
+        # And so on...
+        
+        # Pretend we read all but ther last byte of the data.
+        self.fdc.cursor = 511 # TODO: Was 9215, which is right?!
+        self.assertEqual(self.bus.get_irq_log(), [6, 6, 6]) # Assume there would have been one for all bytes ready to have been read.
+        self.assertEqual(self.fdc.io_read_byte(0x3F5), 0xFE)
+        
+        self.fdc.terminal_count()
         
         self.assertEqual(self.fdc.state, ST_RDDATA_READ_STATUS_REG_0)
         

@@ -494,10 +494,10 @@ class FloppyDisketteController(Device):
         """ Writes the data length parameter to the command buffer. """
         self.parameters.data_length = value
         
-    def begin_read_data(self):
+    def begin_read_data(self, continuation = False):
         """ Reads data from the diskette and writes it out via DMA/interrupts. """
         # self.bus.force_debugger_break("BEGIN READ DATA")
-        # print self.parameters.dump()
+        # log.critical(self.parameters.dump())
         
         # TODO: Read the requested data into the buffer.
         drive = self.drives[self.drive_select]
@@ -512,9 +512,13 @@ class FloppyDisketteController(Device):
                 self.state = ST_RDDATA_READ_STATUS_REG_0
                 return
                 
+        # Do not setup DMA if this is a continuation of a previous read.
+        if continuation:
+            return
+            
         # Signal the DMA request or trigger an interrupt so data can be read by the CPU.
         if self.dma_enable:
-            self.bus.dma_request(FDC_DMA_CHANNEL, self.base + FDC_DATA)
+            self.bus.dma_request(FDC_DMA_CHANNEL, self.base + FDC_DATA, self.terminal_count)
         else:
             self.signal_interrupt(SR0_INT_CODE_NORMAL)
             
@@ -524,15 +528,22 @@ class FloppyDisketteController(Device):
         byte = self.buffer[self.cursor]
         self.cursor += 1
         
-        # We need to signal the interrupt on completion for DMA mode or always for non-DMA mode.
+        # If we reached the end of the current buffer, prime the buffer for the next sector.
         if self.cursor == len(self.buffer):
             log.debug("Read data complete!")
-            self.state = ST_RDDATA_READ_STATUS_REG_0
-            self.signal_interrupt(SR0_INT_CODE_NORMAL)
-        elif not self.dma_enable:
+            self.parameters.next_sector()
+            self.begin_read_data(continuation = True)
+            
+        # We need to signal the interrupt for every byte in non-DMA mode.
+        if not self.dma_enable:
             self.signal_interrupt(SR0_INT_CODE_NORMAL)
             
         return byte
+        
+    def terminal_count(self):
+        """ Called when the FDC DMA channel reaches terminal count. """
+        self.state = ST_RDDATA_READ_STATUS_REG_0
+        self.signal_interrupt(SR0_INT_CODE_NORMAL)
         
 class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """
