@@ -32,7 +32,7 @@ from pyxt.onboard import ProgrammableInterruptController, ProgrammableIntervalTi
 
 # Logging setup
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger("pyxt")
 
 # Constants
 DEFAULT_DIP_SWITCHES = (SWITCHES_NORMAL_BOOT | SWITCHES_MEMORY_BANKS_FOUR | SWITCHES_VIDEO_MDA_HERC | SWITCHES_DISKETTES_ONE)
@@ -55,6 +55,8 @@ def parse_cmdline():
                       help = "Set this flag to use the proper LOOP handler that doesn't optimize LOOP back to itself.")
     parser.add_option("--diskette", action = "store", dest = "diskette",
                       help = "Diskette image to load into the first drive (A:).")
+    parser.add_option("--log-file", action = "store", dest = "log_file",
+                      help = "File to output debugging log.")
     return parser.parse_args()
     
 def main():
@@ -65,6 +67,9 @@ def main():
     logging.basicConfig(format = "%(asctime)s.%(msecs)03d %(name)s(%(levelname)s): %(message)s", datefmt="%m/%d %H:%M:%S", level = log_level)
     log.info("PyXT oh hai")
     
+    if options.log_file:
+        log.addHandler(logging.FileHandler(options.log_file))
+        
     # The PIC and DMA controller are integral to the ISA/XT bus and need to be part of the bus.
     # They will also be installed below so they can be configured via I/O ports.
     pic = ProgrammableInterruptController(0x020)
