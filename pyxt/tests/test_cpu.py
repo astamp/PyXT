@@ -5304,7 +5304,9 @@ class ScasOpcodeTests(BaseOpcodeAcceptanceTests):
         self.cpu.regs.ES = 0x0001
         self.cpu.regs.DI = 0x0004
         self.cpu.regs.AL = 0x30
+        self.memory.mem_write_byte(19, 0x31)
         self.memory.mem_write_byte(20, 0x30)
+        self.memory.mem_write_byte(21, 0x32)
         self.load_code_string("AE F4")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.DI, 0x0005)
@@ -5323,6 +5325,76 @@ class ScasOpcodeTests(BaseOpcodeAcceptanceTests):
         self.load_code_string("AE F4")
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.DI, 0x0005)
+        self.assert_flags("oSzPC") # ODITSZAPC
+        
+    def test_scasw_incrementing(self):
+        """
+        scasw
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AX = 0xABCD
+        self.load_code_string("AF F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xABCD) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.ES, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DI, 0x0006)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x00) # Should be unmodified
+        self.assertEqual(self.memory.mem_read_byte(21), 0x00) # Should be unmodified.
+        self.assert_flags("oSzpc") # ODITSZAPC
+        
+    def test_scasw_decrementing(self):
+        """
+        scasw
+        hlt
+        """
+        self.cpu.flags.direction = True
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AX = 0xABCD
+        self.load_code_string("AF F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xABCD) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.ES, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DI, 0x0002)
+        self.assertEqual(self.memory.mem_read_byte(19), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(20), 0x00) # Should be unmodified
+        self.assertEqual(self.memory.mem_read_byte(21), 0x00) # Should be unmodified.
+        self.assert_flags("oSzpc") # ODITSZAPC
+        
+    def test_scasw_zero(self):
+        """
+        scasw
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AX = 0x5020
+        self.memory.mem_write_byte(20, 0x20)
+        self.memory.mem_write_byte(21, 0x50)
+        self.load_code_string("AF F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DI, 0x0006)
+        self.assert_flags("osZPc") # ODITSZAPC
+        
+    def test_scasw_negative(self):
+        """
+        scasw
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AX = 0x2000
+        self.memory.mem_write_byte(20, 0x00)
+        self.memory.mem_write_byte(21, 0x30)
+        self.load_code_string("AF F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DI, 0x0006)
         self.assert_flags("oSzPC") # ODITSZAPC
         
 class RepzRepnzPrefixTests(BaseOpcodeAcceptanceTests):

@@ -727,6 +727,8 @@ class CPU(object):
             self.opcode_lodsw()
         elif opcode == 0xAE:
             self.opcode_scasb()
+        elif opcode == 0xAF:
+            self.opcode_scasw()
         elif opcode == 0xA6:
             self.opcode_cmpsb()
             
@@ -1864,10 +1866,20 @@ class CPU(object):
         """ Compare the byte at ES:DI with AL and update the flags. """
         result = self.operator_sub_8(
             self.regs.AL,
-            self.bus.mem_read_word(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
+            self.bus.mem_read_byte(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
         )
         self.flags.set_from_alu_byte(result)
         self.regs.DI += -1 if self.flags.direction else 1
+        
+    @supports_repz_repnz_prefix
+    def opcode_scasw(self):
+        """ Compare the word at ES:DI with AX and update the flags. """
+        result = self.operator_sub_16(
+            self.regs.AX,
+            self.bus.mem_read_word(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
+        )
+        self.flags.set_from_alu_word(result)
+        self.regs.DI += -2 if self.flags.direction else 2
         
     @supports_repz_repnz_prefix
     def opcode_cmpsb(self):
