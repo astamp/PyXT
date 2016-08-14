@@ -1645,6 +1645,12 @@ class CPU(object):
             self.internal_push(self.regs.IP)
             self.regs.IP = value
             
+        elif sub_opcode == 3: # CALLF - Call far to an IP:CS pointer at the address specified.
+            self.internal_push(self.regs.CS)
+            self.internal_push(self.regs.IP)
+            self.regs.IP = value
+            self.regs.CS = self._get_rm16(rm_type, rm_value + 2)
+            
         elif sub_opcode == 4: # JMP
             self.regs.IP = value
             
