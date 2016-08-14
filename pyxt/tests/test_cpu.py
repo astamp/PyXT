@@ -5740,6 +5740,27 @@ class CallOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.CS, 0x0000)
         self.assertEqual(self.cpu.regs.IP, 0x0003) # Next instruction after the first hlt.
         
+    def test_callf_simple(self):
+        """
+        call 0x0001:0x0002
+        TIMES (0x10 - ($ - $$)) nop
+        inc ax ; Should be skipped
+        inc bx ; Should be skipped
+        inc cx
+        hlt
+        """
+        self.cpu.regs.SP = 0x0100
+        self.load_code_string("9A 02 00 01 00 90 90 90 90 90 90 90 90 90 90 90 40 43 41 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AX, 0)
+        self.assertEqual(self.cpu.regs.BX, 0)
+        self.assertEqual(self.cpu.regs.CX, 1)
+        self.assertEqual(self.cpu.regs.SP, 0x00FC) # 2 words.
+        self.assertEqual(self.memory.mem_read_word(0x00FE), 0x0000) # Original CS.
+        self.assertEqual(self.memory.mem_read_word(0x00FC), 0x0005) # Original IP (first NOP).
+        self.assertEqual(self.cpu.regs.CS, 0x0001)
+        self.assertEqual(self.cpu.regs.IP, 0x0004) # Next instruction after the hlt.
+        
 class RclOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_rcl_rm8_1_carry_in(self):
         """

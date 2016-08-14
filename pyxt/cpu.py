@@ -670,6 +670,8 @@ class CPU(object):
             self.opcode_group_ff()
         elif opcode == 0xEA:
             self._jmpf()
+        elif opcode == 0x9A:
+            self.opcode_callf()
             
         # Flags opcodes.
         elif opcode == 0x9E:
@@ -1161,6 +1163,16 @@ class CPU(object):
         self.regs.IP = new_ip
         self.regs.CS = new_cs
         log.debug("JMP FAR to CS: 0x%04x  IP:0x%04x", self.regs.CS, self.regs.IP)
+        
+    def opcode_callf(self):
+        """ Calls a far function from the parameters given in the instruction. """
+        new_ip = self.get_word_immediate()
+        new_cs = self.get_word_immediate()
+        self.internal_push(self.regs.CS)
+        self.internal_push(self.regs.IP)
+        self.regs.IP = new_ip
+        self.regs.CS = new_cs
+        log.debug("CALL FAR to CS:IP %04x:%04x", self.regs.CS, self.regs.IP)
         
     def opcode_call_rel16(self):
         """ Calls a near function at a location relative to the current IP. """
