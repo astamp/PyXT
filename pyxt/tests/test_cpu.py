@@ -4256,13 +4256,13 @@ class JmpOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.BX, 0xFFFF) # Should have been decremented.
         self.assertEqual(self.cpu.regs.SP, 0x0100) # Should be unmodified.
         
-    def test_jmp_far(self):
+    def test_jmp_far_dword_pointer(self):
         """
         jmp far [cs : 0x0c]
-        TIMES (0x0C - ($ - $$)) hlt
+        TIMES (0x0C - ($ - $$)) nop
         dw 0x0002 ; IP
         dw 0x0001 ; CS
-        TIMES (0x12 - ($ - $$)) hlt
+        TIMES (0x12 - ($ - $$)) nop
         inc ax
         hlt
         """
@@ -5740,7 +5740,7 @@ class CallOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.CS, 0x0000)
         self.assertEqual(self.cpu.regs.IP, 0x0003) # Next instruction after the first hlt.
         
-    def test_callf_simple(self):
+    def test_callf_immediate(self):
         """
         call 0x0001:0x0002
         TIMES (0x10 - ($ - $$)) nop
