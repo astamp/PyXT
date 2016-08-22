@@ -7058,3 +7058,22 @@ class ImulOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertTrue(self.cpu.flags.carry)
         self.assertTrue(self.cpu.flags.overflow)
         
+class GeneralShiftOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_shift_by_zero_does_nothing(self):
+        """
+        shl ax, cl
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.flags.overflow = True
+        self.cpu.regs.AX = 0x0001
+        self.cpu.regs.CL = 0
+        self.load_code_string("D3 E0 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0001) # Should be unmodified.
+        
+        # Ordinarily these would be the last shifted out value, but since we shifted by
+        # zero they are unmodified.
+        self.assertTrue(self.cpu.flags.carry) # Should be unmodified.
+        self.assertTrue(self.cpu.flags.overflow) # Should be unmodified.
+        
