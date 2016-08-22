@@ -1751,6 +1751,10 @@ class CPU(object):
         
         old_value = value = self._get_rm_bits(bits, rm_type, rm_value)
         
+        # No need to shift by zero.
+        if count == 0:
+            return
+            
         if sub_opcode == 0x00: # ROL - Rotate left shifting bits back in on the right.
             if bits == 8:
                 value, self.flags.carry = rotate_left_8_bits(value, count)
