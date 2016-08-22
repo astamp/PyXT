@@ -601,8 +601,10 @@ class CPU(object):
             self.opcode_loop()
         elif opcode == 0xE8:
             self.opcode_call_rel16()
+        elif opcode == 0xC2:
+            self.opcode_ret_imm16()
         elif opcode == 0xC3:
-            self._ret()
+            self.opcode_ret()
         elif opcode == 0xCA:
             self.opcode_retf_imm16()
         elif opcode == 0xCB:
@@ -1188,9 +1190,15 @@ class CPU(object):
         self.regs.IP += offset
         # log.debug("CALL incremented IP by 0x%04x to 0x%04x", offset, self.regs.IP)
         
-    def _ret(self):
+    def opcode_ret(self):
+        """ RET - Near return, pops IP. """
         self.regs.IP = self.internal_pop()
-        # log.debug("RET back to 0x%04x", self.regs.IP)
+        
+    def opcode_ret_imm16(self):
+        """ RET - Near return, pops IP and adds imm16 to SP. """
+        adjustment = self.get_word_immediate()
+        self.regs.IP = self.internal_pop()
+        self.regs.SP += adjustment
         
     def opcode_retf(self):
         """ RETF - Far return, pops IP and CS. """

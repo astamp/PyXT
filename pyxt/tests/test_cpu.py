@@ -7077,3 +7077,39 @@ class GeneralShiftOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertTrue(self.cpu.flags.carry) # Should be unmodified.
         self.assertTrue(self.cpu.flags.overflow) # Should be unmodified.
         
+
+class RetOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_ret_simple(self):
+        """
+        ret
+        hlt
+        TIMES (0x10 - ($ - $$)) db 0x00
+        inc al
+        hlt
+        """
+        self.cpu.regs.SS = 0x0000
+        self.cpu.regs.SP = 0x00FE
+        self.memory.mem_write_word(0x00FE, 0x0010) # Will be IP after the RET.
+        self.load_code_string("C3 F4 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        self.assertEqual(self.cpu.regs.SP, 0x0100)
+        self.assertEqual(self.cpu.regs.IP, 0x0013) # Next instruction after the hlt.
+        
+    def test_ret_imm16(self):
+        """
+        ret 0x6
+        hlt
+        TIMES (0x10 - ($ - $$)) db 0x00
+        inc al
+        hlt
+        """
+        self.cpu.regs.SS = 0x0000
+        self.cpu.regs.SP = 0x00FE
+        self.memory.mem_write_word(0x00FE, 0x0010) # Will be IP after the RET.
+        self.load_code_string("C2 06 00 F4 00 00 00 00 00 00 00 00 00 00 00 00 FE C0 F4")
+        self.assertEqual(self.run_to_halt(), 3)
+        self.assertEqual(self.cpu.regs.AL, 1)
+        self.assertEqual(self.cpu.regs.SP, 0x0106)
+        self.assertEqual(self.cpu.regs.IP, 0x0013) # Next instruction after the hlt.
+        
