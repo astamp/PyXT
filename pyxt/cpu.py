@@ -72,12 +72,19 @@ SEGMENT_REG = {
     0x03 : "DS",
 }
 
+
 # Functions
+SIGNED_DWORD = struct.Struct("<l")
+UNSIGNED_DWORD = struct.Struct("<L")
 SIGNED_WORD = struct.Struct("<h")
 UNSIGNED_WORD = struct.Struct("<H")
 SIGNED_BYTE = struct.Struct("<b")
 UNSIGNED_BYTE = struct.Struct("<B")
 
+def signed_dword(value):
+    """ Interpret an unsigned double word as a signed double word. """
+    return SIGNED_DWORD.unpack(UNSIGNED_DWORD.pack(value))[0]
+    
 def signed_word(value):
     """ Interpret an unsigned word as a signed word. """
     return SIGNED_WORD.unpack(UNSIGNED_WORD.pack(value))[0]
@@ -1592,6 +1599,50 @@ class CPU(object):
                     else:
                         self.regs.AL = quotient
                         self.regs.AH = source % value
+                        
+        elif sub_opcode == 7: # IDIV (signed)
+            # Throw a divide error for divide by zero.
+            if value == 0:
+                self.internal_service_interrupt(INT_DIVIDE_ERROR)
+                
+            else:
+                if bits == 16:
+                    # Python's integer division always truncates towards negative infinity.
+                    # We need to truncate towards zero, so do all of the work unsigned and convert back.
+                    dividend = signed_dword((self.regs.DX << 16) | self.regs.AX)
+                    divisor = signed_word(value)
+                    
+                    dividend_sign = -1 if dividend < 0 else 1
+                    divisor_sign = -1 if divisor < 0 else 1
+                    
+                    quotient = (abs(dividend) // abs(divisor)) * dividend_sign * divisor_sign
+                
+                
+                    # quotient = source // value
+                    # Throw a divide error for a result too large to fix in AX.
+                    if quotient > 32767 or quotient < -32767:
+                        self.internal_service_interrupt(INT_DIVIDE_ERROR)
+                    else:
+                        self.regs.AX = quotient
+                        self.regs.DX = (abs(dividend) % abs(divisor)) * dividend_sign
+                    
+                else:
+                    # Python's integer division always truncates towards negative infinity.
+                    # We need to truncate towards zero, so do all of the work unsigned and convert back.
+                    dividend = signed_word(self.regs.AX)
+                    divisor = signed_byte(value)
+                    
+                    dividend_sign = -1 if dividend < 0 else 1
+                    divisor_sign = -1 if divisor < 0 else 1
+                    
+                    quotient = (abs(dividend) // abs(divisor)) * dividend_sign * divisor_sign
+                    
+                    # Throw a divide error for a value that will overflow a signed 8-bit value.
+                    if quotient > 127 or quotient < -127:
+                        self.internal_service_interrupt(INT_DIVIDE_ERROR)
+                    else:
+                        self.regs.AL = quotient
+                        self.regs.AH = (abs(dividend) % abs(divisor)) * dividend_sign
                         
         else:
             raise NotImplementedError("sub_opcode = %r" % sub_opcode)

@@ -6686,3 +6686,216 @@ class RcrOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0x8002)
         self.assertFalse(self.cpu.flags.carry)
         
+class IdivOpcodeTests(BaseOpcodeAcceptanceTests):
+    def setUp(self):
+        super(IdivOpcodeTests, self).setUp()
+        self.local_interrupt_log = []
+        self.cpu.internal_service_interrupt = self.service_interrupt_hook
+        
+    def service_interrupt_hook(self, interrupt):
+        self.local_interrupt_log.append(interrupt)
+        
+    def test_idiv_by_byte(self):
+        """
+        idiv bl
+        hlt
+        """
+        self.cpu.regs.AX = 1000
+        self.cpu.regs.BL = 14
+        self.load_code_string("F6 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 71)
+        self.assertEqual(self.cpu.regs.AH, 6)
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_idiv_by_byte_no_remainder(self):
+        """
+        idiv bl
+        hlt
+        """
+        self.cpu.regs.AX = 1000
+        self.cpu.regs.BL = 10
+        self.load_code_string("F6 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 100)
+        self.assertEqual(self.cpu.regs.AH, 0)
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_idiv_by_byte_zero(self):
+        """
+        idiv bl
+        hlt
+        """
+        self.cpu.regs.AX = 1000
+        self.cpu.regs.BL = 0
+        self.load_code_string("F6 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.local_interrupt_log, [0])
+        
+    def test_idiv_by_byte_result_too_big(self):
+        """
+        idiv bl
+        hlt
+        """
+        self.cpu.regs.AX = 1280
+        self.cpu.regs.BL = 10
+        self.load_code_string("F6 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.local_interrupt_log, [0]) # 128 is bigger than 127
+        
+    def test_idiv_by_byte_negative_dividend(self):
+        """
+        idiv bl
+        hlt
+        """
+        self.cpu.regs.AX = -1000
+        self.cpu.regs.BL = 14
+        self.load_code_string("F6 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 185) # -71, Determined by operands.
+        self.assertEqual(self.cpu.regs.AH, 250) # -6, Same sign as dividend.
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_idiv_by_byte_negative_divisor(self):
+        """
+        idiv bl
+        hlt
+        """
+        self.cpu.regs.AX = 1000
+        self.cpu.regs.BL = -14
+        self.load_code_string("F6 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 185) # -71, Determined by operands.
+        self.assertEqual(self.cpu.regs.AH, 6) # Same sign as dividend.
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_idiv_by_byte_both_negative(self):
+        """
+        idiv bl
+        hlt
+        """
+        self.cpu.regs.AX = -1000
+        self.cpu.regs.BL = -14
+        self.load_code_string("F6 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 71) # Determined by operands.
+        self.assertEqual(self.cpu.regs.AH, 250) # -6, Same sign as dividend.
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_idiv_by_byte_result_too_big_negative(self):
+        """
+        idiv bl
+        hlt
+        """
+        self.cpu.regs.AX = -1280
+        self.cpu.regs.BL = 10
+        self.load_code_string("F6 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.local_interrupt_log, [0]) # -128 is smaller than -127
+        
+    def test_idiv_by_word(self):
+        """
+        idiv bx
+        hlt
+        """
+        self.cpu.regs.DX = 0x000F # 1,000,000
+        self.cpu.regs.AX = 0x4240
+        self.cpu.regs.BX = 77
+        self.load_code_string("F7 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 12987)
+        self.assertEqual(self.cpu.regs.DX, 1)
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_idiv_by_word_no_remainder(self):
+        """
+        idiv bx
+        hlt
+        """
+        self.cpu.regs.DX = 0x000F # 1,000,000
+        self.cpu.regs.AX = 0x4240
+        self.cpu.regs.BX = 1000
+        self.load_code_string("F7 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 1000)
+        self.assertEqual(self.cpu.regs.DX, 0)
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_idiv_by_word_zero(self):
+        """
+        idiv bx
+        hlt
+        """
+        self.cpu.regs.DX = 0x000F # 1,000,000
+        self.cpu.regs.AX = 0x4240
+        self.cpu.regs.BX = 0
+        self.load_code_string("F7 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.local_interrupt_log, [0])
+        
+    def test_idiv_by_word_result_too_big(self):
+        """
+        idiv bx
+        hlt
+        """
+        self.cpu.regs.DX = 0x0005 # 327,680
+        self.cpu.regs.AX = 0x0000
+        self.cpu.regs.BX = 10
+        self.load_code_string("F7 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.local_interrupt_log, [0])
+        
+    def test_idiv_by_word_negative_dividend(self):
+        """
+        idiv bx
+        hlt
+        """
+        self.cpu.regs.DX = 0xFFF0 # -1,000,000
+        self.cpu.regs.AX = 0xBDC0
+        self.cpu.regs.BX = 77
+        self.load_code_string("F7 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xCD45) # -12987, Determined by operands.
+        self.assertEqual(self.cpu.regs.DX, 0xFFFF) # -1, Same sign as dividend.
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_idiv_by_word_negative_divisor(self):
+        """
+        idiv bx
+        hlt
+        """
+        self.cpu.regs.DX = 0x000F # 1,000,000
+        self.cpu.regs.AX = 0x4240
+        self.cpu.regs.BX = -77
+        self.load_code_string("F7 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xCD45) # -12987, Determined by operands.
+        self.assertEqual(self.cpu.regs.DX, 1) # -1, Same sign as dividend.
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_idiv_by_word_both_negative(self):
+        """
+        idiv bx
+        hlt
+        """
+        self.cpu.regs.DX = 0xFFF0 # -1,000,000
+        self.cpu.regs.AX = 0xBDC0
+        self.cpu.regs.BX = -77
+        self.load_code_string("F7 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 12987) # 12987, Determined by operands.
+        self.assertEqual(self.cpu.regs.DX, 0xFFFF) # -1, Same sign as dividend.
+        self.assertEqual(self.local_interrupt_log, [])
+        
+    def test_idiv_by_word_result_too_big_negative(self):
+        """
+        idiv bx
+        hlt
+        """
+        self.cpu.regs.DX = 0xFFFB # -327,680
+        self.cpu.regs.AX = 0x0000
+        self.cpu.regs.BX = 10
+        self.load_code_string("F7 FB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.local_interrupt_log, [0])
+        
