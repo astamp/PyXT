@@ -6899,3 +6899,162 @@ class IdivOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.local_interrupt_log, [0])
         
+class ImulOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_imul_al_rm8_small(self):
+        """
+        imul byte [value]
+        hlt
+        value:
+            db 25
+        """
+        self.cpu.flags.carry = True
+        self.cpu.flags.overflow = True
+        self.cpu.regs.AH = 0xA5 # Should be ignored.
+        self.cpu.regs.AL = 5
+        self.load_code_string("F6 2E 05 00 F4 19")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x007D) # 125
+        self.assertFalse(self.cpu.flags.carry)
+        self.assertFalse(self.cpu.flags.overflow)
+        
+    def test_imul_al_rm8_large(self):
+        """
+        imul byte [value]
+        hlt
+        value:
+            db 25
+        """
+        self.cpu.regs.AH = 0xA5 # Should be ignored.
+        self.cpu.regs.AL = 0x7F
+        self.load_code_string("F6 2E 05 00 F4 19")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0C67) # 3175
+        self.assertTrue(self.cpu.flags.carry)
+        self.assertTrue(self.cpu.flags.overflow)
+        
+    def test_imul_al_rm8_negative_small(self):
+        """
+        imul byte [value]
+        hlt
+        value:
+            db 25
+        """
+        self.cpu.flags.carry = True
+        self.cpu.flags.overflow = True
+        self.cpu.regs.AH = 0xA5 # Should be ignored.
+        self.cpu.regs.AL = -5
+        self.load_code_string("F6 2E 05 00 F4 19")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xFF83) # -125
+        self.assertFalse(self.cpu.flags.carry)
+        self.assertFalse(self.cpu.flags.overflow)
+        
+    def test_imul_al_rm8_negative_large(self):
+        """
+        imul byte [value]
+        hlt
+        value:
+            db 25
+        """
+        self.cpu.regs.AH = 0xA5 # Should be ignored.
+        self.cpu.regs.AL = -7
+        self.load_code_string("F6 2E 05 00 F4 19")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xFF51) # -175
+        self.assertTrue(self.cpu.flags.carry)
+        self.assertTrue(self.cpu.flags.overflow)
+        
+    def test_imul_al_rm8_negative_rm8(self):
+        """
+        imul byte [value]
+        hlt
+        value:
+            db -25
+        """
+        self.cpu.regs.AH = 0xA5 # Should be ignored.
+        self.cpu.regs.AL = 7
+        self.load_code_string("F6 2E 05 00 F4 E7")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xFF51) # -175
+        self.assertTrue(self.cpu.flags.carry)
+        self.assertTrue(self.cpu.flags.overflow)
+        
+    def test_imul_ax_rm16_small(self):
+        """
+        imul word [value]
+        hlt
+        value:
+            dw 25
+        """
+        self.cpu.flags.carry = True
+        self.cpu.flags.overflow = True
+        self.cpu.regs.AX = 400
+        self.load_code_string("F7 2E 05 00 F4 19 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x2710) # 10000
+        self.assertEqual(self.cpu.regs.DX, 0x0000)
+        self.assertFalse(self.cpu.flags.carry)
+        self.assertFalse(self.cpu.flags.overflow)
+        
+    def test_imul_ax_rm16_large(self):
+        """
+        imul word [value]
+        hlt
+        value:
+            dw 25
+        """
+        self.cpu.regs.AX = 0x7FFF
+        self.load_code_string("F7 2E 05 00 F4 19 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x7FE7) # 819175
+        self.assertEqual(self.cpu.regs.DX, 0x000C)
+        self.assertTrue(self.cpu.flags.carry)
+        self.assertTrue(self.cpu.flags.overflow)
+        
+    def test_imul_ax_rm16_negative_small(self):
+        """
+        imul word [value]
+        hlt
+        value:
+            dw 25
+        """
+        self.cpu.flags.carry = True
+        self.cpu.flags.overflow = True
+        self.cpu.regs.AX = -400
+        self.load_code_string("F7 2E 05 00 F4 19 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xD8F0) # -10000
+        self.assertEqual(self.cpu.regs.DX, 0xFFFF)
+        self.assertFalse(self.cpu.flags.carry)
+        self.assertFalse(self.cpu.flags.overflow)
+        
+    def test_imul_ax_rm16_negative_large(self):
+        """
+        imul word [value]
+        hlt
+        value:
+            dw 25
+        """
+        self.cpu.regs.AX = 0x8001
+        self.load_code_string("F7 2E 05 00 F4 19 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x8019) # -819175
+        self.assertEqual(self.cpu.regs.DX, 0xFFF3)
+        self.assertTrue(self.cpu.flags.carry)
+        self.assertTrue(self.cpu.flags.overflow)
+        
+    def test_imul_ax_rm16_negative_rm16(self):
+        """
+        imul word [value]
+        hlt
+        value:
+            dw -25
+        """
+        self.cpu.regs.AX = 0x7FFF
+        self.load_code_string("F7 2E 05 00 F4 E7 FF")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x8019) # -819175
+        self.assertEqual(self.cpu.regs.DX, 0xFFF3)
+        self.assertTrue(self.cpu.flags.carry)
+        self.assertTrue(self.cpu.flags.overflow)
+        

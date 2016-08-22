@@ -1564,7 +1564,7 @@ class CPU(object):
             self.flags.set_from_alu(value, bits = bits, carry = False)
             self.flags.carry = value != 0
             
-        elif sub_opcode == 4: # MUL
+        elif sub_opcode == 4: # MUL (unsigned)
             if bits == 16:
                 value = self.regs.AX * value
                 self.regs.DX = (value & 0xFFFF0000) >> 16
@@ -1574,6 +1574,23 @@ class CPU(object):
                 self.regs.AX = self.regs.AL * value
                 self.flags.carry = self.flags.overflow = self.regs.AH != 0
                 
+        elif sub_opcode == 5: # IMUL (signed)
+            if bits == 16:
+                value = signed_word(self.regs.AX) * signed_word(value)
+                self.regs.DX = (value & 0xFFFF0000) >> 16
+                self.regs.AX = value & 0x0000FFFF
+                # Is the high word (DX) just a sign extension of the low word (AX)?
+                self.flags.carry = self.flags.overflow = (
+                    (self.regs.AX & 0x8000 == 0x8000 and self.regs.DX != 0xFFFF) or
+                    (self.regs.AX & 0x8000 == 0x0000 and self.regs.DX != 0x0000)
+                )
+            else:
+                self.regs.AX = signed_byte(self.regs.AL) * signed_byte(value)
+                # Is the high byte (AH) just a sign extension of the low byte (AL)?
+                self.flags.carry = self.flags.overflow = (
+                    (self.regs.AL & 0x80 == 0x80 and self.regs.AH != 0xFF) or
+                    (self.regs.AL & 0x80 == 0x00 and self.regs.AH != 0x00)
+                )
         elif sub_opcode == 6: # DIV (unsigned)
             # Throw a divide error for divide by zero.
             if value == 0:
