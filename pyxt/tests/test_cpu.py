@@ -6664,6 +6664,76 @@ class CmpsOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(0x0006), 0x62) # Should be unmodified
         self.assert_flags("oSzPC") # ODITSZAPC
         
+    def test_cmpsw_incrementing(self):
+        """
+        cmpsw
+        hlt
+        foo: db __utf16le__("foo"), 0
+        bar: db __utf16le__("bar"), 0
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.SI = 0x0002
+        self.cpu.regs.DI = 0x0009
+        self.load_code_string("A7 F4 66 00 6F 00 6F 00 00 62 00 61 00 72 00 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SI, 0x0004)
+        self.assertEqual(self.cpu.regs.DI, 0x000B)
+        self.assertEqual(self.memory.mem_read_word(0x0002), 0x0066) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_word(0x0009), 0x0062) # Should be unmodified
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_cmpsw_decrementing(self):
+        """
+        cmpsw
+        hlt
+        foo: db __utf16le__("foo"), 0
+        bar: db __utf16le__("bar"), 0
+        """
+        self.cpu.flags.direction = True
+        self.cpu.regs.SI = 0x0002
+        self.cpu.regs.DI = 0x0009
+        self.load_code_string("A7 F4 66 00 6F 00 6F 00 00 62 00 61 00 72 00 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SI, 0x0000)
+        self.assertEqual(self.cpu.regs.DI, 0x0007)
+        self.assertEqual(self.memory.mem_read_word(0x0002), 0x0066) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_word(0x0009), 0x0062) # Should be unmodified
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_cmpsw_zero(self):
+        """
+        cmpsw
+        hlt
+        foo: db __utf16le__("foo"), 0
+        bar: db __utf16le__("far"), 0
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.SI = 0x0002
+        self.cpu.regs.DI = 0x0009
+        self.load_code_string("A7 F4 66 00 6F 00 6F 00 00 66 00 61 00 72 00 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SI, 0x004)
+        self.assertEqual(self.cpu.regs.DI, 0x00B)
+        self.assert_flags("osZPc") # ODITSZAPC
+        
+    def test_cmpsw_negative(self):
+        """
+        cmpsw
+        hlt
+        foo: db __utf16le__("foo"), 0
+        bar: db __utf16le__("bar"), 0
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.SI = 0x0009 # Switched SI and DI from previous tests.
+        self.cpu.regs.DI = 0x0002
+        self.load_code_string("A7 F4 66 00 6F 00 6F 00 00 62 00 61 00 72 00 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SI, 0x000B)
+        self.assertEqual(self.cpu.regs.DI, 0x0004)
+        self.assertEqual(self.memory.mem_read_byte(0x0002), 0x66) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x0009), 0x62) # Should be unmodified
+        self.assert_flags("oSzPC") # ODITSZAPC
+        
 class CwdOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_cwd_zero(self):
         """

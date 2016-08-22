@@ -742,6 +742,8 @@ class CPU(object):
             self.opcode_scasw()
         elif opcode == 0xA6:
             self.opcode_cmpsb()
+        elif opcode == 0xA7:
+            self.opcode_cmpsw()
             
         elif opcode == 0x8F:
             self.opcode_pop_rm16()
@@ -1990,12 +1992,23 @@ class CPU(object):
     def opcode_cmpsb(self):
         """ Compare the byte at ES:DI with the byte at DS:SI and update the flags. """
         result = self.operator_sub_8(
-            self.bus.mem_read_word(segment_offset_to_address(self.get_data_segment(), self.regs.SI)),
-            self.bus.mem_read_word(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
+            self.bus.mem_read_byte(segment_offset_to_address(self.get_data_segment(), self.regs.SI)),
+            self.bus.mem_read_byte(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
         )
         self.flags.set_from_alu_byte(result)
         self.regs.SI += -1 if self.flags.direction else 1
         self.regs.DI += -1 if self.flags.direction else 1
+        
+    @supports_repz_repnz_prefix
+    def opcode_cmpsw(self):
+        """ Compare the word at ES:DI with the word at DS:SI and update the flags. """
+        result = self.operator_sub_16(
+            self.bus.mem_read_word(segment_offset_to_address(self.get_data_segment(), self.regs.SI)),
+            self.bus.mem_read_word(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
+        )
+        self.flags.set_from_alu_word(result)
+        self.regs.SI += -2 if self.flags.direction else 2
+        self.regs.DI += -2 if self.flags.direction else 2
         
     # ********** Memory access helpers. **********
     def get_data_segment(self):
