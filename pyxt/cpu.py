@@ -1304,6 +1304,8 @@ class CPU(object):
             result = value | immediate
         elif sub_opcode == 0x02:
             result = value + immediate + (1 if self.flags.carry else 0)
+        elif sub_opcode == 0x03:
+            result = self.operator_sbb_8(value, immediate)
         elif sub_opcode == 0x04:
             result = value & immediate
         elif sub_opcode == 0x05:

@@ -1334,6 +1334,29 @@ class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assert_flags("oSzpc") # ODITSZAPC
         # Note sure why carry is clear above, but DEBUG.COM confirms...
         
+    def test_sbb_8x_8_bit(self):
+        """
+        sbb bl, 20
+        hlt
+        """
+        self.cpu.regs.BL = 50
+        self.load_code_string("80 DB 14 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BL, 30)
+        self.assert_flags("oszPc") # ODITSZAPC
+        
+    def test_sbb_8x_16_bit(self):
+        """
+        sbb bx, 2000
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.regs.BX = 5000
+        self.load_code_string("81 DB D0 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 2999)
+        self.assert_flags("oszPc") # ODITSZAPC
+        
 class CmpOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_cmp_rm8_r8_none(self):
         """
