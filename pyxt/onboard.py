@@ -137,7 +137,7 @@ class ProgrammableInterruptController(Device):
     def process_ocw2_byte(self, value):
         command = (value & 0xE0) >> 5
         interrupt = value & 0x07
-        print("command = %r, interrupt = %r" % (command, interrupt))
+        # print("command = %r, interrupt = %r" % (command, interrupt))
         
     def process_ocw3_byte(self, value):
         self.read_register = value & self.OCW3_READ_REGISTER_MASK
