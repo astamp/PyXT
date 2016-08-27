@@ -571,6 +571,9 @@ class CPU(object):
                 self.segment_override = "SS"
             elif opcode == 0x3E:
                 self.segment_override = "DS"
+            elif opcode == 0xF0:
+                # TODO: If PyXT ever runs in multiple threads the LOCK signal will need to be implemented.
+                pass
             else:
                 break
                 

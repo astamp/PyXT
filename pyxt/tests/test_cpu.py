@@ -7276,3 +7276,17 @@ class RetOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.SP, 0x0106)
         self.assertEqual(self.cpu.regs.IP, 0x0013) # Next instruction after the hlt.
         
+class LockPrefixTests(BaseOpcodeAcceptanceTests):
+    def test_lock_doesnt_crash(self):
+        """
+        lock xchg bx
+        hlt
+        """
+        self.cpu.regs.AX = 0xCAFE
+        self.cpu.regs.BX = 0xF00D
+        self.load_code_string("F0 93 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xF00D)
+        self.assertEqual(self.cpu.regs.BX, 0xCAFE)
+        
+        
