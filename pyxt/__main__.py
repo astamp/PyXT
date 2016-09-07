@@ -35,7 +35,7 @@ import logging
 log = logging.getLogger("pyxt")
 
 # Constants
-DEFAULT_DIP_SWITCHES = (SWITCHES_NORMAL_BOOT | SWITCHES_MEMORY_BANKS_FOUR | SWITCHES_VIDEO_MDA_HERC | SWITCHES_DISKETTES_ONE)
+DEFAULT_DIP_SWITCHES = (SWITCHES_NORMAL_BOOT | SWITCHES_MEMORY_BANKS_FOUR | SWITCHES_VIDEO_MDA_HERC | SWITCHES_DISKETTES_TWO)
 
 # Functions
 def parse_cmdline():
@@ -55,6 +55,8 @@ def parse_cmdline():
                       help = "Set this flag to use the proper LOOP handler that doesn't optimize LOOP back to itself.")
     parser.add_option("--diskette", action = "store", dest = "diskette",
                       help = "Diskette image to load into the first drive (A:).")
+    parser.add_option("--diskette2", action = "store", dest = "diskette2",
+                      help = "Diskette image to load into the second drive (B:).")
     parser.add_option("--log-file", action = "store", dest = "log_file",
                       help = "File to output debugging log.")
     return parser.parse_args()
@@ -99,9 +101,14 @@ def main():
     bus.install_device(None, diskette_controller)
     a_drive = FloppyDisketteDrive(FIVE_INCH_360_KB)
     diskette_controller.attach_drive(a_drive, 0)
+    b_drive = FloppyDisketteDrive(FIVE_INCH_360_KB)
+    diskette_controller.attach_drive(b_drive, 1)
     
     if options.diskette:
         a_drive.load_diskette(options.diskette)
+        
+    if options.diskette2:
+        b_drive.load_diskette(options.diskette2)
         
     bus.install_device(None, dma_controller)
     nmi_mask = NMIMaskRegister(0x0A0)
