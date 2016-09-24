@@ -21,7 +21,7 @@ from pyxt.constants import *
 from pyxt.chargen import *
 
 # Pygame Imports
-import pygame
+# import pygame
 
 # Pyglet Imports
 import pyglet

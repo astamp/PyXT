@@ -22,7 +22,7 @@ from pyxt.debugger import Debugger
 from pyxt.bus import SystemBus
 from pyxt.memory import RAM, ROM
 from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MDA_START_ADDRESS
-from pyxt.ui import PygameManager, PygletManager
+from pyxt.ui import PygletManager
 
 from pyxt.fdc import FloppyDisketteController, FloppyDisketteDrive, FIVE_INCH_360_KB
 from pyxt.dma import DmaController
