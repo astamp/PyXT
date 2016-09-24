@@ -23,6 +23,10 @@ from pyxt.chargen import *
 # Pygame Imports
 import pygame
 
+# Pyglet Imports
+import pyglet
+from PIL import Image
+
 # Logging setup
 import logging
 log = logging.getLogger(__name__)
@@ -82,6 +86,8 @@ class MonochromeDisplayAdapter(Device):
                 
         # Handle to the Pygame display object.
         self.screen = None
+        self.batch = pyglet.graphics.Batch()
+        self.sprites = [pyglet.sprite.Sprite(self.char_generator.font_data_normal[x & 0xFF], x = (x % 80) * 9, y = 336 - ((x // 80) * 14),  batch = self.batch) for x in xrange(MDA_COLUMNS * MDA_ROWS)]
         
         # Flag to indicate if we have updated the bitmap and need to display it.
         self.needs_draw = True
@@ -93,9 +99,7 @@ class MonochromeDisplayAdapter(Device):
         self.current_pixel = [0, 0]
         
     def reset(self):
-        pygame.init()
-        self.screen = pygame.display.set_mode(MDA_RESOLUTION)
-        pygame.display.set_caption("PyXT Monochrome Display Adapter")
+        self.screen = pyglet.window.Window(*MDA_RESOLUTION, caption = "PyXT Monochrome Display Adapter")
         
         # Now that we have a display draw whatever is currently in RAM.
         self.redraw()
@@ -175,7 +179,9 @@ class MonochromeDisplayAdapter(Device):
     def draw(self):
         """ Update the "physical" display if necessary. """
         if self.needs_draw:
-            pygame.display.flip()
+            self.batch.draw()
+            self.screen.dispatch_event('on_draw')
+            self.screen.flip()
             self.needs_draw = False
             
     def redraw(self):
@@ -201,21 +207,25 @@ class MonochromeDisplayAdapter(Device):
             return
             
         # Calculate the character generator attributes.
-        cg_attributes = CHARGEN_ATTR_NONE
+        # cg_attributes = CHARGEN_ATTR_NONE
         if attributes & MDA_ATTR_BACKGROUND == MDA_ATTR_BACKGROUND:
-            cg_attributes |= CHARGEN_ATTR_REVERSE
-        if attributes & MDA_ATTR_INTENSITY:
-            cg_attributes |= CHARGEN_ATTR_BRIGHT
-            
+            self.sprites[column + row * 80].image = self.char_generator.font_data_reverse[character]
+            # cg_attributes |= CHARGEN_ATTR_REVERSE
+        elif attributes & MDA_ATTR_INTENSITY:
+            # cg_attributes |= CHARGEN_ATTR_BRIGHT
+            self.sprites[column + row * 80].image = self.char_generator.font_data_bright[character]
+        else:
+            self.sprites[column + row * 80].image = self.char_generator.font_data_normal[character]
         # Blit the character to the bitmap.
-        self.char_generator.blit_character(self.screen, (column * self.char_generator.char_width, row * self.char_generator.char_height), character, cg_attributes)
+        # self.sprites[column + row * 80].draw()
+        # self.char_generator.blit_character(self.screen, (column * self.char_generator.char_width, row * self.char_generator.char_height), character, cg_attributes)
         
     def get_current_pixel(self):
         """ Returns if the current pixel is on or off and increments the pixel index. """
-        if self.screen is not None:
-            color = self.screen.get_at(self.current_pixel)
-        else:
-            color = (0, 0, 0, 0)
+        # if self.screen is not None:
+            # color = self.screen.get_at(self.current_pixel)
+        # else:
+            # color = (0, 0, 0, 0)
             
         # Update the current pixel for the next status read.
         self.current_pixel[0] += 1
@@ -225,7 +235,8 @@ class MonochromeDisplayAdapter(Device):
             if self.current_pixel[1] >= MDA_RESOLUTION[1]:
                 self.current_pixel[1] = 0
                 
-        return color[0:3] != EGA_BLACK
+        return self.current_pixel[0] < (720 // 2)
+        # return color[0:3] != EGA_BLACK
         
 class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
     """
@@ -253,18 +264,13 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
     def __init__(self, rom_file, font = MDA_FONT):
         self.font_info = self.FONT_INFO[font]
         
-        self.font_data_normal = pygame.Surface((self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual))
-        self.font_data_normal.fill(EGA_BLACK)
+        temp_data_normal = Image.new("RGB", (self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual), EGA_BLACK)
+        temp_data_bright = Image.new("RGB", (self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual), EGA_BLACK)
+        temp_data_reverse = Image.new("RGB", (self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual), EGA_GREEN)
         
-        self.font_data_bright = pygame.Surface((self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual))
-        self.font_data_bright.fill(EGA_BLACK)
-        
-        self.font_data_reverse = pygame.Surface((self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual))
-        self.font_data_reverse.fill(EGA_GREEN)
-        
-        pix_normal = pygame.PixelArray(self.font_data_normal)
-        pix_bright = pygame.PixelArray(self.font_data_bright)
-        pix_reverse = pygame.PixelArray(self.font_data_reverse)
+        pix_normal = temp_data_normal.load()
+        pix_bright = temp_data_bright.load()
+        pix_reverse = temp_data_reverse.load()
         
         # The characters are split top and bottom across the first 2 2k pages of the part.
         with open(rom_file, "rb") as fileptr:
@@ -292,10 +298,17 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
                         pix_bright[(index * self.char_width) + 8, row] = EGA_BRIGHT_GREEN
                         pix_reverse[(index * self.char_width) + 8, row] = EGA_BLACK
                         
-        # Make sure to explicitly del this to free the surface lock.
-        del pix_normal
-        del pix_bright
-        del pix_reverse
+        image_normal = pyglet.image.ImageData(temp_data_normal.width, temp_data_normal.height, "RGB", temp_data_normal.tobytes(), pitch = -3 * temp_data_normal.width)
+        self.font_data_normal = pyglet.image.ImageGrid(image_normal, 1, self.CHAR_COUNT)
+        self.font_data_normal = pyglet.image.TextureGrid(self.font_data_normal)
+        
+        image_bright = pyglet.image.ImageData(temp_data_bright.width, temp_data_bright.height, "RGB", temp_data_bright.tobytes(), pitch = -3 * temp_data_bright.width)
+        self.font_data_bright = pyglet.image.ImageGrid(image_bright, 1, self.CHAR_COUNT)
+        self.font_data_bright = pyglet.image.TextureGrid(self.font_data_bright)
+        
+        image_reverse = pyglet.image.ImageData(temp_data_reverse.width, temp_data_reverse.height, "RGB", temp_data_reverse.tobytes(), pitch = -3 * temp_data_reverse.width)
+        self.font_data_reverse = pyglet.image.ImageGrid(image_reverse, 1, self.CHAR_COUNT)
+        self.font_data_reverse = pyglet.image.TextureGrid(self.font_data_reverse)
         
     def blit_character(self, surface, location, index, attributes = CHARGEN_ATTR_NONE):
         """ Place a character onto a surface at the given location. """
@@ -309,7 +322,15 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
         elif attributes & CHARGEN_ATTR_BRIGHT:
             font_data = self.font_data_bright
             
-        surface.blit(font_data, location, area = (self.char_width * index, 0, self.char_width, self.char_height))
+        # surface.blit(font_data, location, area = (self.char_width * index, 0, self.char_width, self.char_height))
+        # region = font_data.get_region(self.char_width * index, 0, self.char_width, self.char_height)
+        region = font_data[index]
+        # print region
+        # print location[0], location[1]
+        # print "da blit", region, location[0], 350 - location[1] - self.char_height, 0
+        # region.blit(location[0], 350 - location[1] - self.char_height, 0)
+        # surface.blit_into(region, location[0], 350 - location[1] - self.char_height, 0)
+        # surface.blit_into(region, location[0], 350 - location[1] - self.char_height, 0)
         
     @property
     def char_width(self):
@@ -328,33 +349,30 @@ def main():
     
     print("MDA test application.")
     char_generator = CharacterGeneratorMDA_CGA_ROM(sys.argv[1], CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
-    
     mda = MonochromeDisplayAdapter(char_generator)
     mda.reset()
-    
-    # Test the font.
-    for x in range(256):
-        mda.mem_write_byte((x % 32) + ((x // 32) * 80) << 1, x)
+    @mda.screen.event
+    def on_draw():
+        # Test the font.
+        for x in range(256):
+            mda.mem_write_byte((x % 32) + ((x // 32) * 80) << 1, x)
         
-    # Test screen width and setting attributes after setting chars.
-    for x in range(80):
-        mda.mem_write_byte((x << 1) + 1600, 0x30 + (x % 10))
-        mda.mem_write_byte((x << 1) + 1600 + 1, 0x08 if x & 0x01 else 0x00)
-        
-    # Test setting attributes before setting chars.
-    for x in range(5):
-        mda.mem_write_byte((x << 1) + 1920 + 1, 0x08)
-    for x, byte in enumerate(six.iterbytes(b"Hello world")):
-        mda.mem_write_byte((x << 1) + 1920, byte)
-        
+        # Test screen width and setting attributes after setting chars.
+        for x in range(80):
+            mda.mem_write_byte((x << 1) + 1600, 0x30 + (x % 10))
+            mda.mem_write_byte((x << 1) + 1600 + 1, 0x08 if x & 0x01 else 0x00)
+            
+        # Test setting attributes before setting chars.
+        for x in range(5):
+            mda.mem_write_byte((x << 1) + 1920 + 1, 0x08)
+        for x, byte in enumerate(six.iterbytes(b"Hello world")):
+            mda.mem_write_byte((x << 1) + 1920, byte)
+            
     # Ensure we commit the memory to the "display".
     mda.draw()
     
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                sys.exit()
-                
+    pyglet.app.run()
+    
 if __name__ == "__main__":
     main()
     

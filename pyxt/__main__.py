@@ -22,7 +22,7 @@ from pyxt.debugger import Debugger
 from pyxt.bus import SystemBus
 from pyxt.memory import RAM, ROM
 from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MDA_START_ADDRESS
-from pyxt.ui import PygameManager
+from pyxt.ui import PygameManager, PygletManager
 
 from pyxt.fdc import FloppyDisketteController, FloppyDisketteDrive, FIVE_INCH_360_KB
 from pyxt.dma import DmaController
@@ -147,11 +147,11 @@ def main():
     
     cpu_or_debugger = debugger if options.debug else cpu
     
-    pygame_manager = PygameManager(ppi, mda_card)
+    ui_manager = PygletManager(ppi, mda_card)
     
     try:
         while not cpu.hlt:
-            pygame_manager.poll()
+            ui_manager.poll()
             pit.clock()
             dma_controller.clock()
             cpu_or_debugger.fetch()
