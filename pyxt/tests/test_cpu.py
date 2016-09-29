@@ -3331,6 +3331,46 @@ class StosOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(21), 0xFF)
         self.assertEqual(self.memory.mem_read_byte(22), 0x00) # Should be unmodified.
         
+    def test_stosb_cannot_override_extra_segment(self):
+        """
+        ds stosb
+        hlt
+        """
+        self.cpu.regs.DS = 0x0000
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AH = 0xFF
+        self.cpu.regs.AL = 0x77
+        self.load_code_string("3E AA F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x77) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AH, 0xFF) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.ES, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DI, 0x0005)
+        self.assertEqual(self.memory.mem_read_byte(4), 0x00) # Should be unmodified
+        self.assertEqual(self.memory.mem_read_byte(20), 0x77)
+        
+    def test_stosw_cannot_override_extra_segment(self):
+        """
+        ds stosw
+        hlt
+        """
+        self.cpu.regs.DS = 0x0000
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AH = 0xFF
+        self.cpu.regs.AL = 0x77
+        self.load_code_string("3E AB F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x77) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.AH, 0xFF) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.ES, 0x0001) # Should be unmodified.
+        self.assertEqual(self.cpu.regs.DI, 0x0006)
+        self.assertEqual(self.memory.mem_read_byte(4), 0x00) # Should be unmodified
+        self.assertEqual(self.memory.mem_read_byte(5), 0x00) # Should be unmodified
+        self.assertEqual(self.memory.mem_read_byte(20), 0x77)
+        self.assertEqual(self.memory.mem_read_byte(21), 0xFF)
+        
 class RepPrefixTests(BaseOpcodeAcceptanceTests):
     def test_rep_stosb(self):
         """
@@ -3575,24 +3615,6 @@ class SegmentOverrideTests(BaseOpcodeAcceptanceTests):
         self.cpu.segment_override = "SS"
         self.assertEqual(self.cpu.get_data_segment(), 0x7788)
         
-    def test_get_extra_segment_with_override(self):
-        self.cpu.regs.DS = 0x1122
-        self.cpu.regs.ES = 0x3344
-        self.cpu.regs.CS = 0x5566
-        self.cpu.regs.SS = 0x7788
-        
-        self.cpu.segment_override = None
-        self.assertEqual(self.cpu.get_extra_segment(), 0x3344)
-        
-        self.cpu.segment_override = "DS"
-        self.assertEqual(self.cpu.get_extra_segment(), 0x1122)
-        self.cpu.segment_override = "ES"
-        self.assertEqual(self.cpu.get_extra_segment(), 0x3344)
-        self.cpu.segment_override = "CS"
-        self.assertEqual(self.cpu.get_extra_segment(), 0x5566)
-        self.cpu.segment_override = "SS"
-        self.assertEqual(self.cpu.get_extra_segment(), 0x7788)
-        
     def test_es_override(self):
         """
         mov [es:bx], al
@@ -3626,19 +3648,17 @@ class SegmentOverrideTests(BaseOpcodeAcceptanceTests):
         
     def test_ds_override(self):
         """
-        ds stosb
-        mov al, 0x55
-        stosb
+        mov ax, [ds:bp]
         hlt
         """
-        self.cpu.regs.DS = 0x0001
-        self.cpu.regs.ES = 0x0002
-        self.cpu.regs.DI = 0x0000
-        self.cpu.regs.AL = 0xAA
-        self.load_code_string("3E AA B0 55 AA F4")
-        self.assertEqual(self.run_to_halt(), 4)
-        self.assertEqual(self.memory.mem_read_byte(32 + 1), 0x55) # Normally uses ES.
-        self.assertEqual(self.memory.mem_read_byte(16 + 0), 0xAA) # Overridden to use DS.
+        # Stolen from test_bp_doesnt_override_existing_override() below as it is the only way
+        # I know to test the DS segment override.
+        self.cpu.regs.DS = 0x0030
+        self.cpu.regs.BP =  0x0100
+        self.memory.mem_write_word(0x0400, 0xCAFE)
+        self.load_code_string("3E 8B 46 00 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xCAFE)
         
     def test_ss_override(self):
         """
@@ -3760,6 +3780,48 @@ class MovsOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(35), 0x00) # Should be unmodified.
         self.assertEqual(self.memory.mem_read_byte(36), 0x22)
         self.assertEqual(self.memory.mem_read_byte(37), 0x33)
+        
+    def test_movsb_cannot_override_extra_segment(self):
+        """
+        cs movsb
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI =  0x0004
+        self.cpu.regs.ES = 0x0002
+        self.cpu.regs.DI =  0x0006
+
+        self.memory.mem_write_byte(0x04, 0xAA) # CS:0004
+        self.memory.mem_write_byte(0x14, 0xBB) # DS:0004
+        self.memory.mem_write_byte(0x24, 0xCC) # ES:0004
+        self.memory.mem_write_byte(0x06, 0x00) # CS:0006
+        self.load_code_string("2E A4 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        # Should have copied CS:0004 to ES:0006
+        self.assertEqual(self.memory.mem_read_byte(0x06), 0x00) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x26), 0xAA)
+        
+    def test_movsw_cannot_override_extra_segment(self):
+        """
+        cs movsw
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.DS = 0x0001
+        self.cpu.regs.SI =  0x0004
+        self.cpu.regs.ES = 0x0002
+        self.cpu.regs.DI =  0x0006
+
+        self.memory.mem_write_word(0x04, 0xAAAA) # CS:0004
+        self.memory.mem_write_word(0x14, 0xBBBB) # DS:0004
+        self.memory.mem_write_word(0x24, 0xCCCC) # ES:0004
+        self.memory.mem_write_word(0x06, 0x0000) # CS:0006
+        self.load_code_string("2E A5 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        # Should have copied CS:0004 to ES:0006
+        self.assertEqual(self.memory.mem_read_word(0x06), 0x0000) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_word(0x26), 0xAAAA)
         
 class PushOpcodeTests(BaseOpcodeAcceptanceTests):
     def setUp(self):
@@ -5490,6 +5552,39 @@ class ScasOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.DI, 0x0006)
         self.assert_flags("oSzPC") # ODITSZAPC
         
+    def test_scasb_cannot_override_extra_segment(self):
+        """
+        cs scasb
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AL = 0x30
+        self.memory.mem_write_byte(19, 0x31)
+        self.memory.mem_write_byte(20, 0x30)
+        self.memory.mem_write_byte(21, 0x32)
+        self.load_code_string("2E AE F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DI, 0x0005)
+        self.assert_flags("osZPc") # ODITSZAPC
+        
+    def test_scasw_cannot_override_extra_segment(self):
+        """
+        cs scasw
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.ES = 0x0001
+        self.cpu.regs.DI = 0x0004
+        self.cpu.regs.AX = 0x5020
+        self.memory.mem_write_byte(20, 0x20)
+        self.memory.mem_write_byte(21, 0x50)
+        self.load_code_string("2E AF F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.DI, 0x0006)
+        self.assert_flags("osZPc") # ODITSZAPC
+        
 class RepzRepnzPrefixTests(BaseOpcodeAcceptanceTests):
     def test_repnz_scasb_exit_on_zero(self):
         """
@@ -6733,6 +6828,46 @@ class CmpsOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(0x0002), 0x66) # Should be unmodified.
         self.assertEqual(self.memory.mem_read_byte(0x0009), 0x62) # Should be unmodified
         self.assert_flags("oSzPC") # ODITSZAPC
+        
+    def test_cmpsb_cannot_override_extra_segment(self):
+        """
+        cs cmpsb
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.DS = 0x000A
+        self.cpu.regs.SI =  0x0008
+        self.cpu.regs.ES = 0x000B
+        self.cpu.regs.DI =  0x0009
+        self.memory.mem_write_byte(0x0008, 0xAA) # CS:0008
+        self.memory.mem_write_byte(0x0009, 0xBB) # CS:0009
+        self.memory.mem_write_byte(0x00A8, 0xCC) # DS:0008
+        self.memory.mem_write_byte(0x00B9, 0xAA) # ES:0009
+        self.load_code_string("2E A6 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SI, 0x0009)
+        self.assertEqual(self.cpu.regs.DI, 0x000A)
+        self.assert_flags("osZPc") # ODITSZAPC - Should match 0xAA to 0xAA
+        
+    def test_cmpsw_cannot_override_extra_segment(self):
+        """
+        cs cmpsw
+        hlt
+        """
+        self.cpu.flags.direction = False
+        self.cpu.regs.DS = 0x000A
+        self.cpu.regs.SI =  0x0006
+        self.cpu.regs.ES = 0x000B
+        self.cpu.regs.DI =  0x0008
+        self.memory.mem_write_word(0x0006, 0xAAAA) # CS:0008
+        self.memory.mem_write_word(0x0008, 0xBBBB) # CS:0009
+        self.memory.mem_write_word(0x00A6, 0xCCCC) # DS:0008
+        self.memory.mem_write_word(0x00B8, 0xAAAA) # ES:0009
+        self.load_code_string("2E A7 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.SI, 0x0008)
+        self.assertEqual(self.cpu.regs.DI, 0x000A)
+        self.assert_flags("osZPc") # ODITSZAPC - Should match 0xAAAA to 0xAAAA
         
 class CwdOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_cwd_zero(self):

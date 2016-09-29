@@ -1930,13 +1930,13 @@ class CPU(object):
     @supports_rep_prefix
     def opcode_stosb(self):
         """ Write the value in AL to ES:DI and increments or decrements DI. """
-        self.bus.mem_write_byte(segment_offset_to_address(self.get_extra_segment(), self.regs.DI), self.regs.AL)
+        self.bus.mem_write_byte(segment_offset_to_address(self.regs.ES, self.regs.DI), self.regs.AL)
         self.regs.DI += -1 if self.flags.direction else 1
         
     @supports_rep_prefix
     def opcode_stosw(self):
         """ Write the word in AX to ES:DI and increments or decrements DI by 2. """
-        self.bus.mem_write_word(segment_offset_to_address(self.get_extra_segment(), self.regs.DI), self.regs.AX)
+        self.bus.mem_write_word(segment_offset_to_address(self.regs.ES, self.regs.DI), self.regs.AX)
         self.regs.DI += -2 if self.flags.direction else 2
         
     @supports_rep_prefix
@@ -1955,7 +1955,7 @@ class CPU(object):
     def opcode_movsb(self):
         """ Reads a byte from DS:SI and writes it to ES:DI. """
         self.bus.mem_write_byte(
-            segment_offset_to_address(self.get_extra_segment(), self.regs.DI),
+            segment_offset_to_address(self.regs.ES, self.regs.DI),
             self.read_data_byte(self.regs.SI),
         )
         self.regs.SI += -1 if self.flags.direction else 1
@@ -1965,7 +1965,7 @@ class CPU(object):
     def opcode_movsw(self):
         """ Reads a word from DS:SI and writes it to ES:DI. """
         self.bus.mem_write_word(
-            segment_offset_to_address(self.get_extra_segment(), self.regs.DI),
+            segment_offset_to_address(self.regs.ES, self.regs.DI),
             self.read_data_word(self.regs.SI),
         )
         self.regs.SI += -2 if self.flags.direction else 2
@@ -1976,7 +1976,7 @@ class CPU(object):
         """ Compare the byte at ES:DI with AL and update the flags. """
         result = self.operator_sub_8(
             self.regs.AL,
-            self.bus.mem_read_byte(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
+            self.bus.mem_read_byte(segment_offset_to_address(self.regs.ES, self.regs.DI)),
         )
         self.flags.set_from_alu_byte(result)
         self.regs.DI += -1 if self.flags.direction else 1
@@ -1986,7 +1986,7 @@ class CPU(object):
         """ Compare the word at ES:DI with AX and update the flags. """
         result = self.operator_sub_16(
             self.regs.AX,
-            self.bus.mem_read_word(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
+            self.bus.mem_read_word(segment_offset_to_address(self.regs.ES, self.regs.DI)),
         )
         self.flags.set_from_alu_word(result)
         self.regs.DI += -2 if self.flags.direction else 2
@@ -1996,7 +1996,7 @@ class CPU(object):
         """ Compare the byte at ES:DI with the byte at DS:SI and update the flags. """
         result = self.operator_sub_8(
             self.bus.mem_read_byte(segment_offset_to_address(self.get_data_segment(), self.regs.SI)),
-            self.bus.mem_read_byte(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
+            self.bus.mem_read_byte(segment_offset_to_address(self.regs.ES, self.regs.DI)),
         )
         self.flags.set_from_alu_byte(result)
         self.regs.SI += -1 if self.flags.direction else 1
@@ -2007,7 +2007,7 @@ class CPU(object):
         """ Compare the word at ES:DI with the word at DS:SI and update the flags. """
         result = self.operator_sub_16(
             self.bus.mem_read_word(segment_offset_to_address(self.get_data_segment(), self.regs.SI)),
-            self.bus.mem_read_word(segment_offset_to_address(self.get_extra_segment(), self.regs.DI)),
+            self.bus.mem_read_word(segment_offset_to_address(self.regs.ES, self.regs.DI)),
         )
         self.flags.set_from_alu_word(result)
         self.regs.SI += -2 if self.flags.direction else 2
@@ -2017,10 +2017,6 @@ class CPU(object):
     def get_data_segment(self):
         """ Helper function to return the effective data segment. """
         return self.regs[self.segment_override] if self.segment_override else self.regs.DS
-        
-    def get_extra_segment(self):
-        """ Helper function to return the effective extra segment. """
-        return self.regs[self.segment_override] if self.segment_override else self.regs.ES
         
     def write_data_word(self, offset, value):
         """ Write a word to data memory at the given offset.  Assume DS unless overridden by a prefix. """
