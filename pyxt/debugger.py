@@ -46,6 +46,7 @@ class Debugger(object):
         
         self.location_counter = Counter()
         self.instruction_counter = Counter()
+        self.trace_fileptr = None
         
     # ********** Debugger functions. **********
     def fetch(self):
@@ -55,6 +56,23 @@ class Debugger(object):
             
         next_instruction = self.peek_instruction_byte()
         
+        if self.trace_fileptr:
+            if self.cpu.regs.CS >= 0xF000:
+                self.trace_fileptr.write("\t".join([
+                    "%04x:%04x" % (self.cpu.regs.CS, self.cpu.regs.IP),
+                    "0x%02x" % self.cpu.regs.AH,
+                    "0x%02x" % self.cpu.regs.AL,
+                    "%s" % (chr(self.cpu.regs.AL) if self.cpu.regs.AL >= 0x20 and self.cpu.regs.AL < 0x7F else "???"),
+                    "0x%04x" % self.cpu.regs.BX,
+                    "0x%04x" % self.cpu.regs.CX,
+                    "0x%04x" % self.cpu.regs.DX,
+                    "0x%04x" % self.cpu.regs.SI,
+                    "0x%04x" % self.cpu.regs.DI,
+                    "0x%04x" % self.cpu.regs.CS,
+                    "0x%04x" % self.cpu.regs.DS,
+                    "0x%04x" % self.cpu.regs.ES,
+                ]) + "\r\n")
+                
         # Check if we are trying to step out of a CALL-ed function.
         if self.step_out:
             if next_instruction in RETURN_OPCODES:
@@ -134,8 +152,13 @@ class Debugger(object):
                 print("[%s] >" % " ".join(self.debugger_shortcut), end=" ")
             else:
                 print(">", end=" ")
-            cmd = raw_input().lower().split()
-            
+                
+            try:
+                cmd = raw_input().lower().split()
+            except KeyboardInterrupt:
+                print("^C")
+                continue
+                
             try:
                 resume = self.process_command(cmd)
                 if resume:
@@ -171,11 +194,23 @@ class Debugger(object):
         elif len(cmd) == 2 and cmd[0] in ("stack", "st"):
             self.dump_stack(int(cmd[1]))
             
+        elif len(cmd) == 2 and cmd[0] in ("key", "scancode"):
+            self.bus.io_decoder[0x060].key_pressed((int(cmd[1], 0), ))
+            
         elif len(cmd) == 1 and cmd[0] == "ram-dump":
             with open("ram-dump.bin", "wb") as fileptr:
                 for index in xrange(10):
                     fileptr.write(self.bus.devices[index].contents.tostring())
                     
+        elif len(cmd) == 2 and cmd[0] == "trace":
+            if cmd[1] == "on" and self.trace_fileptr is None:
+                self.trace_fileptr = open("trace.log", "wb")
+            elif cmd[1] == "off" and self.trace_fileptr is not None:
+                self.trace_fileptr.close()
+                self.trace_fileptr = None
+            else:
+                print("Trace is %s." % ("off" if self.trace_fileptr is None else "on"))
+                
         elif len(cmd) == 1 and cmd[0] in ("step-out", "out"):
             # Set the step out flag and disable single stepping so we run to the next return.
             self.step_out = True
