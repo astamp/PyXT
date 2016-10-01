@@ -64,6 +64,53 @@ MDA_RAM_SIZE = 4096
 BITS_LO_TO_HI = [7, 6, 5, 4, 3, 2, 1, 0]
 
 # Classes
+class Cursor(object):
+    """ Structure containing the cursor parameters. """
+    NO_BLINK = 0
+    FAST_BLINK_RATE = 16
+    MEDIUM_BLINK_RATE = 24
+    SLOW_BLINK_RATE = 32
+    
+    MODE_MASK = 0x60
+    MODE_NORMAL = 0x00
+    MODE_ALWAYS_OFF = 0x20
+    MODE_FAST_BLINK = 0x40
+    MODE_SLOW_BLINK = 0x60
+    
+    def __init__(self):
+        self.addr = 0 # Character location in video memory to place the cursor.
+        self.start = 0 # Top scanline of the cursor relative to the character cell.
+        self.end = 0 # Bottom scanline of the cursor relative to the character cell.
+        self.interval = self.SLOW_BLINK_RATE # Number of vertical refreshes per cursor blink.
+        self.timer = 0 # Current index into vertical refresh interval.
+        self.enabled = True
+        self.mode = None # Intentionally None to force set_mode to update.
+        
+        self.displayed = False # Is the cursor currently displayed on the screen.
+        self.displayed_addr = 0 # Location of currently displayed cursor.
+        
+        self.set_mode(self.MODE_NORMAL)
+        
+    def set_mode(self, mode):
+        """ Set the cursor mode from bits 5 and 6 of the top scanline byte. """
+        if mode != self.mode:
+            self.mode = mode
+            self.timer = 0
+            self.enabled = True
+            
+            if mode == self.MODE_NORMAL:
+                self.interval = self.MEDIUM_BLINK_RATE
+                
+            elif mode == self.MODE_ALWAYS_OFF:
+                self.interval = self.NO_BLINK
+                self.enabled = False
+                
+            elif mode == self.MODE_FAST_BLINK:
+                self.interval = self.FAST_BLINK_RATE
+                
+            elif mode == self.MODE_SLOW_BLINK:
+                self.interval = self.SLOW_BLINK_RATE
+                
 class MonochromeDisplayAdapter(Device):
     def __init__(self, char_generator, randomize = False):
         super(MonochromeDisplayAdapter, self).__init__()
@@ -91,6 +138,9 @@ class MonochromeDisplayAdapter(Device):
         
         # Used to simulate the pixel on bit when the status register is being read.
         self.current_pixel = [0, 0]
+        
+        # Cursor parameters.
+        self.cursor = Cursor()
         
     def reset(self):
         pygame.init()
@@ -166,14 +216,66 @@ class MonochromeDisplayAdapter(Device):
             
         elif port in DATA_REG_ACCESS_PORTS:
             # log.warning("Data reg access port 0x%03x written with 0x%02x!", port, value)
-            pass # self.write_crt_data_register(self.data_reg_index, value)
+            self.write_crt_data_register(self.data_reg_index, value)
             
         elif port == CONTROL_REG_PORT:
             log.debug("Control reg port 0x%03x written with 0x%02x!", port, value)
             self.control_reg = value
             
+    def write_crt_data_register(self, index, value):
+        """ Handles writes to the 6845 CRT controller's parameters. """
+        cursor = self.cursor
+        
+        # if index == 1:
+            # log.debug("Character columns: %d", value)
+        # elif index == 6:
+            # log.debug("Character rows: %d", value)
+        # elif index == 9:
+            # log.debug("Character scanlines: %d", value + 1)
+            
+        if index == 10:
+            cursor.start = value & 0x1F
+            cursor.set_mode(value & cursor.MODE_MASK)
+        elif index == 11:
+            cursor.end = value
+        elif index == 14:
+            cursor.addr = (cursor.addr & 0x00FF) | (value << 8)
+        elif index == 15:
+            cursor.addr = (cursor.addr & 0xFF00) | value
+        else:
+            log.debug("Other CRT data register 0x%02x written with 0x%02x!", index, value)
+        
     def draw(self):
         """ Update the "physical" display if necessary. """
+        cursor = self.cursor
+        
+        # If blinking is enabled, is it time to blink?
+        blink_cursor = False
+        if cursor.interval:
+            cursor.timer += 1
+            if cursor.timer > cursor.interval:
+                cursor.timer = 0
+                blink_cursor = True
+                
+        # If we are blinking or need to move the cursor.
+        if blink_cursor or cursor.addr != cursor.displayed_addr:
+            # Re-display the character at the last cursor position to erase the cursor.
+            if cursor.displayed:
+                self.blit_single_char(cursor.displayed_addr << 1)
+                
+            elif cursor.enabled:
+                # Draw the cursor over the current character.
+                row = cursor.addr // MDA_COLUMNS
+                column = cursor.addr % MDA_COLUMNS
+                pygame.draw.rect(self.screen, EGA_GREEN, [column * 9, (row * 14) + cursor.start, 9, (cursor.end - cursor.start) + 1])
+                
+                # Log where the cursor is located so we can erase it.
+                cursor.displayed_addr = cursor.addr
+                
+            # Force a redraw and toggle the cursor active.
+            self.needs_draw = True
+            cursor.displayed = not cursor.displayed
+            
         if self.needs_draw:
             pygame.display.flip()
             self.needs_draw = False
