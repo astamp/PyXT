@@ -22,6 +22,7 @@ from pyxt.debugger import Debugger
 from pyxt.bus import SystemBus
 from pyxt.memory import RAM, ROM
 from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MDA_START_ADDRESS
+from pyxt.cga import ColorGraphicsAdapter, CGA_START_ADDRESS, CharacterGeneratorCGA
 from pyxt.ui import PygameManager
 
 from pyxt.fdc import FloppyDisketteController, FloppyDisketteDrive, FIVE_INCH_360_KB
@@ -47,6 +48,8 @@ def parse_cmdline():
                       help = "ROM BIOS image to load at 0xF0000.")
     parser.add_option("--mda-rom", action = "store", dest = "mda_rom",
                       help = "MDA ROM to use for the virtual MDA card.")
+    parser.add_option("--display", action = "store", dest = "display", default = "mda",
+                      help = "Display adapter type to use, default: mda.")
     parser.add_option("--dip-switches", action = "store", type = "int", dest = "dip_switches",
                       help = "DIP switch byte to use.", default = DEFAULT_DIP_SWITCHES)
     parser.add_option("--skip-memory-test", action = "store_true", dest = "skip_memory_test",
@@ -103,10 +106,19 @@ def main():
         bus.mem_write_word(0x0472, 0x1234)
         
     # Other onboard hardware devices.
-    char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
-    mda_card = MonochromeDisplayAdapter(char_generator, randomize = True)
-    bus.install_device(MDA_START_ADDRESS, mda_card)
-    
+    video_card = None
+    if options.display == "mda":
+        char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
+        video_card = MonochromeDisplayAdapter(char_generator, randomize = True)
+        bus.install_device(MDA_START_ADDRESS, video_card)
+    elif options.display == "cga":
+        char_generator = CharacterGeneratorCGA(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.CGA_WIDE_FONT)
+        video_card = ColorGraphicsAdapter(char_generator, randomize = True)
+        # Use MDA start address until devices can be installed on non-64k boundaries.
+        bus.install_device(MDA_START_ADDRESS, video_card)
+    else:
+        log.error("Unsupported display type: %r", options.display)
+        
     diskette_controller = FloppyDisketteController(0x3F0)
     bus.install_device(None, diskette_controller)
     a_drive = FloppyDisketteDrive(FIVE_INCH_360_KB)
@@ -157,7 +169,7 @@ def main():
     
     cpu_or_debugger = debugger if options.debug else cpu
     
-    pygame_manager = PygameManager(ppi, mda_card)
+    pygame_manager = PygameManager(ppi, video_card)
     
     try:
         while not cpu.hlt:
