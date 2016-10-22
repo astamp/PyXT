@@ -5,7 +5,11 @@ For more info see here:
 http://www.seasip.info/VintagePC/cga.html
 http://bochs.sourceforge.net/techspec/PORTS.LST
 http://webpages.charter.net/danrollins/techhelp/0066.HTM
+http://webpages.charter.net/danrollins/techhelp/0089.HTM
 http://www.oldskool.org/pc/cgacal
+https://en.wikipedia.org/wiki/Color_Graphics_Adapter
+http://www.eivanov.com/2011/01/cga-programming.html
+http://nerdlypleasures.blogspot.com/2016/05/ibms-cga-hardware-explained.html
 """
 
 from __future__ import print_function
@@ -52,7 +56,7 @@ DATA_REG_ACCESS_PORTS = (0x3D1, 0x3D3, 0x3D5, 0x3D7)
 
 CONTROL_REG_PORT = 0x3D8
 CONTROL_REG_80_COLUMN =     0x01
-CONTROL_REG_320_X_200_GFX = 0x02
+CONTROL_REG_GRAPHICS_MODE = 0x02
 CONTROL_REG_MONO =          0x04
 CONTROL_REG_VIDEO_ENABLE =  0x08
 CONTROL_REG_640_X_200_GFX = 0x10
@@ -60,6 +64,7 @@ CONTROL_REG_BLINK_ENABLE =  0x20
 
 PALETTE_REG_PORT = 0x3D9
 PALETTE_REG_COLOR_MASK = 0x0F
+PALETTE_REG_SELECT = 0x20
 
 STATUS_REG_PORT = 0x3DA
 STATUS_REG_BASE = 0xF0
@@ -97,6 +102,20 @@ CGA_COLOR_MAP = {
     0xD : (0xFC, 0x54, 0xFC),
     0xE : (0xFC, 0xFC, 0x54),
     0xF : (0xFC, 0xFC, 0xFC),
+}
+
+PALETTE_0_COLOR_MAP = {
+    0 : CGA_COLOR_MAP[0x0],
+    1 : CGA_COLOR_MAP[0x2],
+    2 : CGA_COLOR_MAP[0x4],
+    3 : CGA_COLOR_MAP[0x6],
+}
+
+PALETTE_1_COLOR_MAP = {
+    0 : CGA_COLOR_MAP[0x0],
+    1 : CGA_COLOR_MAP[0x3],
+    2 : CGA_COLOR_MAP[0x5],
+    3 : CGA_COLOR_MAP[0x7],
 }
 
 # Classes
@@ -188,6 +207,13 @@ class ColorGraphicsAdapter(Device):
         self.rows = 25
         self.columns = 40
         
+        # Video page support.
+        self.page_offset = 0x0000
+        
+        # Graphics support.
+        self.graphics_mode = False
+        self.graphics_palette = PALETTE_0_COLOR_MAP
+        
     def reset(self):
         pygame.init()
         self.window = pygame.display.set_mode(DOUBLE_RESOLUTION)
@@ -229,7 +255,10 @@ class ColorGraphicsAdapter(Device):
         self.video_ram[offset] = value
         
         # Reblit using the character as the base, not an attribute.
-        self.blit_single_char(offset & 0x1FFE)
+        if self.graphics_mode:
+            self.draw_single_byte(offset)
+        else:
+            self.blit_single_char(offset & 0x1FFE)
         
         # Mark that the display bitmap is dirty and needs to be updated.
         self.needs_draw = True
@@ -272,11 +301,14 @@ class ColorGraphicsAdapter(Device):
             
         elif port == CONTROL_REG_PORT:
             log.debug("Control reg port 0x%03x written with 0x%02x!", port, value)
+            self.graphics_mode = value & CONTROL_REG_GRAPHICS_MODE == CONTROL_REG_GRAPHICS_MODE
+            
             self.control_reg = value
             
         elif port == PALETTE_REG_PORT:
             log.debug("Palette reg port 0x%03x written with 0x%02x!", port, value)
             self.overscan_color = value & PALETTE_REG_COLOR_MASK
+            self.graphics_palette = PALETTE_1_COLOR_MAP if value & PALETTE_REG_SELECT else PALETTE_0_COLOR_MAP
             
     def write_crt_data_register(self, index, value):
         """ Handles writes to the 6845 CRT controller's parameters. """
@@ -294,6 +326,14 @@ class ColorGraphicsAdapter(Device):
             cursor.set_mode(value & cursor.MODE_MASK)
         elif index == 11:
             cursor.end = value
+        elif index == 12:
+            self.page_offset = (self.page_offset & 0x00FF) | (value << 8)
+            # HACK: For now, redraw the entire screen on page swap.
+            self.redraw()
+        elif index == 13:
+            self.page_offset = (self.page_offset & 0xFF00) | value
+            # HACK: For now, redraw the entire screen on page swap.
+            self.redraw()
         elif index == 14:
             cursor.addr = (cursor.addr & 0x00FF) | (value << 8)
         elif index == 15:
@@ -305,35 +345,37 @@ class ColorGraphicsAdapter(Device):
         """ Update the "physical" display if necessary. """
         cursor = self.cursor
         
-        # If blinking is enabled, is it time to blink?
-        blink_cursor = False
-        if cursor.interval:
-            cursor.timer += 1
-            if cursor.timer > cursor.interval:
-                cursor.timer = 0
-                blink_cursor = True
-                
-        # If we are blinking or need to move the cursor.
-        if blink_cursor or cursor.addr != cursor.displayed_addr:
-            # Re-display the character at the last cursor position to erase the cursor.
-            if cursor.displayed:
-                self.blit_single_char(cursor.displayed_addr << 1)
-                
-            elif cursor.enabled:
-                # Draw the cursor over the current character.
-                row = cursor.addr // self.columns
-                column = cursor.addr % self.columns
-                self.screen.fill(
-                    CGA_COLOR_MAP[self.video_ram[cursor.addr + 1] & 0x0F],
-                    [column * 8, (row * 8) + cursor.start, 8, (cursor.end - cursor.start) + 1],
-                )
-                
-                # Log where the cursor is located so we can erase it.
-                cursor.displayed_addr = cursor.addr
-                
-            # Force a redraw and toggle the cursor active.
-            self.needs_draw = True
-            cursor.displayed = not cursor.displayed
+        # Do not use the hardware cursor in graphics mode.
+        if not self.graphics_mode:
+            # If blinking is enabled, is it time to blink?
+            blink_cursor = False
+            if cursor.interval:
+                cursor.timer += 1
+                if cursor.timer > cursor.interval:
+                    cursor.timer = 0
+                    blink_cursor = True
+                    
+            # If we are blinking or need to move the cursor.
+            if blink_cursor or cursor.addr != cursor.displayed_addr:
+                # Re-display the character at the last cursor position to erase the cursor.
+                if cursor.displayed:
+                    self.blit_single_char(cursor.displayed_addr << 1)
+                    
+                elif cursor.enabled:
+                    # Draw the cursor over the current character.
+                    row = cursor.addr // self.columns
+                    column = cursor.addr % self.columns
+                    self.screen.fill(
+                        CGA_COLOR_MAP[self.video_ram[cursor.addr + 1] & 0x0F],
+                        [column * 8, (row * 8) + cursor.start, 8, (cursor.end - cursor.start) + 1],
+                    )
+                    
+                    # Log where the cursor is located so we can erase it.
+                    cursor.displayed_addr = cursor.addr
+                    
+                # Force a redraw and toggle the cursor active.
+                self.needs_draw = True
+                cursor.displayed = not cursor.displayed
             
         # Draw the overscan region if the color has changed.
         if self.overscan_color != self.last_overscan_color:
@@ -356,9 +398,13 @@ class ColorGraphicsAdapter(Device):
             
     def redraw(self):
         """ Does a full redraw of the display from RAM. """
-        for offset in range(0, self.rows * self.columns * 2, 2):
-            self.blit_single_char(offset)
-            
+        if self.graphics_mode:
+            for offset in range(0, CGA_RAM_SIZE):
+                self.draw_single_byte(offset)
+        else:
+            for offset in range(0, self.rows * self.columns * 2, 2):
+                self.blit_single_char(self.page_offset + offset)
+                
         self.needs_draw = True
         
     def blit_single_char(self, offset):
@@ -384,6 +430,26 @@ class ColorGraphicsAdapter(Device):
             CGA_COLOR_MAP[attributes & 0x0F],
             CGA_COLOR_MAP[attributes >> 4],
         )
+        
+    def draw_single_byte(self, offset):
+        """ Draws a single byte of packed graphics to the display given the offset into video RAM. """
+        byte = self.video_ram[offset]
+        px0 = (byte >> 6) & 0x3
+        px1 = (byte >> 4) & 0x3
+        px2 = (byte >> 2) & 0x3
+        px3 = byte & 0x3
+        
+        row = (((offset & 0x1FFF) // 80) << 1) + (1 if offset & 0x2000 == 0x2000 else 0)
+        if row > 199:
+            return
+            
+        column = ((offset & 0x1FFF) % 80) * 4
+        
+        # TODO: There must be a faster way to do this.
+        self.screen.set_at((column, row), self.graphics_palette[px0])
+        self.screen.set_at((column + 1, row), self.graphics_palette[px1])
+        self.screen.set_at((column + 2, row), self.graphics_palette[px2])
+        self.screen.set_at((column + 3, row), self.graphics_palette[px3])
         
     def get_current_pixel(self):
         """ Returns if the current pixel is on or off and increments the pixel index. """
@@ -494,6 +560,11 @@ def main():
                     overscan_color = (overscan_color + 1) & 0x0F
                     print("overscan_color = 0x%x" % overscan_color)
                     cga.io_write_byte(PALETTE_REG_PORT, overscan_color)
+                    cga.draw()
+                elif event.key == pygame.K_KP_MULTIPLY:
+                    cga.io_write_byte(CONTROL_REG_PORT, CONTROL_REG_GRAPHICS_MODE)
+                    cga.mem_write_byte(CGA_OFFSET + 0, 0xA5)
+                    cga.mem_write_byte(CGA_OFFSET + 8192, 0x5A)
                     cga.draw()
                 elif len(event.unicode) > 0:
                     byte = six.byte2int(event.unicode.encode("utf-8"))
