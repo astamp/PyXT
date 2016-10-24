@@ -595,8 +595,12 @@ def main():
                 elif event.key == pygame.K_KP_MINUS:
                     old_value = cga.io_read_byte(CONTROL_REG_PORT)
                     if old_value & CONTROL_REG_HIGH_RES:
+                        cga.io_write_byte(0x3D4, 1)
+                        cga.io_write_byte(0x3D5, 40)
                         cga.io_write_byte(CONTROL_REG_PORT, old_value & ~CONTROL_REG_HIGH_RES)
                     else:
+                        cga.io_write_byte(0x3D4, 1)
+                        cga.io_write_byte(0x3D5, 80)
                         cga.io_write_byte(CONTROL_REG_PORT, old_value | CONTROL_REG_HIGH_RES)
                         
                     cga.draw()
