@@ -41,12 +41,20 @@ CGA_START_ADDRESS = 0xB8000
 # This is a hack until devices can be installed at non 64k boundaries.
 CGA_OFFSET = 0x8000
 
-# TODO: This will not work 640x200 graphics mode.
-BASE_RESOLUTION = 320, 200
 # Calculate the space for a border around the screen, the color of this can be changed in CGA.
 OVERSCAN = 16
-OVERSCAN_RESOLUTION = BASE_RESOLUTION[0] + (2 * OVERSCAN), BASE_RESOLUTION[1] + (2 * OVERSCAN)
-# Scale up the display size for modern monitors.
+
+# Screen resolution in low (40 col) and high (80 col) resolution modes.
+SCREEN_RESOLUTION_LOW_RES = 320, 200
+SCREEN_RESOLUTION_HIGH_RES = 640, 200
+
+# Size of the the scaled display region (320x200 -> 2x,2x; 640x200 -> 1x,2x).
+DISPLAY_RESOLUTION = 640, 400
+
+# Size of the "physical" display including overscan.
+OVERSCAN_RESOLUTION = DISPLAY_RESOLUTION[0] + (OVERSCAN * 2), DISPLAY_RESOLUTION[1] + (OVERSCAN * 2)
+
+# Optional double resolution.
 DOUBLE_RESOLUTION = OVERSCAN_RESOLUTION[0] * 2, OVERSCAN_RESOLUTION[1] * 2
 
 CGA_PORTS_START = 0x3D0
@@ -55,7 +63,7 @@ DATA_REG_INDEX_PORTS = (0x3D0, 0x3D2, 0x3D4, 0x3D6)
 DATA_REG_ACCESS_PORTS = (0x3D1, 0x3D3, 0x3D5, 0x3D7)
 
 CONTROL_REG_PORT = 0x3D8
-CONTROL_REG_80_COLUMN =     0x01
+CONTROL_REG_HIGH_RES =      0x01
 CONTROL_REG_GRAPHICS_MODE = 0x02
 CONTROL_REG_MONO =          0x04
 CONTROL_REG_VIDEO_ENABLE =  0x08
@@ -167,7 +175,7 @@ class Cursor(object):
                 self.interval = self.SLOW_BLINK_RATE
                 
 class ColorGraphicsAdapter(Device):
-    def __init__(self, char_generator, randomize = False):
+    def __init__(self, char_generator, randomize = False, double = False):
         super(ColorGraphicsAdapter, self).__init__()
         
         self.char_generator = char_generator
@@ -186,6 +194,7 @@ class ColorGraphicsAdapter(Device):
         self.window = None # Actual window overscan res scaled up 2x.
         self.overscan = None # Intermediate video memory for prescaled image.
         self.screen = None # Actual screen area, subsurface of overscan surface.
+        self.double = double
         
         # Flag to indicate if we have updated the bitmap and need to display it.
         self.needs_draw = True
@@ -213,13 +222,15 @@ class ColorGraphicsAdapter(Device):
         # Graphics support.
         self.graphics_mode = False
         self.graphics_palette = PALETTE_0_COLOR_MAP
+        self.high_resolution = False
         
     def reset(self):
         pygame.init()
-        self.window = pygame.display.set_mode(DOUBLE_RESOLUTION)
+        self.window = pygame.display.set_mode(DOUBLE_RESOLUTION if self.double else OVERSCAN_RESOLUTION)
         pygame.display.set_caption("PyXT Color Graphics Adapter")
         self.overscan = pygame.Surface(OVERSCAN_RESOLUTION, pygame.SRCALPHA)
-        self.screen = self.overscan.subsurface((OVERSCAN, OVERSCAN, BASE_RESOLUTION[0], BASE_RESOLUTION[1]))
+        self.viewport = self.overscan.subsurface((OVERSCAN, OVERSCAN, DISPLAY_RESOLUTION[0], DISPLAY_RESOLUTION[1]))
+        self.screen = pygame.Surface(SCREEN_RESOLUTION_HIGH_RES if self.high_resolution else SCREEN_RESOLUTION_LOW_RES, pygame.SRCALPHA)
         
         # Now that we have a display draw whatever is currently in RAM.
         self.redraw()
@@ -301,8 +312,22 @@ class ColorGraphicsAdapter(Device):
             
         elif port == CONTROL_REG_PORT:
             log.debug("Control reg port 0x%03x written with 0x%02x!", port, value)
-            self.graphics_mode = value & CONTROL_REG_GRAPHICS_MODE == CONTROL_REG_GRAPHICS_MODE
+            needs_redraw = False
             
+            new_high_resolution = value & CONTROL_REG_HIGH_RES == CONTROL_REG_HIGH_RES
+            if new_high_resolution != self.high_resolution:
+                self.high_resolution = new_high_resolution
+                self.screen = pygame.Surface(SCREEN_RESOLUTION_HIGH_RES if self.high_resolution else SCREEN_RESOLUTION_LOW_RES, pygame.SRCALPHA)
+                needs_redraw = True
+                
+            new_graphics_mode = value & CONTROL_REG_GRAPHICS_MODE == CONTROL_REG_GRAPHICS_MODE
+            if new_graphics_mode != self.graphics_mode:
+                self.graphics_mode = new_graphics_mode
+                needs_redraw = True
+                
+            if needs_redraw:
+                self.redraw()
+                
             self.control_reg = value
             
         elif port == PALETTE_REG_PORT:
@@ -391,9 +416,13 @@ class ColorGraphicsAdapter(Device):
             self.needs_draw = True
             
         if self.needs_draw:
-            # pygame.transform.scale2x(self.overscan, self.window)
-            pygame.transform.scale(self.overscan, DOUBLE_RESOLUTION, self.window)
-            # pygame.transform.smoothscale(self.overscan, DOUBLE_RESOLUTION, self.window)
+            pygame.transform.scale(self.screen, DISPLAY_RESOLUTION, self.viewport)
+            if self.double:
+                # pygame.transform.scale2x(self.overscan, self.window)
+                pygame.transform.scale(self.overscan, DOUBLE_RESOLUTION, self.window)
+                # pygame.transform.smoothscale(self.overscan, DOUBLE_RESOLUTION, self.window)
+            else:
+                self.window.blit(self.overscan, (0, 0))
             pygame.display.flip()
             self.needs_draw = False
             
@@ -548,7 +577,7 @@ def main():
     print("CGA test application.")
     char_generator = CharacterGeneratorCGA(sys.argv[1], CharacterGeneratorCGA.CGA_WIDE_FONT)
     
-    cga = ColorGraphicsAdapter(char_generator)
+    cga = ColorGraphicsAdapter(char_generator, double = False)
     cga.reset()
     
     pygame.key.set_repeat(250, 25)
@@ -562,11 +591,27 @@ def main():
                     print("overscan_color = 0x%x" % overscan_color)
                     cga.io_write_byte(PALETTE_REG_PORT, overscan_color)
                     cga.draw()
+                    
+                elif event.key == pygame.K_KP_MINUS:
+                    old_value = cga.io_read_byte(CONTROL_REG_PORT)
+                    if old_value & CONTROL_REG_HIGH_RES:
+                        cga.io_write_byte(CONTROL_REG_PORT, old_value & ~CONTROL_REG_HIGH_RES)
+                    else:
+                        cga.io_write_byte(CONTROL_REG_PORT, old_value | CONTROL_REG_HIGH_RES)
+                        
+                    cga.draw()
+                    
                 elif event.key == pygame.K_KP_MULTIPLY:
-                    cga.io_write_byte(CONTROL_REG_PORT, CONTROL_REG_GRAPHICS_MODE)
+                    old_value = cga.io_read_byte(CONTROL_REG_PORT)
+                    if old_value & CONTROL_REG_GRAPHICS_MODE:
+                        cga.io_write_byte(CONTROL_REG_PORT, old_value & ~CONTROL_REG_GRAPHICS_MODE)
+                    else:
+                        cga.io_write_byte(CONTROL_REG_PORT, old_value | CONTROL_REG_GRAPHICS_MODE)
+                        
                     cga.mem_write_byte(CGA_OFFSET + 0, 0xA5)
                     cga.mem_write_byte(CGA_OFFSET + 8192, 0x5A)
                     cga.draw()
+                    
                 elif len(event.unicode) > 0:
                     byte = six.byte2int(event.unicode.encode("utf-8"))
                     cga.mem_write_byte(cursor, byte)
