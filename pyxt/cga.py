@@ -314,14 +314,15 @@ class ColorGraphicsAdapter(Device):
         """ Handles writes to the 6845 CRT controller's parameters. """
         cursor = self.cursor
         
-        # if index == 1:
-            # log.debug("Character columns: %d", value)
-        # elif index == 6:
-            # log.debug("Character rows: %d", value)
-        # elif index == 9:
-            # log.debug("Character scanlines: %d", value + 1)
-            
-        if index == 10:
+        if index == 1:
+            log.debug("Character columns: %d", value)
+            self.columns = value
+        elif index == 6:
+            log.debug("Character rows: %d", value)
+            self.rows = value
+        elif index == 9:
+            log.debug("Character scanlines: %d", value + 1)
+        elif index == 10:
             cursor.start = value & 0x1F
             cursor.set_mode(value & cursor.MODE_MASK)
         elif index == 11:
