@@ -75,9 +75,8 @@ PALETTE_REG_COLOR_MASK = 0x0F
 PALETTE_REG_SELECT = 0x20
 
 STATUS_REG_PORT = 0x3DA
-STATUS_REG_BASE = 0xF0
-STATUS_REG_PIXEL_ON = 0x08
-STATUS_REG_HORIZONTAL_RETRACE = 0x01
+STATUS_REG_RAM_ACCESS_SAFE = 0x01
+STATUS_REG_VERTICAL_RETRACE = 0x08
 
 CGA_ATTR_FG_BLUE =   0x01
 CGA_ATTR_FG_GREEN =  0x02
@@ -199,7 +198,9 @@ class ColorGraphicsAdapter(Device):
         # Flag to indicate if we have updated the bitmap and need to display it.
         self.needs_draw = True
         
-        # Every other call to the status register will flip the horizontal retrace bit.
+        # Every other call to draw() will flip the vertical retrace.
+        self.vertical_retrace = False
+        # Every other call to get the status register should flip the "snow" bit.
         self.horizontal_retrace = False
         
         # Used to simulate the pixel on bit when the status register is being read.
@@ -288,11 +289,12 @@ class ColorGraphicsAdapter(Device):
             return self.control_reg
             
         elif port == STATUS_REG_PORT:
-            status = STATUS_REG_BASE
-            if self.get_current_pixel():
-                status |= STATUS_REG_PIXEL_ON
+            # Both the horizontal and vertical retrace must change state during the POST.
+            status = 0x00
+            if self.vertical_retrace:
+                status |= STATUS_REG_VERTICAL_RETRACE
             if self.horizontal_retrace:
-                status |= STATUS_REG_HORIZONTAL_RETRACE
+                status |= STATUS_REG_RAM_ACCESS_SAFE
                 
             self.horizontal_retrace = not self.horizontal_retrace
             return status
@@ -370,6 +372,7 @@ class ColorGraphicsAdapter(Device):
     def draw(self):
         """ Update the "physical" display if necessary. """
         cursor = self.cursor
+        self.vertical_retrace = not self.vertical_retrace
         
         # Do not use the hardware cursor in graphics mode.
         if not self.graphics_mode:
@@ -480,23 +483,6 @@ class ColorGraphicsAdapter(Device):
         self.screen.set_at((column + 1, row), self.graphics_palette[px1])
         self.screen.set_at((column + 2, row), self.graphics_palette[px2])
         self.screen.set_at((column + 3, row), self.graphics_palette[px3])
-        
-    def get_current_pixel(self):
-        """ Returns if the current pixel is on or off and increments the pixel index. """
-        if self.screen is not None:
-            color = self.screen.get_at(self.current_pixel)
-        else:
-            color = (0, 0, 0, 0)
-            
-        # Update the current pixel for the next status read.
-        self.current_pixel[0] += 1
-        if self.current_pixel[0] >= BASE_RESOLUTION[0]:
-            self.current_pixel[0] = 0
-            self.current_pixel[1] += 1
-            if self.current_pixel[1] >= BASE_RESOLUTION[1]:
-                self.current_pixel[1] = 0
-                
-        return color[0:3] != (0, 0, 0)
         
 class CharacterGeneratorCGA(CharacterGenerator):
     """
