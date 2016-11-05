@@ -140,8 +140,9 @@ class SystemBus(object):
         if device is not None:
             return device.io_read_byte(port)
         else:
-            log.warning("No handler for reading I/O port: 0x%03x, returning 0x00.", port)
-            return 0x00
+            # DOSBox, PCjs, VMware, and several forum posts agree this should return 0xFF.
+            log.warning("No handler for reading I/O port: 0x%03x, returning 0xFF.", port)
+            return 0xFF
             
     def io_read_word(self, port):
         """ Read a word from the supplied port. """

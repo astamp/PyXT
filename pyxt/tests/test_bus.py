@@ -69,3 +69,6 @@ class SystemBusTests(unittest.TestCase):
         self.bus.interrupt_request(8)
         self.assertEqual(self.pic.irq_log, [])
         
+    def test_unmapped_io_port_returns_0xff(self):
+        self.assertEqual(self.bus.io_read_byte(5643), 0xFF)
+        
