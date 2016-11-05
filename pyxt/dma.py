@@ -87,6 +87,7 @@ class DmaChannel(object):
         self.page_register_port = 0x000
         self.page_register_value = 0x0000
         self.terminal_count_callback = None
+        self.reached_terminal_count = False
         
 class DmaController(Device):
     """ A Device emulating an 8237 DMA controller. """
@@ -129,6 +130,7 @@ class DmaController(Device):
                     
                     if channel.word_count == 0xFFFF:
                         channel.requested = False
+                        channel.reached_terminal_count = True
                         if callable(channel.terminal_count_callback):
                             channel.terminal_count_callback()
                             
@@ -156,8 +158,11 @@ class DmaController(Device):
             for index, channel in enumerate(self.channels):
                 if channel.requested:
                     value |= (0x10 << index)
-                if channel.word_count == 0xFFFF:
+                if channel.reached_terminal_count:
                     value |= (0x01 << index)
+                    # Per the data sheet, these are cleared after a status read.
+                    channel.reached_terminal_count = False
+                    
             return value
             
         else:

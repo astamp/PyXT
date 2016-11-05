@@ -128,8 +128,17 @@ class DMATests(unittest.TestCase):
         
     def test_read_status_register(self):
         self.dma.channels[1].requested = True
-        self.dma.channels[2].word_count = 0xFFFF
+        self.dma.channels[2].reached_terminal_count = True
         self.assertEqual(self.dma.io_read_byte(0x08), 0x24)
+        
+    def test_read_status_register_clears_terminal_count_flag(self):
+        self.dma.channels[1].requested = True
+        self.dma.channels[2].word_count = 0xFFFF
+        self.dma.channels[2].reached_terminal_count = True
+        self.assertEqual(self.dma.io_read_byte(0x08), 0x24)
+        # First read should clear the TC flag, but not the requested flag.
+        self.assertFalse(self.dma.channels[2].reached_terminal_count)
+        self.assertEqual(self.dma.io_read_byte(0x08), 0x20)
         
     def test_command_register_enable_disable(self):
         self.dma.io_write_byte(0x08, 0x00)
@@ -247,6 +256,7 @@ class DMATests(unittest.TestCase):
         self.dma.channels[0].mode = MODE_SINGLE
         self.dma.channels[0].word_count = 3
         self.dma.channels[0].address = 0
+        self.dma.channels[0].reached_terminal_count = False
         self.dma.dma_request(0, 5643, self.signal_terminal_count)
         
         self.dma.clock()
@@ -267,6 +277,7 @@ class DMATests(unittest.TestCase):
         # Should call the terminal count callback.
         self.dma.clock()
         self.assertEqual(self.dma.channels[0].word_count, 0xFFFF) # Terminal count.
+        self.assertTrue(self.dma.channels[0].reached_terminal_count)
         self.assertEqual(self.dma.channels[0].address, 4)
         self.assertTrue(self.terminal_count)
         
