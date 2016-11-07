@@ -23,6 +23,7 @@ log.addHandler(logging.NullHandler())
 
 # Constants
 UPDATE_DISPLAY = USEREVENT + 0
+KEYBOARD_RESET = USEREVENT + 1
 
 ScanCode = namedtuple("XTScanCode", ["make_codes", "break_codes"])
 
@@ -169,6 +170,16 @@ class PygameManager(object):
             elif event.type == UPDATE_DISPLAY:
                 self.display.draw()
                 
+            elif event.type == KEYBOARD_RESET:
+                # This should be a one-shot timer, setting the interval to zero disables it.
+                pygame.time.set_timer(KEYBOARD_RESET, 0)
+                self.keyboard.self_test_complete()
+                
+    @staticmethod
+    def set_timer(timer, interval):
+        """ Sets a timer to be scheduled in the Pygame machine. """
+        pygame.time.set_timer(timer, interval)
+        
 # Main application
 def main():
     """ Test application for this module. """

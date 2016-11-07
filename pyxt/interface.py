@@ -17,3 +17,7 @@ class KeyboardController(object):
         """ Function called when one or more scancodes are ready for the controller. """
         raise NotImplementedError
         
+    def self_test_complete(self):
+        """ Function called when the keyboard controller self-test is complete. """
+        raise NotImplementedError
+        

@@ -13,6 +13,7 @@ from six.moves import range # pylint: disable=redefined-builtin
 # PyXT imports
 from pyxt.bus import Device
 from pyxt.interface import KeyboardController
+from pyxt.ui import PygameManager, KEYBOARD_RESET
 
 # Logging setup
 import logging
@@ -21,6 +22,8 @@ log.addHandler(logging.NullHandler())
 
 # Constants
 KEYBOARD_IRQ_LINE = 1
+
+KEYBOARD_SELF_TEST_COMPLETE = 0xAA
 
 PORT_B_TIMER_2_GATE = 0x01
 PORT_B_SPEAKER_DATA = 0x02
@@ -86,6 +89,9 @@ class ProgrammablePeripheralInterface(Device, KeyboardController):
         self.last_scancode = scancodes[0]
         self.bus.interrupt_request(KEYBOARD_IRQ_LINE)
         
+    def self_test_complete(self):
+        self.key_pressed((KEYBOARD_SELF_TEST_COMPLETE, ))
+        
     # Local functions.
     def write_diag_port(self, value):
         """ Write a value to the diag port, 0x060. """
@@ -97,12 +103,20 @@ class ProgrammablePeripheralInterface(Device, KeyboardController):
         
     def write_port_b(self, value):
         """ Writes a value to the PORT B output, 0x061. """
-        self.port_b_output = value
-        
         # Clear the last scancode "shift register".
         if value & PORT_B_CLEAR_KEYBOARD:
             self.last_scancode = 0x00
             
+        # Signal reset only on negative going transition of the clear line.
+        elif value & PORT_B_CLEAR_KEYBOARD == 0x00 and self.port_b_output & PORT_B_CLEAR_KEYBOARD:
+            self.signal_keyboard_reset()
+            
+        self.port_b_output = value
+        
+    def signal_keyboard_reset(self):
+        """ Sends the "reset" signal to the keyboard. """
+        PygameManager.set_timer(KEYBOARD_RESET, 500)
+        
     def read_port_c(self):
         """ Reads the value from the PORT C input, 0x062. """
         value = 0x00
