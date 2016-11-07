@@ -289,6 +289,9 @@ class MonochromeDisplayAdapter(Device):
         
     def blit_single_char(self, offset):
         """ Blits a single character to the display given the offset of the character. """
+        if offset >= MDA_RAM_SIZE:
+            return
+            
         # Get the character and attributes from RAM.
         character = self.video_ram[offset]
         attributes = self.video_ram[offset + 1]
