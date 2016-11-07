@@ -395,7 +395,7 @@ class ColorGraphicsAdapter(Device):
                     row = cursor.addr // self.columns
                     column = cursor.addr % self.columns
                     self.screen.fill(
-                        CGA_COLOR_MAP[self.video_ram[cursor.addr + 1] & 0x0F],
+                        CGA_COLOR_MAP[0x7],
                         [column * 8, (row * 8) + cursor.start, 8, (cursor.end - cursor.start) + 1],
                     )
                     
@@ -442,6 +442,9 @@ class ColorGraphicsAdapter(Device):
         
     def blit_single_char(self, offset):
         """ Blits a single character to the display given the offset of the character. """
+        if offset >= CGA_RAM_SIZE:
+            return
+            
         # Get the character and attributes from RAM.
         character = self.video_ram[offset]
         attributes = self.video_ram[offset + 1]
