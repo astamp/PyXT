@@ -161,6 +161,8 @@ class PygameManager(object):
                 scancode = PYGAME_KEY_TO_XT_SCANCODES.get(event.key, None)
                 if scancode:
                     self.keyboard.key_pressed(scancode.make_codes)
+                else:
+                    log.warning("Unmapped key: %r", event)
                     
             elif event.type == KEYUP:
                 scancode = PYGAME_KEY_TO_XT_SCANCODES.get(event.key, None)
