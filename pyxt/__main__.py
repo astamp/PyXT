@@ -29,7 +29,8 @@ from pyxt.fdc import FloppyDisketteController, FloppyDisketteDrive, FIVE_INCH_36
 from pyxt.dma import DmaController
 from pyxt.nmi_mask import NMIMaskRegister
 from pyxt.ppi import *
-from pyxt.onboard import ProgrammableInterruptController, ProgrammableIntervalTimer
+from pyxt.timer import ProgrammableIntervalTimer
+from pyxt.pic import ProgrammableInterruptController
 
 # Logging setup
 import logging
