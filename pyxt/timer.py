@@ -218,7 +218,7 @@ class ProgrammableIntervalTimer(Device):
     def __init__(self, base, **kwargs):
         super(ProgrammableIntervalTimer, self).__init__(**kwargs)
         self.base = base
-        self.channels = [Counter(self.counter_0_callback), Counter(), SpeakerChannel()]
+        self.channels = [Counter(self.counter_0_callback), Counter(self.counter_1_callback), SpeakerChannel()]
         self.divisor = self.CLOCK_DIVISOR
         
     # Device interface.
@@ -278,4 +278,12 @@ class ProgrammableIntervalTimer(Device):
         # We only care about a positive going transition.
         if value:
             self.bus.interrupt_request(TIMER_IRQ_LINE)
+            
+    def counter_1_callback(self, value):
+        """
+        Called back when channel 1 reaches terminal count.
+        """
+        # We only care about a positive going transition.
+        if value:
+            self.bus.dma_request(0, 0, None)
             
