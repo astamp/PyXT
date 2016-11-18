@@ -8,18 +8,25 @@ class PPITests(unittest.TestCase):
         self.ppi = ProgrammablePeripheralInterface(0x060)
         self.ppi.write_diag_port = self.diag_port_hook
         self.ppi.signal_keyboard_reset = self.signal_reset_hook
+        self.ppi.speaker_control = self.speaker_control_hook
         self.last_diag_output = None
         self.reset_signalled = False
+        self.speaker_enabled = False
         
         self.bus = SystemBusTestable()
         self.bus.install_device(None, self.ppi)
         
+    # Test hooks.
     def diag_port_hook(self, value):
         self.last_diag_output = value
         
     def signal_reset_hook(self):
         self.reset_signalled = True
         
+    def speaker_control_hook(self, enabled):
+        self.speaker_enabled = enabled
+        
+    # Tests.
     def test_address_list(self):
         self.assertEqual(self.ppi.get_ports_list(), [0x0060, 0x0061, 0x0062, 0x0063])
         
@@ -76,3 +83,12 @@ class PPITests(unittest.TestCase):
         self.assertEqual(self.ppi.last_scancode, 0xAA)
         self.assertEqual(self.bus.get_irq_log(), [1])
         
+    def test_speaker_enabled(self):
+        self.assertFalse(self.speaker_enabled)
+        self.ppi.io_write_byte(0x061, 0x01) # Just the gate shouldn't enable the speaker.
+        self.assertFalse(self.speaker_enabled)
+        self.ppi.io_write_byte(0x061, 0x02) # Just the data shouldn't enable the speaker.
+        self.assertFalse(self.speaker_enabled)
+        self.ppi.io_write_byte(0x061, 0x03) # Both gate and data should enable the speaker.
+        self.assertTrue(self.speaker_enabled)
+                

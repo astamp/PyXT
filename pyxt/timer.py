@@ -9,6 +9,7 @@ from six.moves import range # pylint: disable=redefined-builtin
 
 # PyXT imports
 from pyxt.bus import Device
+from pyxt.speaker import GLOBAL_SPEAKER
 
 # Logging setup
 import logging
@@ -197,6 +198,17 @@ class Counter(object):
         else:
             raise RuntimeError("Invalid PIT channel r/w mode: %r", self.read_write_mode)
             
+class SpeakerChannel(Counter):
+    """ Special timer channel that updates the tone of the emulated PC speaker based on the count. """
+    def write(self, value):
+        super(SpeakerChannel, self).write(value)
+        
+        if self.enabled:
+            if self.count > 0:
+                GLOBAL_SPEAKER.set_tone_from_counter(self.count)
+            else:
+                GLOBAL_SPEAKER.stop()
+                
 class ProgrammableIntervalTimer(Device):
     """ An IOComponent emulating an 8253 PIT timer. """
     # This is intentionally not 4 so that it is misaligned with the CPU which currenly assumes 1
@@ -206,7 +218,7 @@ class ProgrammableIntervalTimer(Device):
     def __init__(self, base, **kwargs):
         super(ProgrammableIntervalTimer, self).__init__(**kwargs)
         self.base = base
-        self.channels = [Counter(self.counter_0_callback), Counter(), Counter()]
+        self.channels = [Counter(self.counter_0_callback), Counter(), SpeakerChannel()]
         self.divisor = self.CLOCK_DIVISOR
         
     # Device interface.

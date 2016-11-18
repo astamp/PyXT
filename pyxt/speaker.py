@@ -1,5 +1,7 @@
 """
 pyxt.speaker - High-level emulation of the PC speaker using Pygame.
+
+https://en.wikipedia.org/wiki/PC_speaker
 """
 
 # Standard library imports
@@ -25,6 +27,7 @@ SIZE = -16
 CHANNELS = 1
 MIN_SHORT = -32768
 MAX_SHORT = 32767
+BUS_FREQUENCY = 1193181.8181
 
 # Module-level init for Pygame mixer, must be called before anything else.+
 pygame.mixer.pre_init(SAMPLE_RATE, SIZE, CHANNELS)
@@ -42,12 +45,23 @@ class PCSpeaker(object):
         """ Generate a square wave for a given frequency. """
         # Don't divide by zero or go thru this again for the same frequency.
         if frequency > 0 and frequency != self.frequency:
+            
+            period = float(SAMPLE_RATE) / (frequency * 2)
+            if int(period) == 0:
+                return
+            for index in range(SAMPLE_RATE):
+                self.data[index] = MIN_SHORT if (index // int(period)) & 0x1 else MAX_SHORT
+                
             self.frequency = frequency
             self.needs_replay = True
             
-            period = float(SAMPLE_RATE) / (frequency * 2)
-            for index in range(SAMPLE_RATE):
-                self.data[index] = MIN_SHORT if (index // int(period)) & 0x1 else MAX_SHORT
+            if self.sound is not None:
+                self.play()
+                
+    def set_tone_from_counter(self, count):
+        """ Sets the tone from the 8253 counter value. """
+        freq = int(round(BUS_FREQUENCY / count))
+        self.set_tone(freq)
                 
     def play(self):
         """ Plays the loaded sound until stopped. """
@@ -64,6 +78,9 @@ class PCSpeaker(object):
             self.sound.stop()
             self.sound = None
             self.needs_replay = True
+            
+# TODO: Find a clean way to pass this into the PPI and PIT objects to avoid the global.
+GLOBAL_SPEAKER = PCSpeaker()
             
 def main():
     """ Test application. """

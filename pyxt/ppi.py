@@ -14,6 +14,7 @@ from six.moves import range # pylint: disable=redefined-builtin
 from pyxt.bus import Device
 from pyxt.interface import KeyboardController
 from pyxt.ui import PygameManager, KEYBOARD_RESET
+from pyxt.speaker import GLOBAL_SPEAKER
 
 # Logging setup
 import logging
@@ -27,6 +28,7 @@ KEYBOARD_SELF_TEST_COMPLETE = 0xAA
 
 PORT_B_TIMER_2_GATE = 0x01
 PORT_B_SPEAKER_DATA = 0x02
+PORT_B_SPEAKER_ENABLE = PORT_B_TIMER_2_GATE | PORT_B_SPEAKER_DATA
 PORT_B_RESERVED = 0x04 # Or cassette motor in PC.
 PORT_B_READ_SWITCHES_HIGH_NIBBLE = 0x08
 PORT_B_NMI_RAM_PARITY_DISABLE = 0x10
@@ -111,12 +113,22 @@ class ProgrammablePeripheralInterface(Device, KeyboardController):
         elif value & PORT_B_CLEAR_KEYBOARD == 0x00 and self.port_b_output & PORT_B_CLEAR_KEYBOARD:
             self.signal_keyboard_reset()
             
+        # Update the speaker to reflect the enable bits.
+        self.speaker_control(value & PORT_B_SPEAKER_ENABLE == PORT_B_SPEAKER_ENABLE)
+        
         self.port_b_output = value
         
     def signal_keyboard_reset(self):
         """ Sends the "reset" signal to the keyboard. """
         PygameManager.set_timer(KEYBOARD_RESET, 500)
         
+    def speaker_control(self, enable):
+        """ Enables or disables the emulated PC speaker. """
+        if enable:
+            GLOBAL_SPEAKER.play()
+        else:
+            GLOBAL_SPEAKER.stop()
+            
     def read_port_c(self):
         """ Reads the value from the PORT C input, 0x062. """
         value = 0x00
