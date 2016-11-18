@@ -67,16 +67,17 @@ class PPITests(unittest.TestCase):
         self.ppi.io_write_byte(0x061, 0x80) # Clear keyboard asserted.
         self.assertEqual(self.ppi.last_scancode, 0x00)
         
-    def test_release_from_reset(self):
+    def test_keyboard_reset(self):
         self.port_b_output = 0x00
-        self.ppi.io_write_byte(0x061, 0x40) # Clear keyboard deasserted.
+        self.ppi.io_write_byte(0x061, 0x00) # Keyboard clock disabled.
         self.assertFalse(self.reset_signalled) # Reset not signalled.
         
-        self.ppi.io_write_byte(0x061, 0xC0) # Clear keyboard asserted.
-        self.assertFalse(self.reset_signalled) # Reset not signalled.
+        self.ppi.io_write_byte(0x061, 0x40) # Keyboard clock enabled.
+        self.assertTrue(self.reset_signalled) # Reset signalled only on positive going transition.
         
-        self.ppi.io_write_byte(0x061, 0x40) # Clear keyboard deasserted.
-        self.assertTrue(self.reset_signalled) # Reset signalled only on negative going transition.
+        self.reset_signalled = False
+        self.ppi.io_write_byte(0x061, 0x00) # Keyboard clock disabled.
+        self.assertFalse(self.reset_signalled) # Reset not signalled.
         
     def test_self_test_complete(self):
         self.ppi.self_test_complete()

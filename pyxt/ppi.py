@@ -33,7 +33,7 @@ PORT_B_RESERVED = 0x04 # Or cassette motor in PC.
 PORT_B_READ_SWITCHES_HIGH_NIBBLE = 0x08
 PORT_B_NMI_RAM_PARITY_DISABLE = 0x10
 PORT_B_NMI_IO_PARITY_DISABLE = 0x20
-PORT_B_HOLD_KEYBOARD_CLOCK_LOW = 0x40
+PORT_B_KEYBOARD_CLOCK_ENABLE = 0x40
 PORT_B_CLEAR_KEYBOARD = 0x80
 
 SWITCHES_NORMAL_BOOT = 0x01
@@ -109,8 +109,8 @@ class ProgrammablePeripheralInterface(Device, KeyboardController):
         if value & PORT_B_CLEAR_KEYBOARD:
             self.last_scancode = 0x00
             
-        # Signal reset only on negative going transition of the clear line.
-        elif value & PORT_B_CLEAR_KEYBOARD == 0x00 and self.port_b_output & PORT_B_CLEAR_KEYBOARD:
+        # Signal reset only on positive going transition of the clock line.
+        if value & PORT_B_KEYBOARD_CLOCK_ENABLE and self.port_b_output & PORT_B_KEYBOARD_CLOCK_ENABLE == 0x00:
             self.signal_keyboard_reset()
             
         # Update the speaker to reflect the enable bits.
