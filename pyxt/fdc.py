@@ -8,6 +8,7 @@ from collections import namedtuple
 
 # Six imports
 import six
+from six.moves import range # pylint: disable=redefined-builtin
 
 # PyXT imports
 from pyxt.bus import Device
@@ -128,6 +129,19 @@ ST_RDDATA_READ_STATUS_REG_0 = ST_READ_MASK | 0x005A
 # SDS - Sense drive status.
 ST_SDS_SELECT_DRIVE_HEAD = 0x0060
 ST_SDS_READ_STATUS_REG_3 = ST_READ_MASK | 0x0061
+
+# WRTDATA - Read data.
+ST_WRTDATA_SELECT_DRIVE_HEAD = 0x0070
+ST_WRTDATA_SELECT_CYLINDER = 0x0071
+ST_WRTDATA_SELECT_HEAD = 0x0072
+ST_WRTDATA_SELECT_SECTOR = 0x0073
+ST_WRTDATA_SET_BYTES_PER_SECTOR = 0x0074
+ST_WRTDATA_SET_END_OF_TRACK = 0x0075
+ST_WRTDATA_SET_GAP_LENGTH = 0x0076
+ST_WRTDATA_SET_DATA_LENGTH = 0x0077
+ST_WRTDATA_BEGIN_EXECUTION = ST_EXECUTE_MASK | 0x0078
+ST_WRTDATA_IN_PROGRESS = 0x0079
+ST_WRTDATA_READ_STATUS_REG_0 = ST_READ_MASK | 0x007A
 
 # Drive type definitions.
 DriveInfo = namedtuple("DriveInfo", ["bytes_per_sector", "sectors_per_track", "tracks_per_side", "sides"])
@@ -257,6 +271,19 @@ class FloppyDisketteController(Device):
             ST_SDS_SELECT_DRIVE_HEAD : (None, self.write_drive_head_select, None, ST_SDS_READ_STATUS_REG_3),
             ST_SDS_READ_STATUS_REG_3 : (self.read_status_register_3, None, None, ST_READY),
             
+            # Write data.
+            ST_WRTDATA_SELECT_DRIVE_HEAD : (None, self.write_drive_head_select, None, ST_WRTDATA_SELECT_CYLINDER),
+            ST_WRTDATA_SELECT_CYLINDER : (None, self.write_cylinder_parameter, None, ST_WRTDATA_SELECT_HEAD),
+            ST_WRTDATA_SELECT_HEAD : (None, self.write_head_parameter, None, ST_WRTDATA_SELECT_SECTOR),
+            ST_WRTDATA_SELECT_SECTOR : (None, self.write_sector_parameter, None, ST_WRTDATA_SET_BYTES_PER_SECTOR),
+            ST_WRTDATA_SET_BYTES_PER_SECTOR : (None, self.write_bytes_per_sector_parameter, None, ST_WRTDATA_SET_END_OF_TRACK),
+            ST_WRTDATA_SET_END_OF_TRACK : (None, self.write_end_of_track_parameter, None, ST_WRTDATA_SET_GAP_LENGTH),
+            ST_WRTDATA_SET_GAP_LENGTH : (None, self.write_gap_length_parameter, None, ST_WRTDATA_SET_DATA_LENGTH),
+            ST_WRTDATA_SET_DATA_LENGTH : (None, self.write_data_length_parameter, None, ST_WRTDATA_BEGIN_EXECUTION),
+            ST_WRTDATA_BEGIN_EXECUTION : (None, None, self.begin_write_data, ST_WRTDATA_IN_PROGRESS),
+            ST_WRTDATA_IN_PROGRESS : (None, self.write_data, None, ST_WRTDATA_IN_PROGRESS),
+            ST_WRTDATA_READ_STATUS_REG_0 : (self.read_status_register_0, None, None, ST_READY),
+            
         }
         
         self.drive_select = 0
@@ -372,6 +399,8 @@ class FloppyDisketteController(Device):
             self.state = ST_SDS_SELECT_DRIVE_HEAD
         elif value & COMMAND_OPCODE_MASK == COMMAND_READ_DATA:
             self.state = ST_RDDATA_SELECT_DRIVE_HEAD
+        elif value & COMMAND_OPCODE_MASK == COMMAND_WRITE_DATA:
+            self.state = ST_WRTDATA_SELECT_DRIVE_HEAD
         else:
             log.warning("Invalid command: 0x%02x", value)
             
@@ -542,9 +571,64 @@ class FloppyDisketteController(Device):
         
     def terminal_count(self):
         """ Called when the FDC DMA channel reaches terminal count. """
-        self.state = ST_RDDATA_READ_STATUS_REG_0
+        if self.state == ST_RDDATA_IN_PROGRESS:
+            self.state = ST_RDDATA_READ_STATUS_REG_0
+        elif self.state == ST_WRTDATA_IN_PROGRESS:
+            self.state = ST_WRTDATA_READ_STATUS_REG_0
+        else:
+            raise RuntimeError("Terminal count signaled in state: 0x%04x" % self.state)
+            
         self.signal_interrupt(SR0_INT_CODE_NORMAL)
         
+    def begin_write_data(self, continuation = False):
+        """ Writes data to the diskette from data via DMA/interrupts. """
+        # self.bus.force_debugger_break("BEGIN WRITE DATA")
+        # log.critical(self.parameters.dump())
+        
+        # Allocate a buffer for the write data.
+        drive = self.drives[self.drive_select]
+        if drive:
+            _unused, length = calculate_parameters(drive.drive_info, self.parameters)
+            self.buffer = array.array("B", (0,) * length)
+            self.cursor = 0
+            
+            # If we don't have a diskette present, throw an interrupt and get out.
+            if drive.write_protect or not drive.diskette_present:
+                self.signal_interrupt(SR0_INT_CODE_ABNORMAL | SR0_NOT_READY)
+                self.state = ST_WRTDATA_READ_STATUS_REG_0
+                return
+                
+        # Do not setup DMA if this is a continuation of a previous write.
+        if continuation:
+            return
+            
+        # Signal the DMA request or trigger an interrupt so data can be written by the CPU.
+        if self.dma_enable:
+            self.bus.dma_request(FDC_DMA_CHANNEL, self.base + FDC_DATA, self.terminal_count)
+        else:
+            self.signal_interrupt(SR0_INT_CODE_NORMAL)
+            
+    def write_data(self, value):
+        """ Called when a byte is written to the controller. """
+        # log.debug("write_data, cursor = %d, len(buffer) = %d", self.cursor, len(self.buffer))
+        self.buffer[self.cursor] = value
+        self.cursor += 1
+        
+        # If we reached the end of the current buffer, prime the buffer for the next sector.
+        if self.cursor == len(self.buffer):
+            log.debug("write data complete!")
+            drive = self.drives[self.drive_select]
+            if drive:
+                drive.write(self.parameters, self.buffer)
+                drive.commit()
+                
+            self.parameters.next_sector()
+            self.begin_write_data(continuation = True)
+            
+        # We need to signal the interrupt for every byte in non-DMA mode.
+        if not self.dma_enable:
+            self.signal_interrupt(SR0_INT_CODE_NORMAL)
+            
 class FloppyDisketteDrive(object):
     """ Maintains the "physical state" of an attached diskette drive. """
     def __init__(self, drive_info):
@@ -601,4 +685,19 @@ class FloppyDisketteDrive(object):
             return self.contents[offset : offset + length]
         else:
             return array.array("B")
+            
+    def write(self, parms, buffer):
+        """ Perform a diskette "write" operation based on the given parameters. """
+        offset, length = calculate_parameters(self.drive_info, parms)
+        assert length == len(buffer)
+        if self.contents:
+            for index in range(length):
+                self.contents[index + offset] = buffer[index]
+                
+    def commit(self):
+        """ Write the contents of the disk buffer back to an image file. """
+        if self.contents:
+            # TODO: Do we want to overwrite the source diskette?
+            with open("temp.img", "wb") as fileptr:
+                self.contents.tofile(fileptr)
             

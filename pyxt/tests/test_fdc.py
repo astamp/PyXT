@@ -263,6 +263,98 @@ class FDCTests(unittest.TestCase):
         drive.write_protect = True
         self.assertEqual(self.fdc.read_status_register_3(), 0x40)
         
+    def test_terminal_count_read_data(self):
+        self.fdc.state = ST_RDDATA_IN_PROGRESS
+        self.fdc.terminal_count()
+        self.assertEqual(self.fdc.state, ST_RDDATA_READ_STATUS_REG_0)
+        self.assertEqual(self.bus.get_irq_log(), [6])
+        self.assertEqual(self.fdc.interrupt_code, SR0_INT_CODE_NORMAL)
+        
+    def test_terminal_count_write_data(self):
+        self.fdc.state = ST_WRTDATA_IN_PROGRESS
+        self.fdc.terminal_count()
+        self.assertEqual(self.fdc.state, ST_WRTDATA_READ_STATUS_REG_0)
+        self.assertEqual(self.bus.get_irq_log(), [6])
+        self.assertEqual(self.fdc.interrupt_code, SR0_INT_CODE_NORMAL)
+        
+    def test_terminal_count_other_raises_error(self):
+        self.fdc.state = ST_READY
+        with self.assertRaises(RuntimeError):
+            self.fdc.terminal_count()
+            
+    def test_begin_write_data_normal(self):
+        drive = FloppyDisketteDrive(FIVE_INCH_360_KB)
+        drive.present_cylinder_number = 1
+        test_file = get_test_file(self, "diskette.img")
+        drive.load_diskette(test_file)
+        self.fdc.attach_drive(drive, 0)
+        self.fdc.drive_select = 0
+        self.fdc.head_select = 0
+        self.fdc.cursor = 511 # Non-zero for test.
+        self.fdc.state = 5643 # Not relevant.
+        
+        self.fdc.begin_write_data()
+        
+        self.assertEqual(self.fdc.cursor, 0)
+        self.assertEqual(len(self.fdc.buffer), 512)
+        
+        self.assertEqual(self.bus.get_irq_log(), [6]) # Non-DMA.
+        self.assertEqual(self.fdc.interrupt_code, SR0_INT_CODE_NORMAL) # Non-DMA.
+        
+        self.assertEqual(self.fdc.state, 5643) # Should be unmodified, caller will advance state.
+        
+    def test_begin_write_data_continuation(self):
+        drive = FloppyDisketteDrive(FIVE_INCH_360_KB)
+        drive.present_cylinder_number = 1
+        test_file = get_test_file(self, "diskette.img")
+        drive.load_diskette(test_file)
+        self.fdc.attach_drive(drive, 0)
+        self.fdc.drive_select = 0
+        self.fdc.head_select = 0
+        self.fdc.cursor = 511 # Non-zero for test.
+        self.fdc.state = 5643 # Not relevant.
+        
+        self.fdc.begin_write_data(continuation = True)
+        
+        self.assertEqual(self.fdc.cursor, 0)
+        self.assertEqual(len(self.fdc.buffer), 512)
+        # No DMA setup or interrupt for continuation (it's really the same write).
+        self.assertEqual(self.bus.get_irq_log(), []) # Non-DMA.
+        
+        self.assertEqual(self.fdc.state, 5643) # Should be unmodified, caller will advance state.
+        
+    def test_begin_write_data_write_protect(self):
+        drive = FloppyDisketteDrive(FIVE_INCH_360_KB)
+        drive.present_cylinder_number = 1
+        test_file = get_test_file(self, "diskette.img")
+        drive.load_diskette(test_file, write_protect = True)
+        self.fdc.attach_drive(drive, 0)
+        self.fdc.drive_select = 0
+        self.fdc.head_select = 0
+        self.fdc.cursor = 511 # Non-zero for test.
+        
+        self.fdc.begin_write_data()
+        
+        self.assertEqual(self.bus.get_irq_log(), [6])
+        self.assertEqual(self.fdc.interrupt_code, SR0_INT_CODE_ABNORMAL | SR0_NOT_READY)
+        
+        self.assertEqual(self.fdc.state, ST_WRTDATA_READ_STATUS_REG_0)
+        
+    def test_begin_write_data_no_diskette(self):
+        drive = FloppyDisketteDrive(FIVE_INCH_360_KB)
+        drive.present_cylinder_number = 1
+        self.fdc.attach_drive(drive, 0)
+        self.fdc.drive_select = 0
+        self.fdc.head_select = 0
+        self.fdc.cursor = 511 # Non-zero for test.
+        
+        self.fdc.begin_write_data()
+        
+        self.assertEqual(self.bus.get_irq_log(), [6])
+        self.assertEqual(self.fdc.interrupt_code, SR0_INT_CODE_ABNORMAL | SR0_NOT_READY)
+        
+        self.assertEqual(self.fdc.state, ST_WRTDATA_READ_STATUS_REG_0)
+        
 class FDDTests(unittest.TestCase):
     def setUp(self):
         self.fdd = FloppyDisketteDrive(FIVE_INCH_360_KB)
@@ -306,20 +398,34 @@ class FDDTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             test_fdd.load_diskette(test_file)
             
+class FloppyDisketteDriveTestable(FloppyDisketteDrive):
+    """ Testable drive that doesn't actually commit to "disk". """
+    def __init__(self, drive_info):
+        super(FloppyDisketteDriveTestable, self).__init__(drive_info)
+        self.last_committed_data = []
+        
+    def commit(self):
+        # Use tolist to avoid deprecation warning on tostring() in Py3k
+        # and lack of tobytes() in 2.7.
+        self.last_committed_data = self.contents.tolist()
+       
 class FDCAcceptanceTests(unittest.TestCase):
     def setUp(self):
         self.fdc = FloppyDisketteController(0x3F0)
-        self.fdd0 = FloppyDisketteDrive(FIVE_INCH_360_KB)
+        self.fdd0 = FloppyDisketteDriveTestable(FIVE_INCH_360_KB)
         
         self.fdc.attach_drive(self.fdd0, 0)
-        self.fdd1 = FloppyDisketteDrive(FIVE_INCH_360_KB)
+        self.fdd1 = FloppyDisketteDriveTestable(FIVE_INCH_360_KB)
         self.fdc.attach_drive(self.fdd1, 1)
         
         self.bus = SystemBusTestable()
         self.bus.install_device(None, self.fdc)
         
     def install_test_data_diskette(self, fdd):
-        fdd.contents = array.array("B", (0xAA, 0x55, 0xCA, 0xFE,) * (368640 / 4))
+        fdd.contents = array.array("B", (0xAA, 0x55, 0xCA, 0xFE,) * (368640 // 4))
+        
+    def install_test_blank_diskette(self, fdd):
+        fdd.contents = array.array("B", (0,) * 368640)
         
     def test_command_sense_interrupt_status(self):
         self.fdd0.present_cylinder_number = 27
@@ -541,4 +647,125 @@ class FDCAcceptanceTests(unittest.TestCase):
         self.assertEqual(self.fdc.io_read_byte(0x3F5), 0x15) # Not write protected, track 0.
         self.assertEqual(self.fdc.state, ST_READY)
         
+    def test_write_data_parse_parameters(self):
+        # If there is no diskette in the drive, the write will fail.
+        self.install_test_data_diskette(self.fdd1)
+        
+        self.fdc.io_write_byte(0x3F5, 0xC5) # Write data.
+        
+        self.assertEqual(self.fdc.state, ST_WRTDATA_SELECT_DRIVE_HEAD)
+        self.assertTrue(self.fdc.parameters.multi_track)
+        self.assertTrue(self.fdc.parameters.mfm)
+        
+        self.fdc.io_write_byte(0x3F5, 0x05) # Select drive 1, head 1.
+        
+        self.assertEqual(self.fdc.state, ST_WRTDATA_SELECT_CYLINDER)
+        self.assertTrue(self.fdc.drive_select, 1)
+        self.assertTrue(self.fdc.head_select, 1)
+        
+        self.fdc.io_write_byte(0x3F5, 20) # Select cylinder 20.
+        
+        self.assertEqual(self.fdc.state, ST_WRTDATA_SELECT_HEAD)
+        self.assertEqual(self.fdc.parameters.cylinder, 20)
+        
+        self.fdc.io_write_byte(0x3F5, 1) # Select head 1.
+        
+        self.assertEqual(self.fdc.state, ST_WRTDATA_SELECT_SECTOR)
+        self.assertEqual(self.fdc.parameters.head, 1)
+        
+        self.fdc.io_write_byte(0x3F5, 5) # Select sector 5.
+        
+        self.assertEqual(self.fdc.state, ST_WRTDATA_SET_BYTES_PER_SECTOR)
+        self.assertEqual(self.fdc.parameters.sector, 5)
+        
+        self.fdc.io_write_byte(0x3F5, 2) # 512 bytes per sector.
+        
+        self.assertEqual(self.fdc.state, ST_WRTDATA_SET_END_OF_TRACK)
+        self.assertEqual(self.fdc.parameters.bytes_per_sector, 512)
+        
+        self.fdc.io_write_byte(0x3F5, 8) # Last sector number in cylinder.
+        
+        self.assertEqual(self.fdc.state, ST_WRTDATA_SET_GAP_LENGTH)
+        self.assertEqual(self.fdc.parameters.end_of_track, 8)
+        
+        self.fdc.io_write_byte(0x3F5, 33) # Gap length 33
+        
+        self.assertEqual(self.fdc.state, ST_WRTDATA_SET_DATA_LENGTH)
+        self.assertEqual(self.fdc.parameters.gap_length, 33)
+        
+        self.assertEqual(self.bus.get_irq_log(), []) # Should be no interrupts yet.
+        
+        self.fdc.io_write_byte(0x3F5, 64) # Data length 64.
+        
+        self.assertEqual(self.fdc.state, ST_WRTDATA_IN_PROGRESS)
+        self.assertEqual(self.fdc.parameters.data_length, 64)
+        self.assertEqual(self.bus.get_irq_log(), [6]) # Since this is non-DMA mode, we get an interrupt here.
+        
+    def test_write_data_writing(self):
+        self.install_test_blank_diskette(self.fdd0)
+        
+        parameters = (
+            0xC5, # Write data, multitrack, mfm
+            0x00, # Drive 0, head 0
+            0x00, # Cylinder 0
+            0x00, # Head 0
+            0x01, # Sector 1 (they start at 1)
+            0x02, # 512 bytes per sector
+            0x09, # Write up to track 9.
+            0x2A, # Gap length (not really applicable)
+            0xFF, # Data length (unused if bytes per sector is non-zero?)
+        )
+        for byte in parameters:
+            self.fdc.io_write_byte(0x3F5, byte)
+            
+        self.assertEqual(self.bus.get_irq_log(), [6]) # Ready for data from the host... IRQ!
+        self.assertEqual(self.fdc.state, ST_WRTDATA_IN_PROGRESS)
+        self.fdc.io_write_byte(0x3F5, 0xAA)
+        
+        self.assertEqual(self.bus.get_irq_log(), [6, 6]) # Another... IRQ!
+        self.assertEqual(self.fdc.state, ST_WRTDATA_IN_PROGRESS)
+        self.fdc.io_write_byte(0x3F5, 0x55)
+        
+        # And so on...
+        
+        self.assertEqual(len(self.fdd0.last_committed_data), 0) # Should not be written yet.
+        
+        # Pretend we wrote all but ther last byte of the data.
+        self.fdc.cursor = 511
+        self.assertEqual(self.bus.get_irq_log(), [6, 6, 6]) # Assume there would have been one for all bytes written.
+        self.fdc.io_write_byte(0x3F5, 0xFE)
+        
+        self.assertEqual(len(self.fdd0.last_committed_data), 368640) # Should be written now.
+        self.assertEqual(self.fdd0.last_committed_data[0], 0xAA)
+        self.assertEqual(self.fdd0.last_committed_data[1], 0x55)
+        self.assertEqual(self.fdd0.last_committed_data[511], 0xFE)
+        
+        # At this point if we have not reached terminal count, we should prepare the next sector.
+        self.assertEqual(self.fdc.cursor, 0)
+        self.assertEqual(self.bus.get_irq_log(), [6, 6, 6, 6]) # Ready for next byte... IRQ!
+        self.assertEqual(self.fdc.state, ST_WRTDATA_IN_PROGRESS)
+        
+        # We could write more but if we get TC then exit the write state.
+        self.fdc.terminal_count()
+        self.assertEqual(self.bus.get_irq_log(), [6, 6, 6, 6, 6]) # It's over... IRQ!
+        self.assertEqual(self.fdc.state, ST_WRTDATA_READ_STATUS_REG_0)
+        
+    def test_write_data_no_diskette(self):
+        parameters = (
+            0xC5, # Write data, multitrack, mfm
+            0x00, # Drive 0, head 0
+            0x00, # Cylinder 0
+            0x00, # Head 0
+            0x01, # Sector 1 (they start at 1)
+            0x02, # 512 bytes per sector
+            0x09, # Write up to track 9.
+            0x2A, # Gap length (not really applicable)
+            0xFF, # Data length (unused if bytes per sector is non-zero?)
+        )
+        for byte in parameters:
+            self.fdc.io_write_byte(0x3F5, byte)
+            
+        self.assertEqual(self.bus.get_irq_log(), [6]) # Abnormal termination... IRQ!
+        self.assertEqual(self.fdc.state, ST_WRTDATA_READ_STATUS_REG_0)
+        self.assertEqual(self.fdc.io_read_byte(0x3F5), 0x48) # Abnormal exit, not ready.
         
