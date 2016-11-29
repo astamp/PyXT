@@ -99,13 +99,13 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.unicode == u"+":
                     tone += 100
-                    print tone
+                    print(tone)
                     spk.set_tone(tone)
                     spk.play()
                     
                 elif event.unicode == u"-":
                     tone -= 100
-                    print tone
+                    print(tone)
                     spk.set_tone(tone)
                     spk.play()
                     
