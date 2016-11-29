@@ -117,14 +117,21 @@ class DmaController(Device):
         
     def clock(self):
         if self.enable:
-            for channel in self.channels:
+            for index, channel in enumerate(self.channels):
                 if channel.requested:
                     # Prefix the address with the page register (not like segment+offset though).
                     full_address = (channel.page_register_value << 16) | channel.address
                     
-                    if channel.transfer_type == TYPE_WRITE:
-                        self.bus.mem_write_byte(full_address, self.bus.io_read_byte(channel.port))
-                        
+                    # Channel 0 is the RAM refresh, we can skip that here.
+                    if index != 0:
+                        if channel.transfer_type == TYPE_WRITE:
+                            self.bus.mem_write_byte(full_address, self.bus.io_read_byte(channel.port))
+                        elif channel.transfer_type == TYPE_READ:
+                            print channel, channel.port, hex(full_address)
+                            self.bus.io_write_byte(channel.port, self.bus.mem_read_byte(full_address))
+                        else:
+                            raise RuntimeError("Unsupported transfer type: 0x%x" % channel.transfer_type)
+                            
                     channel.word_count = (channel.word_count - 1) & 0xFFFF
                     channel.address += channel.increment
                     
