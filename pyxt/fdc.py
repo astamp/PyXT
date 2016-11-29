@@ -620,7 +620,7 @@ class FloppyDisketteController(Device):
             drive = self.drives[self.drive_select]
             if drive:
                 drive.write(self.parameters, self.buffer)
-                drive.commit()
+                drive.store_diskette()
                 
             self.parameters.next_sector()
             self.begin_write_data(continuation = True)
@@ -638,6 +638,7 @@ class FloppyDisketteDrive(object):
         self.target_cylinder_number = 0
         self.contents = None
         self.write_protect = False
+        self.filename = None
         
     @property
     def size_in_bytes(self):
@@ -655,10 +656,11 @@ class FloppyDisketteDrive(object):
         log.info("Loading diskette from: %s", filename)
         self.contents = None
         self.write_protect = write_protect
+        self.filename = filename
         
-        if filename is not None:
+        if self.filename is not None:
             self.contents = array.array("B", (0,) * self.size_in_bytes)
-            with open(filename, "rb") as fileptr:
+            with open(self.filename, "rb") as fileptr:
                 data = fileptr.read()
                 
                 if len(data) > self.size_in_bytes:
@@ -669,12 +671,15 @@ class FloppyDisketteDrive(object):
             for index, byte in enumerate(six.iterbytes(data)):
                 self.contents[index] = byte
                 
-    def store_diskette(self, filename):
+    def store_diskette(self):
         """ Write the content of the virtual diskette back to an image file. """
-        log.info("Writing diskette to: %s", filename)
+        log.info("Writing diskette to: %s", self.filename)
         
-        if self.contents is not None:
-            with open(filename, "wb") as fileptr:
+        if self.write_protect:
+            raise RuntimeError("Writing to a write-protected disk is forbidden!")
+            
+        if self.contents is not None and self.filename is not None:
+            with open(self.filename, "wb") as fileptr:
                 self.contents.tofile(fileptr)
                 
     def read(self, parms):
@@ -694,10 +699,3 @@ class FloppyDisketteDrive(object):
             for index in range(length):
                 self.contents[index + offset] = buffer[index]
                 
-    def commit(self):
-        """ Write the contents of the disk buffer back to an image file. """
-        if self.contents:
-            # TODO: Do we want to overwrite the source diskette?
-            with open("temp.img", "wb") as fileptr:
-                self.contents.tofile(fileptr)
-            

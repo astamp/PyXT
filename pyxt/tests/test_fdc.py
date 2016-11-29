@@ -369,6 +369,7 @@ class FDDTests(unittest.TestCase):
         self.assertEqual(self.fdd.target_cylinder_number, 0)
         self.assertIsNone(self.fdd.contents)
         self.assertFalse(self.fdd.write_protect)
+        self.assertIsNone(self.fdd.filename)
         
         self.assertFalse(self.fdd.diskette_present)
         
@@ -380,10 +381,12 @@ class FDDTests(unittest.TestCase):
         self.fdd.load_diskette(test_file)
         self.assertEqual(self.fdd.contents[0], 0x64)
         self.assertEqual(len(self.fdd.contents), 368640) # Ensure it is padded to the full size.
+        self.assertTrue("diskette.img" in self.fdd.filename)
         self.assertTrue(self.fdd.diskette_present)
         
         self.fdd.load_diskette(None)
         self.assertIsNone(self.fdd.contents)
+        self.assertIsNone(self.fdd.filename)
         self.assertFalse(self.fdd.diskette_present)
         
     def test_load_diskette_write_protect(self):
@@ -399,15 +402,15 @@ class FDDTests(unittest.TestCase):
             test_fdd.load_diskette(test_file)
             
 class FloppyDisketteDriveTestable(FloppyDisketteDrive):
-    """ Testable drive that doesn't actually commit to "disk". """
+    """ Testable drive that doesn't actually write back to "disk". """
     def __init__(self, drive_info):
         super(FloppyDisketteDriveTestable, self).__init__(drive_info)
-        self.last_committed_data = []
+        self.last_stored_data = []
         
-    def commit(self):
+    def store_diskette(self):
         # Use tolist to avoid deprecation warning on tostring() in Py3k
         # and lack of tobytes() in 2.7.
-        self.last_committed_data = self.contents.tolist()
+        self.last_stored_data = self.contents.tolist()
        
 class FDCAcceptanceTests(unittest.TestCase):
     def setUp(self):
@@ -728,17 +731,17 @@ class FDCAcceptanceTests(unittest.TestCase):
         
         # And so on...
         
-        self.assertEqual(len(self.fdd0.last_committed_data), 0) # Should not be written yet.
+        self.assertEqual(len(self.fdd0.last_stored_data), 0) # Should not be written yet.
         
         # Pretend we wrote all but ther last byte of the data.
         self.fdc.cursor = 511
         self.assertEqual(self.bus.get_irq_log(), [6, 6, 6]) # Assume there would have been one for all bytes written.
         self.fdc.io_write_byte(0x3F5, 0xFE)
         
-        self.assertEqual(len(self.fdd0.last_committed_data), 368640) # Should be written now.
-        self.assertEqual(self.fdd0.last_committed_data[0], 0xAA)
-        self.assertEqual(self.fdd0.last_committed_data[1], 0x55)
-        self.assertEqual(self.fdd0.last_committed_data[511], 0xFE)
+        self.assertEqual(len(self.fdd0.last_stored_data), 368640) # Should be written now.
+        self.assertEqual(self.fdd0.last_stored_data[0], 0xAA)
+        self.assertEqual(self.fdd0.last_stored_data[1], 0x55)
+        self.assertEqual(self.fdd0.last_stored_data[511], 0xFE)
         
         # At this point if we have not reached terminal count, we should prepare the next sector.
         self.assertEqual(self.fdc.cursor, 0)
