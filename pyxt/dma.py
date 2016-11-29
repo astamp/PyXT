@@ -127,7 +127,6 @@ class DmaController(Device):
                         if channel.transfer_type == TYPE_WRITE:
                             self.bus.mem_write_byte(full_address, self.bus.io_read_byte(channel.port))
                         elif channel.transfer_type == TYPE_READ:
-                            print channel, channel.port, hex(full_address)
                             self.bus.io_write_byte(channel.port, self.bus.mem_read_byte(full_address))
                         else:
                             raise RuntimeError("Unsupported transfer type: 0x%x" % channel.transfer_type)
