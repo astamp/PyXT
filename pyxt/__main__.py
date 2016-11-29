@@ -59,8 +59,12 @@ def parse_cmdline():
                       help = "Set this flag to use the proper LOOP handler that doesn't optimize LOOP back to itself.")
     parser.add_option("--diskette", action = "store", dest = "diskette",
                       help = "Diskette image to load into the first drive (A:).")
+    parser.add_option("--no-wp-a", action = "store_false", dest = "diskette_write_protect", default = True,
+                      help = "Disable write protection for the first drive (A:).")
     parser.add_option("--diskette2", action = "store", dest = "diskette2",
                       help = "Diskette image to load into the second drive (B:).")
+    parser.add_option("--no-wp-b", action = "store_false", dest = "diskette2_write_protect", default = True,
+                      help = "Disable write protection for the second drive (B:).")
     parser.add_option("--log-file", action = "store", dest = "log_file",
                       help = "File to output debugging log.")
     parser.add_option("--log-filter", action = "store", dest = "log_filter",
@@ -128,10 +132,10 @@ def main():
     diskette_controller.attach_drive(b_drive, 1)
     
     if options.diskette:
-        a_drive.load_diskette(options.diskette)
+        a_drive.load_diskette(options.diskette, options.diskette_write_protect)
         
     if options.diskette2:
-        b_drive.load_diskette(options.diskette2)
+        b_drive.load_diskette(options.diskette2, options.diskette2_write_protect)
         
     bus.install_device(None, dma_controller)
     nmi_mask = NMIMaskRegister(0x0A0)
