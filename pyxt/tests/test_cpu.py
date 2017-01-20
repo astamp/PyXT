@@ -7537,3 +7537,53 @@ class AdjustFlagTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.operator_sbb_16(0x0005, 0x0005), -1)
         self.assertTrue(self.cpu.flags.adjust)
         
+    # INC
+    def test_inc_r16_adjust_clear(self):
+        """
+        inc ax
+        hlt
+        """
+        self.cpu.regs.AX = 0x0008
+        self.cpu.flags.adjust = True
+        self.load_code_string("40 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0009)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_inc_r16_adjust_set(self):
+        """
+        inc ax
+        hlt
+        """
+        self.cpu.regs.AX = 0x000F
+        self.cpu.flags.adjust = False
+        self.load_code_string("40 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0010)
+        self.assertTrue(self.cpu.flags.adjust)
+        
+    # DEC
+    def test_dec_r16_adjust_clear(self):
+        """
+        dec ax
+        hlt
+        """
+        self.cpu.regs.AX = 0x0001
+        self.cpu.flags.adjust = True
+        self.load_code_string("48 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0x0000)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_dec_r16_adjust_set(self):
+        """
+        dec ax
+        hlt
+        """
+        self.cpu.regs.AX = 0x0000
+        self.cpu.flags.adjust = False
+        self.load_code_string("48 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xFFFF)
+        self.assertTrue(self.cpu.flags.adjust)
+        

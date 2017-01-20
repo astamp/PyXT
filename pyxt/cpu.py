@@ -1692,13 +1692,13 @@ class CPU(object):
     def opcode_group_inc(self, opcode):
         """ Handler for all INC [register] instructions. """
         dest = WORD_REG[opcode & 0x07]
-        self.regs[dest] += 1
+        self.regs[dest] = self.operator_add_16(self.regs[dest], 1)
         self.flags.set_from_alu_no_carry_word(self.regs[dest])
         
     def opcode_group_dec(self, opcode):
         """ Handler for all DEC [register] instructions. """
         dest = WORD_REG[opcode & 0x07]
-        self.regs[dest] -= 1
+        self.regs[dest] = self.operator_sub_16(self.regs[dest], 1)
         self.flags.set_from_alu_no_carry_word(self.regs[dest])
         
     def opcode_group_fe(self):
