@@ -7445,3 +7445,43 @@ class AdjustFlagTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.operator_add_16(0x0018, 0x0008), 0x0020)
         self.assertTrue(self.cpu.flags.adjust)
         
+    def test_operator_sub_8_adjust_clear(self):
+        self.cpu.flags.adjust = True
+        self.assertEqual(self.cpu.operator_sub_8(0x08, 0x01), 0x07)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_operator_sub_8_adjust_clear_equal(self):
+        self.cpu.flags.adjust = True
+        self.assertEqual(self.cpu.operator_sub_8(0x08, 0x08), 0x00)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_operator_sub_8_adjust_clear_less_but_not_lowest_nibble(self):
+        self.cpu.flags.adjust = True
+        self.assertEqual(self.cpu.operator_sub_8(0x1A, 0x89), -111)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_operator_sub_8_adjust_set(self):
+        self.cpu.flags.adjust = False
+        self.assertEqual(self.cpu.operator_sub_8(0x08, 0x09), -1)
+        self.assertTrue(self.cpu.flags.adjust)
+        
+    def test_operator_sub_16_adjust_clear(self):
+        self.cpu.flags.adjust = True
+        self.assertEqual(self.cpu.operator_sub_16(0x0008, 0x0001), 0x0007)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_operator_sub_16_adjust_clear_equal(self):
+        self.cpu.flags.adjust = True
+        self.assertEqual(self.cpu.operator_sub_16(0x0008, 0x0008), 0x0000)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_operator_sub_16_adjust_clear_less_but_not_lowest_nibble(self):
+        self.cpu.flags.adjust = True
+        self.assertEqual(self.cpu.operator_sub_16(0x001A, 0x0089), -111)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_operator_sub_16_adjust_set(self):
+        self.cpu.flags.adjust = False
+        self.assertEqual(self.cpu.operator_sub_16(0x0008, 0x0009), -1)
+        self.assertTrue(self.cpu.flags.adjust)
+        

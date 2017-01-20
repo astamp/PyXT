@@ -1462,12 +1462,14 @@ class CPU(object):
         """ Implements the 8-bit sub operation with overflow support. """
         result = operand_a - operand_b
         self.flags.overflow = operand_a & 0x80 != operand_b & 0x80 and operand_b & 0x80 == result & 0x80
+        self.flags.adjust = (operand_a & 0x0F) < (operand_b & 0x0F)
         return result
         
     def operator_sub_16(self, operand_a, operand_b):
         """ Implements the 16-bit sub operation with overflow support. """
         result = operand_a - operand_b
         self.flags.overflow = operand_a & 0x8000 != operand_b & 0x8000 and operand_b & 0x8000 == result & 0x8000
+        self.flags.adjust = (operand_a & 0x000F) < (operand_b & 0x000F)
         return result
         
     # SBB
