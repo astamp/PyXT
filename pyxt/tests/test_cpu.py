@@ -7637,3 +7637,52 @@ class AdjustFlagTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0xFFFF)
         self.assertTrue(self.cpu.flags.adjust)
         
+    def test_dec_rm8_adjust_clear(self):
+        """
+        dec al
+        hlt
+        """
+        self.cpu.regs.AL = 0x01
+        self.cpu.flags.adjust = True
+        self.load_code_string("FE C8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0x00)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_dec_rm8_adjust_set(self):
+        """
+        dec al
+        hlt
+        """
+        self.cpu.regs.AL = 0x00
+        self.cpu.flags.adjust = False
+        self.load_code_string("FE C8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0xFF)
+        self.assertTrue(self.cpu.flags.adjust)
+        
+    def test_dec_rm16_adjust_clear(self):
+        """
+        dec word [value]
+        hlt
+        value:
+            dw 0x0001
+        """
+        self.cpu.flags.adjust = True
+        self.load_code_string("FF 0E 05 00 F4 01 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.memory.mem_read_word(0x0005), 0x0000)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_dec_rm16_adjust_set(self):
+        """
+        dec word [value]
+        hlt
+        value:
+            dw 0x0000
+        """
+        self.cpu.flags.adjust = False
+        self.load_code_string("FF 0E 05 00 F4 00 00")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.memory.mem_read_word(0x0005), 0xFFFF)
+        self.assertTrue(self.cpu.flags.adjust)

@@ -1710,7 +1710,7 @@ class CPU(object):
             value = self.operator_add_8(value, 1)
             
         elif sub_opcode == 1: # DEC
-            value -= 1
+            value = self.operator_sub_8(value, 1)
             
         else:
             raise NotImplementedError("sub_opcode = %r" % sub_opcode)
@@ -1729,7 +1729,7 @@ class CPU(object):
             self.flags.set_from_alu_no_carry_word(value)
             
         elif sub_opcode == 1: # DEC
-            value -= 1
+            value = self.operator_sub_16(value, 1)
             self._set_rm16(rm_type, rm_value, value)
             self.flags.set_from_alu_no_carry_word(value)
             
