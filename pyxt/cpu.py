@@ -1707,7 +1707,7 @@ class CPU(object):
         value = self._get_rm8(rm_type, rm_value)
         
         if sub_opcode == 0: # INC
-            value += 1
+            value = self.operator_add_8(value, 1)
             
         elif sub_opcode == 1: # DEC
             value -= 1
@@ -1724,7 +1724,7 @@ class CPU(object):
         value = self._get_rm16(rm_type, rm_value)
         
         if sub_opcode == 0: # INC
-            value += 1
+            value = self.operator_add_16(value, 1)
             self._set_rm16(rm_type, rm_value, value)
             self.flags.set_from_alu_no_carry_word(value)
             
