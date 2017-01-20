@@ -1443,12 +1443,14 @@ class CPU(object):
         """ Implements the 8-bit add operation with overflow support. """
         result = operand_a + operand_b
         self.flags.overflow = operand_a & 0x80 == operand_b & 0x80 and operand_a & 0x80 != result & 0x80
+        self.flags.adjust = ((operand_a & 0x0F) + (operand_b & 0x0F)) & 0x10 == 0x10
         return result
         
     def operator_add_16(self, operand_a, operand_b):
         """ Implements the 16-bit add operation with overflow support. """
         result = operand_a + operand_b
         self.flags.overflow = operand_a & 0x8000 == operand_b & 0x8000 and operand_a & 0x8000 != result & 0x8000
+        self.flags.adjust = ((operand_a & 0x000F) + (operand_b & 0x000F)) & 0x0010 == 0x0010
         return result
         
     # SUB

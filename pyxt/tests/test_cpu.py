@@ -7424,4 +7424,24 @@ class LockPrefixTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0xF00D)
         self.assertEqual(self.cpu.regs.BX, 0xCAFE)
         
+class AdjustFlagTests(BaseOpcodeAcceptanceTests):
+    def test_operator_add_8_adjust_clear(self):
+        self.cpu.flags.adjust = True
+        self.assertEqual(self.cpu.operator_add_8(0x01, 0x08), 0x09)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_operator_add_8_adjust_set(self):
+        self.cpu.flags.adjust = False
+        self.assertEqual(self.cpu.operator_add_8(0x08, 0x08), 0x10)
+        self.assertTrue(self.cpu.flags.adjust)
+        
+    def test_operator_add_16_adjust_clear(self):
+        self.cpu.flags.adjust = True
+        self.assertEqual(self.cpu.operator_add_16(0x0011, 0x0008), 0x0019)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_operator_add_16_adjust_set(self):
+        self.cpu.flags.adjust = False
+        self.assertEqual(self.cpu.operator_add_16(0x0018, 0x0008), 0x0020)
+        self.assertTrue(self.cpu.flags.adjust)
         
