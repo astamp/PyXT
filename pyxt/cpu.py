@@ -1475,18 +1475,18 @@ class CPU(object):
     # SBB
     def operator_sbb_8(self, operand_a, operand_b):
         """ Implements the 8-bit SBB operator which subtracts an extra 1 if CF is set. """
-        result = operand_a - operand_b
-        if self.flags.carry:
-            result -= 1
+        carry_in = 1 if self.flags.carry else 0
+        result = operand_a - (operand_b + carry_in)
         self.flags.overflow = operand_a & 0x80 != operand_b & 0x80 and operand_b & 0x80 == result & 0x80
+        self.flags.adjust = (operand_a & 0x0F) < ((operand_b & 0x0F) + carry_in)
         return result
         
     def operator_sbb_16(self, operand_a, operand_b):
         """ Implements the 16-bit SBB operator which subtracts an extra 1 if CF is set. """
-        result = operand_a - operand_b
-        if self.flags.carry:
-            result -= 1
+        carry_in = 1 if self.flags.carry else 0
+        result = operand_a - (operand_b + carry_in)
         self.flags.overflow = operand_a & 0x8000 != operand_b & 0x8000 and operand_b & 0x8000 == result & 0x8000
+        self.flags.adjust = (operand_a & 0x000F) < ((operand_b & 0x000F) + carry_in)
         return result
         
     def opcode_group_sbb(self, opcode):

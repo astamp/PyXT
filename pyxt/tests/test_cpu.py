@@ -7512,3 +7512,28 @@ class AdjustFlagTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.operator_adc_16(0x0007, 0x0008), 0x0010)
         self.assertTrue(self.cpu.flags.adjust)
         
+    # SBB
+    def test_operator_sbb_8_carry_false_adjust_clear(self):
+        self.cpu.flags.carry = False
+        self.cpu.flags.adjust = True
+        self.assertEqual(self.cpu.operator_sbb_8(0x05, 0x05), 0x00)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_operator_sbb_8_carry_true_causes_adjust_set(self):
+        self.cpu.flags.carry = True
+        self.cpu.flags.adjust = False
+        self.assertEqual(self.cpu.operator_sbb_8(0x05, 0x05), -1)
+        self.assertTrue(self.cpu.flags.adjust)
+        
+    def test_operator_sbb_16_carry_false_adjust_clear(self):
+        self.cpu.flags.carry = False
+        self.cpu.flags.adjust = True
+        self.assertEqual(self.cpu.operator_sbb_16(0x0005, 0x0005), 0x0000)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_operator_sbb_16_carry_true_causes_adjust_set(self):
+        self.cpu.flags.carry = True
+        self.cpu.flags.adjust = False
+        self.assertEqual(self.cpu.operator_sbb_16(0x0005, 0x0005), -1)
+        self.assertTrue(self.cpu.flags.adjust)
+        
