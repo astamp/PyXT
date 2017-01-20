@@ -7425,6 +7425,7 @@ class LockPrefixTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.BX, 0xCAFE)
         
 class AdjustFlagTests(BaseOpcodeAcceptanceTests):
+    # ADD
     def test_operator_add_8_adjust_clear(self):
         self.cpu.flags.adjust = True
         self.assertEqual(self.cpu.operator_add_8(0x01, 0x08), 0x09)
@@ -7445,6 +7446,7 @@ class AdjustFlagTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.operator_add_16(0x0018, 0x0008), 0x0020)
         self.assertTrue(self.cpu.flags.adjust)
         
+    # SUB
     def test_operator_sub_8_adjust_clear(self):
         self.cpu.flags.adjust = True
         self.assertEqual(self.cpu.operator_sub_8(0x08, 0x01), 0x07)
@@ -7483,5 +7485,30 @@ class AdjustFlagTests(BaseOpcodeAcceptanceTests):
     def test_operator_sub_16_adjust_set(self):
         self.cpu.flags.adjust = False
         self.assertEqual(self.cpu.operator_sub_16(0x0008, 0x0009), -1)
+        self.assertTrue(self.cpu.flags.adjust)
+        
+    # ADC
+    def test_operator_adc_8_carry_false_adjust_clear(self):
+        self.cpu.flags.carry = False
+        self.cpu.flags.adjust = True
+        self.assertEqual(self.cpu.operator_adc_8(0x07, 0x08), 0x0F)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_operator_adc_8_carry_true_causes_adjust_set(self):
+        self.cpu.flags.carry = True
+        self.cpu.flags.adjust = False
+        self.assertEqual(self.cpu.operator_adc_8(0x07, 0x08), 0x10)
+        self.assertTrue(self.cpu.flags.adjust)
+        
+    def test_operator_adc_16_carry_false_adjust_clear(self):
+        self.cpu.flags.carry = False
+        self.cpu.flags.adjust = True
+        self.assertEqual(self.cpu.operator_adc_16(0x0007, 0x0008), 0x000F)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_operator_adc_16_carry_true_causes_adjust_set(self):
+        self.cpu.flags.carry = True
+        self.cpu.flags.adjust = False
+        self.assertEqual(self.cpu.operator_adc_16(0x0007, 0x0008), 0x0010)
         self.assertTrue(self.cpu.flags.adjust)
         
