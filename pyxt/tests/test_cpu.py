@@ -7686,3 +7686,52 @@ class AdjustFlagTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.memory.mem_read_word(0x0005), 0xFFFF)
         self.assertTrue(self.cpu.flags.adjust)
+        
+    # NEG
+    def test_neg_rm8_adjust_clear(self):
+        """
+        neg al
+        hlt
+        """
+        self.cpu.regs.AL = 0x50
+        self.cpu.flags.adjust = True
+        self.load_code_string("F6 D8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0xB0)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_neg_rm8_adjust_set(self):
+        """
+        neg al
+        hlt
+        """
+        self.cpu.regs.AL = 0x05
+        self.cpu.flags.adjust = False
+        self.load_code_string("F6 D8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AL, 0xFB)
+        self.assertTrue(self.cpu.flags.adjust)
+        
+    def test_neg_rm16_adjust_clear(self):
+        """
+        neg ax
+        hlt
+        """
+        self.cpu.regs.AX = 0x0050
+        self.cpu.flags.adjust = True
+        self.load_code_string("F7 D8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xFFB0)
+        self.assertFalse(self.cpu.flags.adjust)
+        
+    def test_neg_rm16_adjust_set(self):
+        """
+        neg ax
+        hlt
+        """
+        self.cpu.regs.AX = 0x0005
+        self.cpu.flags.adjust = False
+        self.load_code_string("F7 D8 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xFFFB)
+        self.assertTrue(self.cpu.flags.adjust)

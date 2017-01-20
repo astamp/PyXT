@@ -1583,7 +1583,7 @@ class CPU(object):
             self._set_rm_bits(bits, rm_type, rm_value, value)
             
         elif sub_opcode == 3: # NEG
-            value = 0 - value
+            value = self.operator_sub_16(0, value) if bits == 16 else self.operator_sub_8(0, value)
             self._set_rm_bits(bits, rm_type, rm_value, value)
             self.flags.set_from_alu(value, bits = bits, carry = False)
             self.flags.carry = value != 0
