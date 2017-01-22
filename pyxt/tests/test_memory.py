@@ -28,6 +28,9 @@ class RandomAccessMemoryTests(unittest.TestCase):
         self.obj.contents[1236] = 78
         self.assertEqual(self.obj.mem_read_byte(1235), 77)
         
+    def test_get_memory_size(self):
+        self.assertEqual(self.obj.get_memory_size(), 0x8000)
+        
 class ReadOnlyMemoryTests(unittest.TestCase):
     def setUp(self):
         self.rom = ROM(16, init_file = get_test_file(self, "romtest.bin"))
@@ -61,3 +64,5 @@ class ReadOnlyMemoryTests(unittest.TestCase):
         self.assertEqual(self.rom.contents[0], 0x65)
         self.assertEqual(self.rom.contents[1], 0x61)
         
+    def test_get_memory_size(self):
+        self.assertEqual(self.rom.get_memory_size(), 16)

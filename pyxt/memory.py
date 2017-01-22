@@ -28,6 +28,9 @@ class RAM(Device): # pylint:disable=abstract-method
     def __repr__(self):
         return "<%s(size=0x%x)>" % (self.__class__.__name__, len(self.contents))
         
+    def get_memory_size(self):
+        return len(self.contents)
+        
     # def mem_read_byte(self, offset):
         # return self.contents[offset]
         
