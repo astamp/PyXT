@@ -20,6 +20,9 @@ class MDATests(unittest.TestCase):
                                                      0x03B4, 0x03B5, 0x03B6, 0x03B7,
                                                      0x03B8, 0x03B9, 0x03BA, 0x03BB])
         
+    def test_get_memory_size(self):
+        self.assertEqual(self.mda.get_memory_size(), 4096)
+        
     def test_initial_state(self):
         self.assertEqual(self.mda.control_reg, 0x00)
         self.assertEqual(self.mda.control_reg, 0x00)
