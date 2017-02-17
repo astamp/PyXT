@@ -42,7 +42,7 @@ assert len(FontInfoHeader) == 2
 class CodePageEntryHeader(Struct):
     """ CPI file CodePageEntryHeader. """
     _format = Format.LittleEndian
-    cpeh_header = Type.UnsignedShort
+    cpeh_size = Type.UnsignedShort
     next_cpeh_offset = Type.UnsignedLong
     device_type = Type.UnsignedShort
     device_name = Type.String[8]
@@ -90,7 +90,7 @@ class CharacterGeneratorCPIFile(CharacterGenerator):
             data = fileptr.read(len(CodePageEntryHeader))
             entry_header = CodePageEntryHeader(data)
             print "aaaaaaaaaaaaaaaaaaaaaaaa"
-            print entry_header.cpeh_header
+            print entry_header.cpeh_size
             # Link to the next codepage in the file.
             next_cpeh_offset = entry_header.next_cpeh_offset
             print entry_header.device_type
