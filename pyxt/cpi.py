@@ -52,6 +52,15 @@ class CodePageEntryHeader(Struct):
 
 assert len(CodePageEntryHeader) == 28
 
+class CodePageInfoHeader(Struct):
+    """ CPI file CodePageInfoHeader. """
+    _format = Format.LittleEndian
+    version = Type.UnsignedShort
+    num_fonts = Type.UnsignedShort
+    size = Type.UnsignedShort
+
+assert len(CodePageInfoHeader) == 6
+
 # Classes
 class CharacterGeneratorCPIFile(CharacterGenerator):
     def __init__(self, cpi_file, codepage):
@@ -109,6 +118,13 @@ class CharacterGeneratorCPIFile(CharacterGenerator):
         if cpeh is None or cpeh_offset is None:
             raise ValueError("Did not find codepage %d in this file!" % codepage)
             
+        fileptr.seek(cpeh.cpih_offset)
+        data = fileptr.read(len(CodePageInfoHeader))
+        info_header = CodePageInfoHeader(data)
+        print info_header.version
+        print info_header.num_fonts
+        print info_header.size
+        
 # Test application.
 def main():
     """ Test application for the CPI parsing module. """
