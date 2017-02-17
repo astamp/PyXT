@@ -5,6 +5,8 @@ See this site for more info:
 http://www.seasip.info/DOS/CPI/cpi.html
 """
 
+from __future__ import print_function
+
 # Standard library imports
 import os
 import array
@@ -13,6 +15,10 @@ from collections import namedtuple
 # PyXT imports
 from pyxt.hlstruct import Struct, Format, Type
 from pyxt.chargen import CharacterGenerator
+
+# Six imports
+import six
+from six.moves import range # pylint: disable=redefined-builtin
 
 # Constants
 FONT_ID_BYTE = b"\xFF"
@@ -92,7 +98,7 @@ class CharacterGeneratorCPIFile(CharacterGenerator):
     def load_from_file(self, fileptr, codepage, font_size):
         """ Read in the CPI file from a file-like. """
         data = fileptr.read(len(FontFileHeader))
-        if data[0] != FONT_ID_BYTE:
+        if data[0:1] != FONT_ID_BYTE:
             raise ValueError("Invalid ID byte: %r" % data[0])
             
         file_header = FontFileHeader(data)
@@ -115,7 +121,7 @@ class CharacterGeneratorCPIFile(CharacterGenerator):
         cpeh_offset = None
         
         next_cpeh_offset = None
-        for index in xrange(info_header.num_codepages):
+        for index in range(info_header.num_codepages):
             # If not the first entry follow the linked list offset.
             if next_cpeh_offset is not None:
                 fileptr.seek(next_cpeh_offset)
@@ -147,7 +153,7 @@ class CharacterGeneratorCPIFile(CharacterGenerator):
             raise ValueError("Only version 1 info headers are supported!")
             
         # Loop through the various fonts (sizes) for this codepage until we find the one we want.
-        for font in xrange(info_header.num_fonts):
+        for font in range(info_header.num_fonts):
             data = fileptr.read(len(ScreenFontHeader))
             screen_font_header = ScreenFontHeader(data)
                 
@@ -160,16 +166,16 @@ class CharacterGeneratorCPIFile(CharacterGenerator):
                 raise ValueError("Font did not contain 256 characters! Had: %d" % screen_font_header.num_chars)
                 
             # Dump out the characters to the display.
-            for ordinal in xrange(screen_font_header.num_chars):
-                print "   +-" + ("-" * (screen_font_header.width * 2)) + "+"
-                for y in xrange(screen_font_header.height):
-                    print "%2d |" % y,
+            for ordinal in range(screen_font_header.num_chars):
+                print("   +-" + ("-" * (screen_font_header.width * 2)) + "+")
+                for y in range(screen_font_header.height):
+                    print("%2d |" % y, end = " ")
                     row = fileptr.read(screen_font_header.width // 8)
-                    for byte in row:
+                    for byte in six.iterbytes(row):
                         for bit in BITS_7_TO_0:
-                            print "#" if bit & ord(byte) else " ",
-                    print "|"
-                print "   +-" + ("-" * (screen_font_header.width * 2)) + "+"
+                            print("#" if bit & byte else " ", end = " ")
+                    print("|")
+                print("   +-" + ("-" * (screen_font_header.width * 2)) + "+")
             break
             
 # Test application.
@@ -177,7 +183,7 @@ def main():
     """ Test application for the CPI parsing module. """
     import sys
     
-    print "CPI test application."
+    print("CPI test application.")
     cpi = CharacterGeneratorCPIFile(sys.argv[1], int(sys.argv[2]), MDA_SIZE)
     
     
