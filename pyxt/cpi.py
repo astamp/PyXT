@@ -80,31 +80,42 @@ class CharacterGeneratorCPIFile(CharacterGenerator):
         data = fileptr.read(len(FontInfoHeader))
         info_header = FontInfoHeader(data)
         
+        cpeh = None
+        cpeh_offset = None
+        
         next_cpeh_offset = None
         for index in xrange(info_header.num_codepages):
             # If not the first entry follow the linked list offset.
             if next_cpeh_offset is not None:
                 fileptr.seek(next_cpeh_offset)
-                next_cpeh_offset = None
                 
+            this_cpeh_offset = fileptr.tell()
             data = fileptr.read(len(CodePageEntryHeader))
             entry_header = CodePageEntryHeader(data)
-            print "aaaaaaaaaaaaaaaaaaaaaaaa"
-            print entry_header.cpeh_size
-            # Link to the next codepage in the file.
-            next_cpeh_offset = entry_header.next_cpeh_offset
-            print entry_header.device_type
-            print entry_header.device_name
-            print entry_header.codepage
-            print entry_header.cpih_offset
-        
+            
+            if entry_header.cpeh_size != 28:
+                raise ValueError("Invalid code page header size: %r" % entry_header.cpeh_size)
+                
+            # Check if this is the codepage we are looking for.
+            if entry_header.codepage == codepage and entry_header.device_type == DEVICE_TYPE_SCREEN:
+                cpeh = entry_header
+                cpeh_offset = this_cpeh_offset
+                break
+                
+            # Otherwise link to the next codepage in the file.
+            else:
+                next_cpeh_offset = entry_header.next_cpeh_offset
+                
+        if cpeh is None or cpeh_offset is None:
+            raise ValueError("Did not find codepage %d in this file!" % codepage)
+            
 # Test application.
 def main():
     """ Test application for the CPI parsing module. """
     import sys
     
     print "CPI test application."
-    cpi = CharacterGeneratorCPIFile(sys.argv[1], sys.argv[2])
+    cpi = CharacterGeneratorCPIFile(sys.argv[1], int(sys.argv[2]))
     
     
 if __name__ == "__main__":
