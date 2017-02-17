@@ -7,6 +7,7 @@ http://code.activestate.com/recipes/498149-a-higher-level-struct-module/
 
 # pylint: skip-file
 
+import six
 import struct
 
 class Format(object):
@@ -119,7 +120,7 @@ class MetaStruct(type):
             cls._struct_info=[]     # name / element pairs
 
         # Get each Element field, sorted by id.
-        elems = sorted(((k,v) for (k,v) in d.iteritems() 
+        elems = sorted(((k,v) for (k,v) in six.iteritems(d) 
                         if isinstance(v, Element)),
                         key=lambda x:x[1].id)
 
@@ -130,9 +131,8 @@ class MetaStruct(type):
     def __len__(self):
         return self._struct_size
         
-class Struct(object):
+class Struct(six.with_metaclass(MetaStruct, object)):
     """Represent a binary structure."""
-    __metaclass__=MetaStruct
     _format = Format.Native  # Default to native format, native size
 
     def __init__(self, _data=None, **kwargs):
@@ -144,7 +144,7 @@ class Struct(object):
         for (name, elem), val in fieldvals:
             setattr(self, name, elem.decode(self._format, val))
         
-        for k,v in kwargs.iteritems():
+        for k,v in six.iteritems(kwargs):
             setattr(self, k, v)
 
     def _pack(self):
