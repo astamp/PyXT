@@ -6,7 +6,9 @@ http://www.seasip.info/DOS/CPI/cpi.html
 """
 
 # Standard library imports
+import os
 import array
+from collections import namedtuple
 
 # PyXT imports
 from pyxt.hlstruct import Struct, Format, Type
@@ -18,6 +20,15 @@ FONT_ID_STR = b"FONT   "
 
 DEVICE_TYPE_SCREEN = 1
 DEVICE_TYPE_PRINTER = 2
+
+NUM_CHARS = 256
+
+FontSize = namedtuple("FontSize", ["height", "width"])
+EGA_VGA_SIZE = FontSize(16, 8)
+MDA_SIZE = FontSize(14, 8)
+CGA_SIZE = FontSize(8, 8)
+
+BITS_7_TO_0 = (0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01)
 
 # Structures
 class FontFileHeader(Struct):
@@ -61,13 +72,24 @@ class CodePageInfoHeader(Struct):
 
 assert len(CodePageInfoHeader) == 6
 
+class ScreenFontHeader(Struct):
+    """ CPI file ScreenFontHeader. """
+    _format = Format.LittleEndian
+    height = Type.UnsignedByte
+    width = Type.UnsignedByte
+    yaspect = Type.UnsignedByte
+    xaspect = Type.UnsignedByte
+    num_chars = Type.UnsignedShort
+
+assert len(ScreenFontHeader) == 6
+
 # Classes
 class CharacterGeneratorCPIFile(CharacterGenerator):
-    def __init__(self, cpi_file, codepage):
+    def __init__(self, cpi_file, codepage, font_size):
         with open(cpi_file, "rb") as fileptr:
-            self.load_from_file(fileptr, codepage)
+            self.load_from_file(fileptr, codepage, font_size)
         
-    def load_from_file(self, fileptr, codepage):
+    def load_from_file(self, fileptr, codepage, font_size):
         """ Read in the CPI file from a file-like. """
         data = fileptr.read(len(FontFileHeader))
         if data[0] != FONT_ID_BYTE:
@@ -121,17 +143,42 @@ class CharacterGeneratorCPIFile(CharacterGenerator):
         fileptr.seek(cpeh.cpih_offset)
         data = fileptr.read(len(CodePageInfoHeader))
         info_header = CodePageInfoHeader(data)
-        print info_header.version
-        print info_header.num_fonts
-        print info_header.size
-        
+        if info_header.version != 1:
+            raise ValueError("Only version 1 info headers are supported!")
+            
+        # Loop through the various fonts (sizes) for this codepage until we find the one we want.
+        for font in xrange(info_header.num_fonts):
+            data = fileptr.read(len(ScreenFontHeader))
+            screen_font_header = ScreenFontHeader(data)
+                
+            # If this isn't the size we need, seek past the bitmaps.
+            if font_size.height != screen_font_header.height or font_size.width != screen_font_header.width:
+                fileptr.seek((screen_font_header.width // 8) * screen_font_header.height * screen_font_header.num_chars, os.SEEK_CUR)
+                continue
+                
+            if screen_font_header.num_chars != NUM_CHARS:
+                raise ValueError("Font did not contain 256 characters! Had: %d" % screen_font_header.num_chars)
+                
+            # Dump out the characters to the display.
+            for ordinal in xrange(screen_font_header.num_chars):
+                print "   +-" + ("-" * (screen_font_header.width * 2)) + "+"
+                for y in xrange(screen_font_header.height):
+                    print "%2d |" % y,
+                    row = fileptr.read(screen_font_header.width // 8)
+                    for byte in row:
+                        for bit in BITS_7_TO_0:
+                            print "#" if bit & ord(byte) else " ",
+                    print "|"
+                print "   +-" + ("-" * (screen_font_header.width * 2)) + "+"
+            break
+            
 # Test application.
 def main():
     """ Test application for the CPI parsing module. """
     import sys
     
     print "CPI test application."
-    cpi = CharacterGeneratorCPIFile(sys.argv[1], int(sys.argv[2]))
+    cpi = CharacterGeneratorCPIFile(sys.argv[1], int(sys.argv[2]), MDA_SIZE)
     
     
 if __name__ == "__main__":
