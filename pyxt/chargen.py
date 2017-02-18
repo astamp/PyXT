@@ -18,22 +18,33 @@ CHARGEN_ATTR_NONE = 0x0000
 CHARGEN_ATTR_BRIGHT = 0x0001
 CHARGEN_ATTR_REVERSE = 0x0002
 
+MAX_CHAR_COUNT = 256
+BITS_7_TO_0 = (0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01)
+
 # Classes
 class CharacterGenerator(object):
     """ Generates glyphs for a given character. """
+    def __init__(self, height, width):
+        self.char_height = height
+        self.char_width = width
+        self.font_bitmaps_alpha = pygame.Surface((width * MAX_CHAR_COUNT, height), pygame.SRCALPHA)
+        
     def blit_character(self, surface, location, index, attributes = CHARGEN_ATTR_NONE):
         """ Place a character onto a surface at the given location. """
         raise NotImplementedError
         
-    @property
-    def char_width(self):
-        """ Returns the width of characters in pixels. """
-        raise NotImplementedError
+    def store_character(self, index, data, row_byte_width = 1):
+        """ Stores a glyph bitmap into the internal font data structure. """
+        pixel_access = pygame.PixelArray(self.font_bitmaps_alpha)
         
-    @property
-    def char_height(self):
-        """ Returns the width of characters in pixels. """
-        raise NotImplementedError
+        for y in range(0, self.char_height):
+            row = data[y * row_byte_width : (y + 1) * row_byte_width]
+            for byte in six.iterbytes(row):
+                for bit in BITS_7_TO_0:
+                    pixel_access[(index * self.char_width) + (7 - bit), row] = (255, 255, 255, 255)
+                    
+        # Make sure to explicitly del this to free the surface lock.
+        del pixel_access
         
 class CharacterGeneratorBIOS(CharacterGenerator):
     """ Character generator that uses the 8x8 backup glyph set in the PC BIOS. """
