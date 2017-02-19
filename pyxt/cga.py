@@ -17,7 +17,6 @@ from __future__ import print_function
 # Standard library imports
 import array
 import random
-from collections import namedtuple
 
 # Six imports
 import six
@@ -25,7 +24,7 @@ from six.moves import range # pylint: disable=redefined-builtin
 
 # PyXT imports
 from pyxt.bus import Device
-from pyxt.chargen import CharacterGenerator
+from pyxt.chargen import CharacterGeneratorMDA_CGA_ROM
 
 # Pygame Imports
 import pygame
@@ -89,8 +88,6 @@ CGA_ATTR_BG_BRIGHT = 0x80
 CGA_ATTR_FG_BLINK =  0x80 # Must be combined with CONTROL_REG_BLINK_ENABLE.
 
 CGA_RAM_SIZE = 16 * 1024
-
-BITS_LO_TO_HI = [7, 6, 5, 4, 3, 2, 1, 0]
 
 CGA_COLOR_MAP = {
     0x0 : (0x00, 0x00, 0x00),
@@ -486,53 +483,14 @@ class ColorGraphicsAdapter(Device):
         self.screen.set_at((column + 1, row), self.graphics_palette[px1])
         self.screen.set_at((column + 2, row), self.graphics_palette[px2])
         self.screen.set_at((column + 3, row), self.graphics_palette[px3])
-        
-class CharacterGeneratorCGA(CharacterGenerator):
-    """
-    Character generator that uses the ROM image from the IBM MDA and printer card.
-    
-    This part was also used on the CGA adapter and contains those fonts as well.
-    Many thanks to Jonathan Hunt who dumped the contents of the ROM and wrote code to interpret it.
-    """
-    MDA_FONT = 0
-    CGA_NARROW_FONT = 1
-    CGA_WIDE_FONT = 2
-    
-    PAGE_SIZE = 2048
-    
-    FontInfo = namedtuple("FontInfo", ["start_address", "byte_width", "rows_stored", "cols_actual", "rows_actual"])
-    
-    FONT_INFO = {
-        # (Start address, byte width, rows in data, cols actual, rows actual)
-        MDA_FONT : FontInfo(0x0000, 1, 16, 9, 14),
-        CGA_NARROW_FONT : FontInfo(0x1000, 1, 8, 8, 8),
-        CGA_WIDE_FONT : FontInfo(0x1800, 1, 8, 8, 8),
-    }
-    
-    def __init__(self, rom_file, font = CGA_WIDE_FONT):
-        font_info = self.FONT_INFO[font]
-        super(CharacterGeneratorCGA, self).__init__(font_info.rows_actual, font_info.cols_actual)
-        
-        # The characters are split top and bottom across the first 2 2k pages of the part.
-        with open(rom_file, "rb") as fileptr:
-            fileptr.seek(font_info.start_address)
-            upper_half = fileptr.read(self.PAGE_SIZE)
-            lower_half = fileptr.read(self.PAGE_SIZE)
-            
-        for index in range(self.CHAR_COUNT):
-            data = upper_half[index * 8 : (index + 1) * 8]
-            if self.char_height > 8:
-                data += lower_half[index * 8 : (index + 1) * 8]
-                
-            self.store_character(index, data)
-            
+                    
 # Test application.
 def main():
     """ Test application for the CGA card. """
     import sys
     
     print("CGA test application.")
-    char_generator = CharacterGeneratorCGA(sys.argv[1], CharacterGeneratorCGA.CGA_WIDE_FONT)
+    char_generator = CharacterGeneratorMDA_CGA_ROM(sys.argv[1], CharacterGeneratorMDA_CGA_ROM.CGA_WIDE_FONT)
     
     cga = ColorGraphicsAdapter(char_generator, double = False)
     cga.reset()

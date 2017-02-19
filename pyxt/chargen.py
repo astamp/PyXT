@@ -3,6 +3,7 @@ pyxt.mda - Monochrome display adapter for PyXT based on Pygame.
 """
 
 # Standard library imports
+from collections import namedtuple
 
 # PyXT imports
 
@@ -89,3 +90,41 @@ class CharacterGeneratorMock(CharacterGenerator):
     def blit_character(self, surface, location, index, foreground, background):
         self.last_blit = (surface, location, index, foreground, background)
         
+class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
+    """
+    Character generator that uses the ROM image from the IBM MDA and printer card.
+    
+    This part was also used on the CGA adapter and contains those fonts as well.
+    Many thanks to Jonathan Hunt who dumped the contents of the ROM and wrote code to interpret it.
+    """
+    MDA_FONT = 0
+    CGA_NARROW_FONT = 1
+    CGA_WIDE_FONT = 2
+    
+    PAGE_SIZE = 2048
+    
+    FontInfo = namedtuple("FontInfo", ["start_address", "byte_width", "rows_stored", "cols_actual", "rows_actual"])
+    
+    FONT_INFO = {
+        # (Start address, byte width, rows in data, cols actual, rows actual)
+        MDA_FONT : FontInfo(0x0000, 1, 16, 9, 14),
+        CGA_NARROW_FONT : FontInfo(0x1000, 1, 8, 8, 8),
+        CGA_WIDE_FONT : FontInfo(0x1800, 1, 8, 8, 8),
+    }
+    
+    def __init__(self, rom_file, font):
+        font_info = self.FONT_INFO[font]
+        super(CharacterGeneratorMDA_CGA_ROM, self).__init__(font_info.rows_actual, font_info.cols_actual)
+        
+        # The characters are split top and bottom across the first 2 2k pages of the part.
+        with open(rom_file, "rb") as fileptr:
+            fileptr.seek(font_info.start_address)
+            upper_half = fileptr.read(self.PAGE_SIZE)
+            lower_half = fileptr.read(self.PAGE_SIZE)
+            
+        for index in range(self.CHAR_COUNT):
+            data = upper_half[index * 8 : (index + 1) * 8]
+            if self.char_height > 8:
+                data += lower_half[index * 8 : (index + 1) * 8]
+                
+            self.store_character(index, data)
