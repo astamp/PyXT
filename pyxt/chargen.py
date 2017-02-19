@@ -40,7 +40,7 @@ class CharacterGenerator(object):
         
     def blit_character(self, surface, location, index, foreground, background):
         """ Place a character onto a surface at the given location. """
-        if index >= self.CHAR_COUNT:
+        if index >= MAX_CHAR_COUNT:
             return
             
         surface.fill(background, (location[0], location[1], self.char_width, self.char_height))
