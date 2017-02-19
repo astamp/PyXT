@@ -513,7 +513,6 @@ class CharacterGeneratorCGA(CharacterGenerator):
     def __init__(self, rom_file, font = CGA_WIDE_FONT):
         font_info = self.FONT_INFO[font]
         super(CharacterGeneratorCGA, self).__init__(font_info.rows_actual, font_info.cols_actual)
-        self.working_char = pygame.Surface((self.char_width, self.char_height), pygame.SRCALPHA)
         
         # The characters are split top and bottom across the first 2 2k pages of the part.
         with open(rom_file, "rb") as fileptr:

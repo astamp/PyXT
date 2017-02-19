@@ -36,6 +36,7 @@ class CharacterGenerator(object):
         self.char_height = height
         self.char_width = width
         self.font_bitmaps_alpha = pygame.Surface((width * MAX_CHAR_COUNT, height), pygame.SRCALPHA)
+        self.working_char = pygame.Surface((self.char_width, self.char_height), pygame.SRCALPHA)
         
     def blit_character(self, surface, location, index, foreground, background):
         """ Place a character onto a surface at the given location. """
