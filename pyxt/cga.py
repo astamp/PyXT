@@ -510,7 +510,7 @@ class CharacterGeneratorCGA(CharacterGenerator):
         CGA_WIDE_FONT : FontInfo(0x1800, 1, 8, 8, 8),
     }
     
-    def __init__(self, rom_file, font = MDA_FONT):
+    def __init__(self, rom_file, font = CGA_WIDE_FONT):
         font_info = self.FONT_INFO[font]
         super(CharacterGeneratorCGA, self).__init__(font_info.rows_actual, font_info.cols_actual)
         self.working_char = pygame.Surface((self.char_width, self.char_height), pygame.SRCALPHA)
@@ -526,16 +526,12 @@ class CharacterGeneratorCGA(CharacterGenerator):
             lower_half = fileptr.read(self.PAGE_SIZE)
             
         for index in range(self.CHAR_COUNT):
-            for row in range(0, self.char_height):
-                if row < 8:
-                    byte = six.indexbytes(upper_half, (index * 8) + row)
-                else:
-                    byte = six.indexbytes(lower_half, (index  * 8) + (row - 8))
-                    
-                for bit in BITS_LO_TO_HI:
-                    if (1 << bit) & byte:
-                        pix_alpha[(index * self.char_width) + (7 - bit), row] = (255, 255, 255, 255)
-                        
+            data = upper_half[index * 8 : (index + 1) * 8]
+            if self.char_height > 8:
+                data += lower_half[index * 8 : (index + 1) * 8]
+                
+            self.store_character(index, data)
+            
         # Make sure to explicitly del this to free the surface lock.
         del pix_alpha
         

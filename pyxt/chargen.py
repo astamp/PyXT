@@ -9,13 +9,25 @@ pyxt.mda - Monochrome display adapter for PyXT based on Pygame.
 # Pygame Imports
 import pygame
 
+# Six imports
+import six
+
 # Constants
 EGA_BLACK = (0x00, 0x00, 0x00)
 EGA_GREEN = (0x00, 0xAA, 0x00)
 EGA_BRIGHT_GREEN = (0x55, 0xFF, 0x55)
 
 MAX_CHAR_COUNT = 256
-BITS_7_TO_0 = (0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01)
+COLUMN_AND_MASK_7_TO_0 = (
+    (0, 0x80),
+    (1, 0x40),
+    (2, 0x20),
+    (3, 0x10),
+    (4, 0x08),
+    (5, 0x04),
+    (6, 0x02),
+    (7, 0x01),
+)
 
 # Classes
 class CharacterGenerator(object):
@@ -32,19 +44,20 @@ class CharacterGenerator(object):
             
         surface.fill(background, (location[0], location[1], self.char_width, self.char_height))
         self.working_char.fill(foreground)
-        self.working_char.blit(self.font_data_alpha, (0, 0), (self.char_width * index, 0, self.char_width, self.char_height), pygame.BLEND_RGBA_MULT)
+        self.working_char.blit(self.font_bitmaps_alpha, (0, 0), (self.char_width * index, 0, self.char_width, self.char_height), pygame.BLEND_RGBA_MULT)
         surface.blit(self.working_char, location)
         
     def store_character(self, index, data, row_byte_width = 1):
         """ Stores a glyph bitmap into the internal font data structure. """
         pixel_access = pygame.PixelArray(self.font_bitmaps_alpha)
         
-        for y in range(0, self.char_height):
-            row = data[y * row_byte_width : (y + 1) * row_byte_width]
-            for byte in six.iterbytes(row):
-                for bit in BITS_7_TO_0:
-                    pixel_access[(index * self.char_width) + (7 - bit), row] = (255, 255, 255, 255)
-                    
+        for row in range(0, self.char_height):
+            row_data = data[row * row_byte_width : (row + 1) * row_byte_width]
+            for byte in six.iterbytes(row_data):
+                for column, mask in COLUMN_AND_MASK_7_TO_0:
+                    if byte & mask:
+                        pixel_access[(index * self.char_width) + column, row] = (255, 255, 255, 255)
+                        
         # Make sure to explicitly del this to free the surface lock.
         del pixel_access
         
