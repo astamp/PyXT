@@ -21,8 +21,9 @@ from pyxt.cpu import CPU
 from pyxt.debugger import Debugger
 from pyxt.bus import SystemBus
 from pyxt.memory import RAM, ROM
-from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MDA_START_ADDRESS
-from pyxt.cga import ColorGraphicsAdapter, CGA_START_ADDRESS, CharacterGeneratorCGA
+from pyxt.chargen import CharacterGeneratorMDA_CGA_ROM
+from pyxt.mda import MonochromeDisplayAdapter, MDA_START_ADDRESS
+from pyxt.cga import ColorGraphicsAdapter, CGA_START_ADDRESS
 from pyxt.ui import PygameManager
 
 from pyxt.fdc import FloppyDisketteController, FloppyDisketteDrive, FIVE_INCH_360_KB
@@ -117,7 +118,7 @@ def main():
         video_card = MonochromeDisplayAdapter(char_generator, randomize = True)
         bus.install_device(MDA_START_ADDRESS, video_card)
     elif options.display == "cga":
-        char_generator = CharacterGeneratorCGA(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.CGA_WIDE_FONT)
+        char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.CGA_WIDE_FONT)
         video_card = ColorGraphicsAdapter(char_generator, randomize = True)
         # Use MDA start address until devices can be installed on non-64k boundaries.
         bus.install_device(MDA_START_ADDRESS, video_card)
