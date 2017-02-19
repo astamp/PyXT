@@ -17,7 +17,6 @@ EGA_BLACK = (0x00, 0x00, 0x00)
 EGA_GREEN = (0x00, 0xAA, 0x00)
 EGA_BRIGHT_GREEN = (0x55, 0xFF, 0x55)
 
-MAX_CHAR_COUNT = 256
 COLUMN_AND_MASK_7_TO_0 = (
     (0, 0x80),
     (1, 0x40),
@@ -32,15 +31,17 @@ COLUMN_AND_MASK_7_TO_0 = (
 # Classes
 class CharacterGenerator(object):
     """ Generates glyphs for a given character. """
+    CHAR_COUNT = 256
+    
     def __init__(self, height, width):
         self.char_height = height
         self.char_width = width
-        self.font_bitmaps_alpha = pygame.Surface((width * MAX_CHAR_COUNT, height), pygame.SRCALPHA)
+        self.font_bitmaps_alpha = pygame.Surface((width * self.CHAR_COUNT, height), pygame.SRCALPHA)
         self.working_char = pygame.Surface((self.char_width, self.char_height), pygame.SRCALPHA)
         
     def blit_character(self, surface, location, index, foreground, background):
         """ Place a character onto a surface at the given location. """
-        if index >= MAX_CHAR_COUNT:
+        if index >= self.CHAR_COUNT:
             return
             
         surface.fill(background, (location[0], location[1], self.char_width, self.char_height))
@@ -65,7 +66,7 @@ class CharacterGenerator(object):
 class CharacterGeneratorBIOS(CharacterGenerator):
     """ Character generator that uses the 8x8 backup glyph set in the PC BIOS. """
     FONT_OFFSET = 0xFA6E
-    RESIDENT_CHARS = 128
+    CHAR_COUNT = 128
     CHAR_WIDTH_BYTES = 1
     CHAR_WIDTH_PIXELS = CHAR_WIDTH_BYTES * 8
     CHAR_HEIGHT_PIXELS = 8
@@ -75,7 +76,7 @@ class CharacterGeneratorBIOS(CharacterGenerator):
         
         with open(bios_file, "rb") as fileptr:
             fileptr.seek(self.FONT_OFFSET)
-            for index in xrange(self.RESIDENT_CHARS):
+            for index in xrange(self.CHAR_COUNT):
                 data = fileptr.read(self.CHAR_HEIGHT_PIXELS * self.CHAR_WIDTH_BYTES)
                 self.store_character(index, data)
         

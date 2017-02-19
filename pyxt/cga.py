@@ -499,7 +499,6 @@ class CharacterGeneratorCGA(CharacterGenerator):
     CGA_WIDE_FONT = 2
     
     PAGE_SIZE = 2048
-    CHAR_COUNT = 256
     
     FontInfo = namedtuple("FontInfo", ["start_address", "byte_width", "rows_stored", "cols_actual", "rows_actual"])
     
