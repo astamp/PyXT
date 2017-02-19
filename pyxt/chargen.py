@@ -71,34 +71,13 @@ class CharacterGeneratorBIOS(CharacterGenerator):
     CHAR_HEIGHT_PIXELS = 8
     
     def __init__(self, bios_file):
-        self.font_data = pygame.Surface((8 * self.RESIDENT_CHARS, 8)) # pylint: disable=too-many-function-args
-        self.font_data.fill(EGA_BLACK)
-        pix = pygame.PixelArray(self.font_data) # pylint: disable=too-many-function-args
+        super(CharacterGeneratorBIOS, self).__init__(self.CHAR_WIDTH_PIXELS, self.CHAR_HEIGHT_PIXELS)
         
         with open(bios_file, "rb") as fileptr:
             fileptr.seek(self.FONT_OFFSET)
             for index in xrange(self.RESIDENT_CHARS):
-                for row in xrange(0, self.CHAR_HEIGHT_PIXELS):
-                    byte = ord(fileptr.read(1))
-                    for bit in xrange(self.CHAR_WIDTH_PIXELS):
-                        if (1 << (self.CHAR_WIDTH_PIXELS - bit)) & byte:
-                            pix[(index * self.CHAR_WIDTH_PIXELS) + bit, row] = EGA_GREEN
-                            
-        # Make sure to explicitly del this to free the surface lock.
-        del pix
-        
-    def blit_character(self, surface, location, index, foreground, background):
-        if index >= self.RESIDENT_CHARS:
-            return
-        surface.blit(self.font_data, location, area = (8 * index, 0, 8, 8))
-        
-    @property
-    def char_width(self):
-        return 8
-        
-    @property
-    def char_height(self):
-        return 8
+                data = fileptr.read(self.CHAR_HEIGHT_PIXELS * self.CHAR_WIDTH_BYTES)
+                self.store_character(index, data)
         
 class CharacterGeneratorMock(CharacterGenerator):
     """ Mock version of the character generator for unit testing. """
