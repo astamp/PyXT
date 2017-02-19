@@ -48,8 +48,8 @@ def parse_cmdline():
                       help = "Enable DEBUG log level.")
     parser.add_option("--bios", action = "store", dest = "bios",
                       help = "ROM BIOS image to load at 0xF0000.")
-    parser.add_option("--mda-rom", action = "store", dest = "mda_rom",
-                      help = "MDA ROM to use for the virtual MDA card.")
+    parser.add_option("--mda-rom", "--cga-rom", action = "store", dest = "mda_cga_rom",
+                      help = "MDA/CGA ROM to use for a virtual MDA/CGA card.")
     parser.add_option("--display", action = "store", dest = "display", default = "mda",
                       help = "Display adapter type to use, default: mda.")
     parser.add_option("--dip-switches", action = "store", type = "int", dest = "dip_switches",
@@ -114,11 +114,11 @@ def main():
     # Other onboard hardware devices.
     video_card = None
     if options.display == "mda":
-        char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
+        char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_cga_rom, CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
         video_card = MonochromeDisplayAdapter(char_generator, randomize = True)
         bus.install_device(MDA_START_ADDRESS, video_card)
     elif options.display == "cga":
-        char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.CGA_WIDE_FONT)
+        char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_cga_rom, CharacterGeneratorMDA_CGA_ROM.CGA_WIDE_FONT)
         video_card = ColorGraphicsAdapter(char_generator, randomize = True)
         # Use MDA start address until devices can be installed on non-64k boundaries.
         bus.install_device(MDA_START_ADDRESS, video_card)
