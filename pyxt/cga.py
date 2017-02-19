@@ -511,21 +511,22 @@ class CharacterGeneratorCGA(CharacterGenerator):
     }
     
     def __init__(self, rom_file, font = MDA_FONT):
-        self.font_info = self.FONT_INFO[font]
-        self.working_char = pygame.Surface((self.font_info.cols_actual, self.font_info.rows_actual), pygame.SRCALPHA)
+        font_info = self.FONT_INFO[font]
+        super(CharacterGeneratorCGA, self).__init__(font_info.rows_actual, font_info.cols_actual)
+        self.working_char = pygame.Surface((self.char_width, self.char_height), pygame.SRCALPHA)
         
-        self.font_data_alpha = pygame.Surface((self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual), pygame.SRCALPHA)
+        self.font_data_alpha = pygame.Surface((self.char_width * self.CHAR_COUNT, self.char_height), pygame.SRCALPHA)
         
         pix_alpha = pygame.PixelArray(self.font_data_alpha)
         
         # The characters are split top and bottom across the first 2 2k pages of the part.
         with open(rom_file, "rb") as fileptr:
-            fileptr.seek(self.font_info.start_address)
+            fileptr.seek(font_info.start_address)
             upper_half = fileptr.read(self.PAGE_SIZE)
             lower_half = fileptr.read(self.PAGE_SIZE)
             
         for index in range(self.CHAR_COUNT):
-            for row in range(0, self.font_info.rows_actual):
+            for row in range(0, self.char_height):
                 if row < 8:
                     byte = six.indexbytes(upper_half, (index * 8) + row)
                 else:
@@ -537,26 +538,6 @@ class CharacterGeneratorCGA(CharacterGenerator):
                         
         # Make sure to explicitly del this to free the surface lock.
         del pix_alpha
-        
-    def blit_character(self, surface, location, index, foreground, background):
-        """ Place a character onto a surface at the given location. """
-        if index >= self.CHAR_COUNT:
-            return
-            
-        surface.fill(background, (location[0], location[1], self.char_width, self.char_height))
-        self.working_char.fill(foreground)
-        self.working_char.blit(self.font_data_alpha, (0, 0), (self.char_width * index, 0, self.char_width, self.char_height), pygame.BLEND_RGBA_MULT)
-        surface.blit(self.working_char, location)
-        
-    @property
-    def char_width(self):
-        """ Returns the width of characters in pixels. """
-        return self.font_info.cols_actual
-        
-    @property
-    def char_height(self):
-        """ Returns the width of characters in pixels. """
-        return self.font_info.rows_actual
         
 # Test application.
 def main():

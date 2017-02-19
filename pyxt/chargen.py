@@ -27,7 +27,13 @@ class CharacterGenerator(object):
         
     def blit_character(self, surface, location, index, foreground, background):
         """ Place a character onto a surface at the given location. """
-        raise NotImplementedError
+        if index >= self.CHAR_COUNT:
+            return
+            
+        surface.fill(background, (location[0], location[1], self.char_width, self.char_height))
+        self.working_char.fill(foreground)
+        self.working_char.blit(self.font_data_alpha, (0, 0), (self.char_width * index, 0, self.char_width, self.char_height), pygame.BLEND_RGBA_MULT)
+        surface.blit(self.working_char, location)
         
     def store_character(self, index, data, row_byte_width = 1):
         """ Stores a glyph bitmap into the internal font data structure. """
