@@ -306,14 +306,16 @@ class MonochromeDisplayAdapter(Device):
             return
             
         # Calculate the character generator attributes.
-        cg_attributes = CHARGEN_ATTR_NONE
+        foreground = EGA_GREEN
+        background = EGA_BLACK
         if attributes & MDA_ATTR_BACKGROUND == MDA_ATTR_BACKGROUND:
-            cg_attributes |= CHARGEN_ATTR_REVERSE
+            foreground = EGA_BLACK
+            background = EGA_GREEN
         if attributes & MDA_ATTR_INTENSITY:
-            cg_attributes |= CHARGEN_ATTR_BRIGHT
+            foreground = EGA_BRIGHT_GREEN
             
         # Blit the character to the bitmap.
-        self.char_generator.blit_character(self.screen, (column * self.char_generator.char_width, row * self.char_generator.char_height), character, cg_attributes)
+        self.char_generator.blit_character(self.screen, (column * self.char_generator.char_width, row * self.char_generator.char_height), character, foreground, background)
         
     def get_current_pixel(self):
         """ Returns if the current pixel is on or off and increments the pixel index. """
@@ -402,16 +404,17 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
         del pix_bright
         del pix_reverse
         
-    def blit_character(self, surface, location, index, attributes = CHARGEN_ATTR_NONE):
+    def blit_character(self, surface, location, index, foreground, background):
         """ Place a character onto a surface at the given location. """
         if index >= self.CHAR_COUNT:
             return
             
         font_data = self.font_data_normal
+        
         # Reverse video overrides brightness.
-        if attributes & CHARGEN_ATTR_REVERSE:
+        if background == EGA_GREEN:
             font_data = self.font_data_reverse
-        elif attributes & CHARGEN_ATTR_BRIGHT:
+        elif foreground == EGA_BRIGHT_GREEN:
             font_data = self.font_data_bright
             
         surface.blit(font_data, location, area = (self.char_width * index, 0, self.char_width, self.char_height))

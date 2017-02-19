@@ -14,10 +14,6 @@ EGA_BLACK = (0x00, 0x00, 0x00)
 EGA_GREEN = (0x00, 0xAA, 0x00)
 EGA_BRIGHT_GREEN = (0x55, 0xFF, 0x55)
 
-CHARGEN_ATTR_NONE = 0x0000
-CHARGEN_ATTR_BRIGHT = 0x0001
-CHARGEN_ATTR_REVERSE = 0x0002
-
 MAX_CHAR_COUNT = 256
 BITS_7_TO_0 = (0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01)
 
@@ -29,7 +25,7 @@ class CharacterGenerator(object):
         self.char_width = width
         self.font_bitmaps_alpha = pygame.Surface((width * MAX_CHAR_COUNT, height), pygame.SRCALPHA)
         
-    def blit_character(self, surface, location, index, attributes = CHARGEN_ATTR_NONE):
+    def blit_character(self, surface, location, index, foreground, background):
         """ Place a character onto a surface at the given location. """
         raise NotImplementedError
         
@@ -71,7 +67,7 @@ class CharacterGeneratorBIOS(CharacterGenerator):
         # Make sure to explicitly del this to free the surface lock.
         del pix
         
-    def blit_character(self, surface, location, index, attributes = CHARGEN_ATTR_NONE):
+    def blit_character(self, surface, location, index, foreground, background):
         if index >= self.RESIDENT_CHARS:
             return
         surface.blit(self.font_data, location, area = (8 * index, 0, 8, 8))
@@ -92,8 +88,8 @@ class CharacterGeneratorMock(CharacterGenerator):
         self.width = kwargs.get("width", 0)
         self.height = kwargs.get("height", 0)
         
-    def blit_character(self, surface, location, index, attributes = CHARGEN_ATTR_NONE):
-        self.last_blit = (surface, location, index, attributes)
+    def blit_character(self, surface, location, index, foreground, background):
+        self.last_blit = (surface, location, index, foreground, background)
         
     @property
     def char_width(self):
