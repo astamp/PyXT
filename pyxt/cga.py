@@ -515,10 +515,6 @@ class CharacterGeneratorCGA(CharacterGenerator):
         super(CharacterGeneratorCGA, self).__init__(font_info.rows_actual, font_info.cols_actual)
         self.working_char = pygame.Surface((self.char_width, self.char_height), pygame.SRCALPHA)
         
-        self.font_data_alpha = pygame.Surface((self.char_width * self.CHAR_COUNT, self.char_height), pygame.SRCALPHA)
-        
-        pix_alpha = pygame.PixelArray(self.font_data_alpha)
-        
         # The characters are split top and bottom across the first 2 2k pages of the part.
         with open(rom_file, "rb") as fileptr:
             fileptr.seek(font_info.start_address)
@@ -532,9 +528,6 @@ class CharacterGeneratorCGA(CharacterGenerator):
                 
             self.store_character(index, data)
             
-        # Make sure to explicitly del this to free the surface lock.
-        del pix_alpha
-        
 # Test application.
 def main():
     """ Test application for the CGA card. """
