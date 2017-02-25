@@ -14,10 +14,6 @@ import pygame
 import six
 
 # Constants
-EGA_BLACK = (0x00, 0x00, 0x00)
-EGA_GREEN = (0x00, 0xAA, 0x00)
-EGA_BRIGHT_GREEN = (0x55, 0xFF, 0x55)
-
 COLUMN_AND_MASK_7_TO_0 = (
     (0, 0x80),
     (1, 0x40),
