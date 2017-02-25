@@ -1167,7 +1167,7 @@ class CPU(object):
         self.regs.CS = self.bus.mem_read_word((interrupt * 4) + 2)
         self.internal_push(self.regs.IP)
         self.regs.IP = self.bus.mem_read_word(interrupt * 4)
-        log.debug("INT %02xh to CS:IP %04x:%04x", interrupt, self.regs.CS, self.regs.IP)
+        # log.debug("INT %02xh to CS:IP %04x:%04x", interrupt, self.regs.CS, self.regs.IP)
         
     # ********** Fancy jump opcodes. **********
     def _jmpf(self):
@@ -1176,7 +1176,7 @@ class CPU(object):
         new_cs = self.get_word_immediate()
         self.regs.IP = new_ip
         self.regs.CS = new_cs
-        log.debug("JMP FAR to CS: 0x%04x  IP:0x%04x", self.regs.CS, self.regs.IP)
+        # log.debug("JMP FAR to CS: 0x%04x  IP:0x%04x", self.regs.CS, self.regs.IP)
         
     def opcode_callf(self):
         """ Calls a far function from the parameters given in the instruction. """
@@ -1186,7 +1186,7 @@ class CPU(object):
         self.internal_push(self.regs.IP)
         self.regs.IP = new_ip
         self.regs.CS = new_cs
-        log.debug("CALL FAR to CS:IP %04x:%04x", self.regs.CS, self.regs.IP)
+        # log.debug("CALL FAR to CS:IP %04x:%04x", self.regs.CS, self.regs.IP)
         
     def opcode_call_rel16(self):
         """ Calls a near function at a location relative to the current IP. """
