@@ -124,3 +124,9 @@ class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
                 data += lower_half[index * 8 : (index + 1) * 8]
                 
             self.store_character(index, data)
+            
+            # The ninth column of the MDA frame is a copy of the 8th for this range of characters only.
+            # See: http://www.seasip.info/VintagePC/mda.html#memmap
+            if font == self.MDA_FONT and index >= 0xC0 and index <= 0xDF:
+                self.font_bitmaps_alpha.blit(self.font_bitmaps_alpha, ((index * self.char_width) + 8, 0), ((index * self.char_width) + 7, 0, 1, self.char_height))
+                
