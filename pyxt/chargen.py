@@ -38,16 +38,21 @@ class CharacterGenerator(object):
         
     def blit_character(self, surface, location, index, foreground, background):
         """ Place a character onto a surface at the given location. """
+        # We may exceed the character count in "real-life" situations, particularly when running
+        # with the CharacterGeneratorBIOS which only has the first 128 characters.
         if index >= self.CHAR_COUNT:
             return
             
         surface.fill(background, (location[0], location[1], self.char_width, self.char_height))
         self.working_char.fill(foreground)
-        self.working_char.blit(self.font_bitmaps_alpha, (0, 0), (self.char_width * index, 0, self.char_width, self.char_height), pygame.BLEND_RGBA_MULT)
+        self.working_char.blit(self.font_bitmaps_alpha, (0, 0), (self.char_width * index, 0, self.char_width, self.char_height), pygame.BLEND_RGBA_MIN)
         surface.blit(self.working_char, location)
         
     def store_character(self, index, data, row_byte_width = 1):
         """ Stores a glyph bitmap into the internal font data structure. """
+        # Ensure we don't overrun the character count when setting up the object.
+        assert index < self.CHAR_COUNT, "index %d out of range (%d)" % (index, self.CHAR_COUNT)
+        
         pixel_access = pygame.PixelArray(self.font_bitmaps_alpha)
         
         for row in range(0, self.char_height):
