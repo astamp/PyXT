@@ -96,7 +96,8 @@ class CodePageInformationFile(object):
     def __init__(self):
         self.font_data = None
         self.supported_sizes = []
-        self.supported_codepages = []
+        
+        self.codepages = {}
         
     def load_from_file(self, filename):
         """ Read in the CPI file from data. """
@@ -151,16 +152,15 @@ class CodePageInformationFile(object):
             if entry_header.cpeh_size != 28:
                 raise ValueError("Invalid code page header size: %r" % entry_header.cpeh_size)
                 
-            # Check if this is the codepage we are looking for.
-            if entry_header.codepage == codepage and entry_header.device_type == DEVICE_TYPE_SCREEN:
-                cpeh = entry_header
-                cpeh_offset = this_cpeh_offset
-                break
+            if entry_header.device_type == DEVICE_TYPE_SCREEN:
+                self.codepages[entry_header.codepage] = entry_header
                 
-            # Otherwise link to the next codepage in the file.
-            else:
-                next_cpeh_offset = entry_header.next_cpeh_offset
+            # Follow the linked list to the next codepage in the file.
+            next_cpeh_offset = entry_header.next_cpeh_offset
                 
+        # TODO: Remove this.
+        return
+        
         if cpeh is None or cpeh_offset is None:
             raise ValueError("Did not find codepage %d in this file!" % codepage)
             
@@ -196,6 +196,11 @@ class CodePageInformationFile(object):
                 print("   +-" + ("-" * (screen_font_header.width * 2)) + "+")
             break
             
+    @property
+    def supported_codepages(self):
+        """ Returns a list of the supported codepages in the file. """
+        return list(self.codepages.keys())
+        
 # Test application.
 def main():
     """ Test application for the CPI parsing module. """
