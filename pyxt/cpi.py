@@ -95,8 +95,6 @@ class CodePageInformationFile(object):
     """ Class for decoding DOS CPI files. """
     def __init__(self):
         self.font_data = None
-        self.supported_sizes = []
-        
         self.codepages = {}
         
     def load_from_file(self, filename):
@@ -196,7 +194,6 @@ class CodePageInformationFile(object):
                 print("   +-" + ("-" * (screen_font_header.width * 2)) + "+")
             break
             
-    @property
     def supported_codepages(self):
         """ Returns a list of the supported codepages in the file. """
         return list(self.codepages.keys())

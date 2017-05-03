@@ -21,8 +21,7 @@ class CPIFileTests(unittest.TestCase):
     def test_initial_state(self):
         blank_cpi = CodePageInformationFile()
         self.assertIsNone(blank_cpi.font_data)
-        self.assertEqual(blank_cpi.supported_sizes, [])
-        self.assertEqual(blank_cpi.supported_codepages, [])
+        self.assertEqual(blank_cpi.supported_codepages(), [])
         
     def test_load_from_data(self):
         test_cpi = CodePageInformationFile()
@@ -73,5 +72,5 @@ class CPIFileAcceptanceTests(unittest.TestCase):
         self.cpi.load_from_file(get_cpi_file(self, "ega.cpi"))
         
     def test_supported_codepages(self):
-        self.assertEqual(set(self.cpi.supported_codepages), set([437, 850, 858, 852, 853, 857]))
+        self.assertEqual(set(self.cpi.supported_codepages()), set([437, 850, 858, 852, 853, 857]))
         
