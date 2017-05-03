@@ -63,3 +63,8 @@ class CPIFileTests(unittest.TestCase):
         with six.assertRaisesRegex(self, ValueError, "Invalid pointer type: \d+") as context:
             test_cpi.load_from_data(b"\xFFFONT   ????????\x01\x00\xA5\x17\x00\x00\x00")
             
+    def test_fih_does_not_immediately_follow(self):
+        test_cpi = CodePageInformationFile()
+        with six.assertRaisesRegex(self, ValueError, "FontInfoHeader does not immediately follow the FontFileHeader!") as context:
+            test_cpi.load_from_data(b"\xFFFONT   ????????\x01\x00\x01\x18\x00\x00\x00")
+            
