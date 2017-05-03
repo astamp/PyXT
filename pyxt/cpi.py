@@ -10,6 +10,7 @@ from __future__ import print_function
 # Standard library imports
 import os
 import array
+from io import BytesIO
 from collections import namedtuple
 
 # PyXT imports
@@ -90,6 +91,22 @@ class ScreenFontHeader(Struct):
 assert len(ScreenFontHeader) == 6
 
 # Classes
+class CodePageInformationFile(object):
+    """ Class for decoding DOS CPI files. """
+    def __init__(self):
+        self.font_data = None
+        self.supported_sizes = []
+        self.supported_codepages = []
+        
+    def load_from_file(self, filename):
+        """ Read in the CPI file from data. """
+        with open(filename, "rb") as fileptr:
+            self.font_data = BytesIO(fileptr.read())
+        
+    def load_from_data(self, data):
+        """ Read in the CPI file from data. """
+        self.font_data = BytesIO(data)
+        
 class CharacterGeneratorCPIFile(CharacterGenerator):
     def __init__(self, cpi_file, codepage, font_size):
         with open(cpi_file, "rb") as fileptr:
