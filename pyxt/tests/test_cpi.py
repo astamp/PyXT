@@ -34,9 +34,9 @@ class CPIFileTests(unittest.TestCase):
             data = fileptr.read()
         test_cpi.load_from_data(data)
         
-        self.assertIsNotNone(self.cpi.font_data)
-        self.cpi.font_data.seek(0, os.SEEK_END)
-        self.assertEqual(self.cpi.font_data.tell(), 58880) # Size of file.
+        self.assertIsNotNone(test_cpi.font_data)
+        test_cpi.font_data.seek(0, os.SEEK_END)
+        self.assertEqual(test_cpi.font_data.tell(), 58880) # Size of file.
         
     def test_load_from_file(self):
         self.assertIsNotNone(self.cpi.font_data)
