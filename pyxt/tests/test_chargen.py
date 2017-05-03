@@ -55,3 +55,14 @@ class CharacterGeneratorTests(unittest.TestCase):
         self.assertEqual(test_surface.get_at((3, 12)), (255, 255, 0, 255))
         self.assertEqual(test_surface.get_at((4, 12)), (0, 0, 255, 255))
         
+    def test_blit_character_out_of_range_ignored(self):
+        self.chargen.store_character(40, TEST_CHAR)
+        test_surface = pygame.Surface((10, 20), pygame.SRCALPHA)
+        self.chargen.blit_character(test_surface, (1, 2), 300, (255, 255, 0), (0, 0, 0))
+
+        # Ensure the entire destination surface is blank.
+        width, height = test_surface.get_size()
+        for y in range(height):
+            for x in range(width):
+                self.assertEqual(test_surface.get_at((x, y)), (0, 0, 0, 0))
+                
