@@ -46,12 +46,12 @@ class CharacterGeneratorTests(unittest.TestCase):
     def test_blit_character(self):
         self.chargen.store_character(40, TEST_CHAR)
         test_surface = pygame.Surface((10, 20), pygame.SRCALPHA)
-        self.chargen.blit_character(test_surface, (1, 2), 40, (255, 255, 0), (0, 0, 0))
+        self.chargen.blit_character(test_surface, (1, 2), 40, (255, 255, 0), (0, 0, 255))
         
         # 0xAA from above.
         #   ^--- The first A.
         self.assertEqual(test_surface.get_at((1, 12)), (255, 255, 0, 255))
-        self.assertEqual(test_surface.get_at((2, 12)), (0, 0, 0, 255))
+        self.assertEqual(test_surface.get_at((2, 12)), (0, 0, 255, 255))
         self.assertEqual(test_surface.get_at((3, 12)), (255, 255, 0, 255))
-        self.assertEqual(test_surface.get_at((4, 12)), (0, 0, 0, 255))
+        self.assertEqual(test_surface.get_at((4, 12)), (0, 0, 255, 255))
         
