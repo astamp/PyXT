@@ -4,6 +4,7 @@ import os
 import inspect
 import unittest
 
+import six
 from pyxt.cpi import *
 
 def get_cpi_file(suite, filename):
@@ -42,3 +43,23 @@ class CPIFileTests(unittest.TestCase):
         self.cpi.font_data.seek(0, os.SEEK_END)
         self.assertEqual(self.cpi.font_data.tell(), 58880) # Size of file.
         
+    def test_invalid_font_id_byte(self):
+        test_cpi = CodePageInformationFile()
+        with six.assertRaisesRegex(self, ValueError, "Invalid ID byte: b?'t'") as context:
+            test_cpi.load_from_data(b"this is not a font file")
+            
+    def test_invalid_font_id_string(self):
+        test_cpi = CodePageInformationFile()
+        with six.assertRaisesRegex(self, ValueError, "Invalid font type: b?'.+'") as context:
+            test_cpi.load_from_data(b"\xFFthis is also not a font file")
+            
+    def test_invalid_number_of_pointers(self):
+        test_cpi = CodePageInformationFile()
+        with six.assertRaisesRegex(self, ValueError, "Invalid number of pointers: \d+") as context:
+            test_cpi.load_from_data(b"\xFFFONT   ????????\x02\xAA\x01\x17\x00\x00\x00")
+            
+    def test_invalid_pointer_type(self):
+        test_cpi = CodePageInformationFile()
+        with six.assertRaisesRegex(self, ValueError, "Invalid pointer type: \d+") as context:
+            test_cpi.load_from_data(b"\xFFFONT   ????????\x01\x00\xA5\x17\x00\x00\x00")
+            

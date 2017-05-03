@@ -102,21 +102,22 @@ class CodePageInformationFile(object):
         """ Read in the CPI file from data. """
         with open(filename, "rb") as fileptr:
             self.font_data = BytesIO(fileptr.read())
+        self._load_from_filelike(self.font_data)
         
     def load_from_data(self, data):
         """ Read in the CPI file from data. """
         self.font_data = BytesIO(data)
+        self._load_from_filelike(self.font_data)
         
-class CharacterGeneratorCPIFile(CharacterGenerator):
-    def __init__(self, cpi_file, codepage, font_size):
-        with open(cpi_file, "rb") as fileptr:
-            self.load_from_file(fileptr, codepage, font_size)
-        
-    def load_from_file(self, fileptr, codepage, font_size):
+    def _load_from_filelike(self, fileptr):
         """ Read in the CPI file from a file-like. """
+        # TODO: Remove these:
+        codepage = 437
+        font_size = MDA_SIZE
+        
         data = fileptr.read(len(FontFileHeader))
         if data[0:1] != FONT_ID_BYTE:
-            raise ValueError("Invalid ID byte: %r" % data[0])
+            raise ValueError("Invalid ID byte: %r" % data[0:1])
             
         file_header = FontFileHeader(data)
         if file_header.id != FONT_ID_STR:
