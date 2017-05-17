@@ -31,9 +31,9 @@ DEVICE_TYPE_PRINTER = 2
 NUM_CHARS = 256
 
 FontSize = namedtuple("FontSize", ["width", "height"])
-EGA_VGA_SIZE = FontSize(8, 16)
-MDA_SIZE = FontSize(8, 14)
-CGA_SIZE = FontSize(8, 8)
+CPI_EGA_VGA_SIZE = FontSize(8, 16)
+CPI_MDA_SIZE = FontSize(8, 14)
+CPI_CGA_SIZE = FontSize(8, 8)
 
 BITS_7_TO_0 = (0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01)
 
@@ -248,6 +248,24 @@ class CodePageInformationFile(object):
         """ Returns a list of the supported sizes in a given codepage. """
         return [(font_header.width, font_header.height) for font_header in self._get_font_headers(codepage)]
         
+class CharacterGeneratorCPI(CharacterGenerator):
+    """ Generates glyphs from data stored in a DOS CPI file. """
+    def __init__(self, cpi_file, codepage, size, width_override = None):
+        cpi_loader = CodePageInformationFile()
+        cpi_loader.load_from_file(cpi_file)
+        
+        # The MDA "screen" assumes 9 pixel wide glyphs but almost all CPI fonts are 9 pixels wide.
+        # Setting this override to 9 will allow the CharacterGenerator to use 9 for font metrics
+        # while selecting the proper 8 pixel wide font from the CPI file.
+        width, height = size
+        if width_override is not None:
+            width = width_override
+            
+        # Allocate the storage for the character data.
+        # TODO: Commonize order of width and height throughout the project.
+        super(CharacterGeneratorCPI, self).__init__(height, width)
+        
+        cpi_loader.load_character_data(codepage, size, self.store_character)
         
 # Test application.
 def main():
