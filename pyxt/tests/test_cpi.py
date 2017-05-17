@@ -66,6 +66,22 @@ class CPIFileTests(unittest.TestCase):
         with six.assertRaisesRegex(self, ValueError, "FontInfoHeader does not immediately follow the FontFileHeader!") as context:
             test_cpi.load_from_data(b"\xFFFONT   ????????\x01\x00\x01\x18\x00\x00\x00")
             
+    def test_single_codepage(self):
+        test_cpi = CodePageInformationFile()
+        test_cpi.load_from_data(b"\xFFFONT   ????????\x01\x00\x01\x17\x00\x00\x00" +
+                                b"\x01\x00" +
+                                b"\x1C\x00\x00\x00\x00\x00\x01\x00HAM WAH \x0B\x16??????\x35\x00\x00\x00")
+                                
+        self.assertEqual(test_cpi.supported_codepages(), [5643])
+        
+    def test_printer_fonts_ignored(self):
+        test_cpi = CodePageInformationFile()
+        test_cpi.load_from_data(b"\xFFFONT   ????????\x01\x00\x01\x17\x00\x00\x00" +
+                                b"\x01\x00" + #             \/ 2 indicates printer font
+                                b"\x1C\x00\x00\x00\x00\x00\x02\x00HAM WAH \x0B\x16??????\x35\x00\x00\x00")
+                                
+        self.assertEqual(test_cpi.supported_codepages(), [])
+        
 class CPIFileAcceptanceTests(unittest.TestCase):
     def setUp(self):
         self.cpi = CodePageInformationFile()
