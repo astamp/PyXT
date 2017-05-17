@@ -160,7 +160,11 @@ class CodePageInformationFile(object):
             next_cpeh_offset = entry_header.next_cpeh_offset
             
     def _get_codepage_info(self, fileptr, cpeh):
-        """ Returns the CodePageInfoHeader and a list of ScreenFontHeader for a given CodePageEntryHeader. """
+        """
+        Returns a list of ScreenFontHeader for a given CodePageEntryHeader.
+        
+        This parses the CodePageInfoHeader and walks the linked list of ScreenFontHeader(s).
+        """
         fileptr.seek(cpeh.cpih_offset)
         
         data = fileptr.read(len(CodePageInfoHeader))
@@ -184,7 +188,7 @@ class CodePageInformationFile(object):
             # Seek past the bitmaps to the next ScreenFontHeader.
             fileptr.seek((screen_font_header.width // 8) * screen_font_header.height * screen_font_header.num_chars, os.SEEK_CUR)
             
-        return info_header, font_headers
+        return font_headers
         
     def dump_font(self, codepage, size):
         """ Print out an ASCII representation of a given font in a codepage. """
@@ -192,7 +196,7 @@ class CodePageInformationFile(object):
         if cpeh is None:
             raise ValueError("Codepage %d not found!" % codepage)
             
-        info_header, font_headers = self._get_codepage_info(self.font_data, cpeh)
+        font_headers = self._get_codepage_info(self.font_data, cpeh)
         for screen_font_header in font_headers:
             # Check if this is the size requested.
             if (screen_font_header.width, screen_font_header.height) == size:
@@ -224,7 +228,7 @@ class CodePageInformationFile(object):
         if cpeh is None:
             raise ValueError("Codepage %d not found!" % codepage)
             
-        return [(font_header.width, font_header.height) for font_header in self._get_codepage_info(self.font_data, cpeh)[1]]
+        return [(font_header.width, font_header.height) for font_header in self._get_codepage_info(self.font_data, cpeh)]
         
 # Test application.
 def main():
