@@ -87,7 +87,14 @@ class ScreenFontHeader(Struct):
     yaspect = Type.UnsignedByte
     xaspect = Type.UnsignedByte
     num_chars = Type.UnsignedShort
-
+    
+    def __init__(self, *args, **kwargs):
+        super(ScreenFontHeader, self).__init__(*args, **kwargs)
+        
+        # Keep track of the offset in the font data for this header without affecting the struct size.
+        # This offset should point to right after this header.
+        self.glyph_data_offset = 0
+        
 assert len(ScreenFontHeader) == 6
 
 # Classes
