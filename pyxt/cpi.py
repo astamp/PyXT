@@ -211,7 +211,7 @@ class CodePageInformationFile(object):
                 
                 # Dump out the characters to the display.
                 for ordinal in range(screen_font_header.num_chars):
-                    self.dump_character(ordinal, self.font_data.read((screen_font_header.width // 8) * screen_font_header.height), screen_font_header.width // 8)
+                    callback(ordinal, self.font_data.read((screen_font_header.width // 8) * screen_font_header.height), screen_font_header.width // 8)
                     
                 break
                 
