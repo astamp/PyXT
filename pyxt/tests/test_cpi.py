@@ -74,6 +74,13 @@ class CPIFileTests(unittest.TestCase):
                                 
         self.assertEqual(test_cpi.supported_codepages(), [5643])
         
+    def test_invalid_codepage_header_size(self):
+        test_cpi = CodePageInformationFile()
+        with six.assertRaisesRegex(self, ValueError, "Invalid code page header size: \d+") as context:
+            test_cpi.load_from_data(b"\xFFFONT   ????????\x01\x00\x01\x17\x00\x00\x00" +
+                                    b"\x01\x00" +
+                                    b"\x1B\x00\x00\x00\x00\x00\x01\x00HAM WAH \x0B\x16??????\x35\x00\x00\x00")
+                                    
     def test_printer_fonts_ignored(self):
         test_cpi = CodePageInformationFile()
         test_cpi.load_from_data(b"\xFFFONT   ????????\x01\x00\x01\x17\x00\x00\x00" +
