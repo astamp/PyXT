@@ -206,18 +206,25 @@ class CodePageInformationFile(object):
                 
                 # Dump out the characters to the display.
                 for ordinal in range(screen_font_header.num_chars):
-                    print("Character %d (0x%02x):" % (ordinal, ordinal))
-                    print("   +-" + ("-" * (screen_font_header.width * 2)) + "+")
-                    for y in range(screen_font_header.height):
-                        print("%2d |" % y, end = " ")
-                        row = self.font_data.read(screen_font_header.width // 8)
-                        for byte in six.iterbytes(row):
-                            for bit in BITS_7_TO_0:
-                                print("#" if bit & byte else " ", end = " ")
-                        print("|")
-                    print("   +-" + ("-" * (screen_font_header.width * 2)) + "+")
+                    self.dump_character(ordinal, self.font_data.read((screen_font_header.width // 8) * screen_font_header.height), screen_font_header.width // 8)
                 break
                 
+    def dump_character(self, index, data, row_byte_width = 1):
+        """ Print out an ASCII representation of a given character. """
+        height = len(data)
+        width = row_byte_width * 8
+        
+        print("Character %d (0x%02x):" % (index, index))
+        print("   +-" + ("-" * (width * 2)) + "+")
+        for y in range(height):
+            print("%2d |" % y, end = " ")
+            row = data[y * row_byte_width: (y + 1) * row_byte_width]
+            for byte in six.iterbytes(row):
+                for bit in BITS_7_TO_0:
+                    print("#" if bit & byte else " ", end = " ")
+            print("|")
+        print("   +-" + ("-" * (width * 2)) + "+")
+        
     def supported_codepages(self):
         """ Returns a list of the supported codepages in the file. """
         return list(self.codepages.keys())
