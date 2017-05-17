@@ -30,9 +30,9 @@ DEVICE_TYPE_PRINTER = 2
 
 NUM_CHARS = 256
 
-FontSize = namedtuple("FontSize", ["height", "width"])
-EGA_VGA_SIZE = FontSize(16, 8)
-MDA_SIZE = FontSize(14, 8)
+FontSize = namedtuple("FontSize", ["width", "height"])
+EGA_VGA_SIZE = FontSize(8, 16)
+MDA_SIZE = FontSize(8, 14)
 CGA_SIZE = FontSize(8, 8)
 
 BITS_7_TO_0 = (0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01)
