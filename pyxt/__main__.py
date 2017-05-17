@@ -10,7 +10,7 @@ from __future__ import print_function
 import os
 import signal
 from pprint import pprint
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 
 # Six imports
 from six.moves import range # pylint: disable=redefined-builtin
@@ -24,6 +24,7 @@ from pyxt.memory import RAM, ROM
 from pyxt.chargen import CharacterGeneratorMDA_CGA_ROM
 from pyxt.mda import MonochromeDisplayAdapter, MDA_START_ADDRESS
 from pyxt.cga import ColorGraphicsAdapter, CGA_START_ADDRESS
+from pyxt.cpi import CharacterGeneratorCPI, CPI_MDA_SIZE, CPI_CGA_SIZE
 from pyxt.ui import PygameManager
 
 from pyxt.fdc import FloppyDisketteController, FloppyDisketteDrive, FIVE_INCH_360_KB
@@ -48,8 +49,6 @@ def parse_cmdline():
                       help = "Enable DEBUG log level.")
     parser.add_option("--bios", action = "store", dest = "bios",
                       help = "ROM BIOS image to load at 0xF0000.")
-    parser.add_option("--mda-rom", "--cga-rom", action = "store", dest = "mda_cga_rom",
-                      help = "MDA/CGA ROM to use for a virtual MDA/CGA card.")
     parser.add_option("--display", action = "store", dest = "display", default = "mda",
                       help = "Display adapter type to use, default: mda.")
     parser.add_option("--dip-switches", action = "store", type = "int", dest = "dip_switches",
@@ -70,6 +69,15 @@ def parse_cmdline():
                       help = "File to output debugging log.")
     parser.add_option("--log-filter", action = "store", dest = "log_filter",
                       help = "Log filter to apply to stderr handler.")
+                      
+    chargen_group = OptionGroup(parser, "Character Generator Options")
+    chargen_group.add_option("--mda-rom", "--cga-rom", action = "store", dest = "mda_cga_rom",
+                             help = "MDA/CGA ROM to use for a virtual MDA/CGA card.")
+    chargen_group.add_option("--cpi-file", action = "store", dest = "cpi_file",
+                             help = "DOS CPI file to load character glyphs from.")
+    chargen_group.add_option("--cpi-codepage", action = "store", type = "int", dest = "cpi_codepage",
+                             help = "Codepage to use in CPI file.")
+    
     return parser.parse_args()
     
 def main():
@@ -114,11 +122,21 @@ def main():
     # Other onboard hardware devices.
     video_card = None
     if options.display == "mda":
-        char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_cga_rom, CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
+        if options.mda_cga_rom:
+            char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_cga_rom, CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
+        elif options.cpi_file and options.cpi_codepage:
+            char_generator = CharacterGeneratorCPI(options.cpi_file, options.cpi_codepage, CPI_MDA_SIZE, width_override = 9)
+        else:
+            raise ValueError("No character ROM provided for the MonochromeDisplayAdapter.")
         video_card = MonochromeDisplayAdapter(char_generator, randomize = True)
         bus.install_device(MDA_START_ADDRESS, video_card)
     elif options.display == "cga":
-        char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_cga_rom, CharacterGeneratorMDA_CGA_ROM.CGA_WIDE_FONT)
+        if options.mda_cga_rom:
+            char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_cga_rom, CharacterGeneratorMDA_CGA_ROM.CGA_WIDE_FONT)
+        elif options.cpi_file and options.cpi_codepage:
+            char_generator = CharacterGeneratorCPI(options.cpi_file, options.cpi_codepage, CPI_CGA_SIZE)
+        else:
+            raise ValueError("No character ROM provided for the ColorGraphicsAdapter.")
         video_card = ColorGraphicsAdapter(char_generator, randomize = True)
         # Use MDA start address until devices can be installed on non-64k boundaries.
         bus.install_device(MDA_START_ADDRESS, video_card)
