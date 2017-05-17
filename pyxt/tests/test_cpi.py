@@ -89,6 +89,11 @@ class CPIFileTests(unittest.TestCase):
                                 
         self.assertEqual(test_cpi.supported_codepages(), [])
         
+    def test_supported_sizes_codepage_not_found(self):
+        test_cpi = CodePageInformationFile()
+        with six.assertRaisesRegex(self, ValueError, "Codepage \d+ not found!") as context:
+            test_cpi.supported_sizes(437)
+            
 class CPIFileAcceptanceTests(unittest.TestCase):
     def setUp(self):
         self.cpi = CodePageInformationFile()
@@ -96,4 +101,7 @@ class CPIFileAcceptanceTests(unittest.TestCase):
         
     def test_supported_codepages(self):
         self.assertEqual(set(self.cpi.supported_codepages()), set([437, 850, 858, 852, 853, 857]))
+                    
+    def test_supported_sizes(self):
+        self.assertEqual(set(self.cpi.supported_sizes(437)), set([(8, 8), (8, 14), (8, 16)]))
         
