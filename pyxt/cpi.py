@@ -194,8 +194,13 @@ class CodePageInformationFile(object):
             
         return font_headers
         
-    def dump_font(self, codepage, size):
-        """ Print out an ASCII representation of a given font in a codepage. """
+    def load_character_data(self, codepage, size, callback):
+        """
+        Calls `callback` with the data for each character.
+        
+        Signature of callback is:
+            def callback(index, data, row_byte_width=1)
+        """
         font_headers = self._get_font_headers(codepage)
         for screen_font_header in font_headers:
             # Check if this is the size requested.
@@ -207,9 +212,19 @@ class CodePageInformationFile(object):
                 # Dump out the characters to the display.
                 for ordinal in range(screen_font_header.num_chars):
                     self.dump_character(ordinal, self.font_data.read((screen_font_header.width // 8) * screen_font_header.height), screen_font_header.width // 8)
+                    
                 break
                 
-    def dump_character(self, index, data, row_byte_width = 1):
+        # If we didn't find our size and break, throw an error.
+        else:
+            raise ValueError("Size (%d, %d) not found in codepage %d!" % (size[0], size[1], codepage))
+            
+    def dump_font(self, codepage, size):
+        """ Print out an ASCII representation of a given font in a codepage. """
+        self.load_character_data(codepage, size, self.dump_character)
+        
+    @staticmethod
+    def dump_character(index, data, row_byte_width = 1):
         """ Print out an ASCII representation of a given character. """
         height = len(data)
         width = row_byte_width * 8
