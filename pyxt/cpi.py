@@ -170,7 +170,7 @@ class CodePageInformationFile(object):
         data = fileptr.read(len(CodePageInfoHeader))
         info_header = CodePageInfoHeader(data)
         if info_header.version != 1:
-            raise ValueError("Only version 1 info headers are supported!")
+            raise ValueError("Invalid code page info version: %r" % info_header.version)
             
         # Loop through the various fonts (sizes) for this codepage, collecting the headers.
         font_headers = []
@@ -181,7 +181,7 @@ class CodePageInformationFile(object):
             screen_font_header.glyph_data_offset = fileptr.tell()
             
             if screen_font_header.num_chars != NUM_CHARS:
-                raise ValueError("Font did not contain 256 characters! Had: %d" % screen_font_header.num_chars)
+                raise ValueError("Invalid number of characters in font: %d" % screen_font_header.num_chars)
                 
             font_headers.append(screen_font_header)
             

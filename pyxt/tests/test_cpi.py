@@ -94,6 +94,56 @@ class CPIFileTests(unittest.TestCase):
         with six.assertRaisesRegex(self, ValueError, "Codepage \d+ not found!") as context:
             test_cpi.supported_sizes(437)
             
+    def test_invalid_cpih_version(self):
+        test_cpi = CodePageInformationFile()
+        test_cpi.load_from_data(
+            # FontFileHeader
+            b"\xFFFONT   ????????\x01\x00\x01\x17\x00\x00\x00" +
+            # FontInfoHeader
+            b"\x01\x00" +
+            # CodePageEntryHeader
+            b"\x1C\x00\x00\x00\x00\x00\x01\x00HAM WAH \x0B\x16??????\x35\x00\x00\x00" +
+            # CodePageInfoHeader
+            b"\x02\x00\x00\x00\x00\x00"
+            )
+        with six.assertRaisesRegex(self, ValueError, "Invalid code page info version: \d+") as context:
+            test_cpi.supported_sizes(5643)
+            
+    def test_single_codepage_single_size(self):
+        test_cpi = CodePageInformationFile()
+        test_cpi.load_from_data(
+            # FontFileHeader
+            b"\xFFFONT   ????????\x01\x00\x01\x17\x00\x00\x00" +
+            # FontInfoHeader
+            b"\x01\x00" +
+            # CodePageEntryHeader
+            b"\x1C\x00\x00\x00\x00\x00\x01\x00HAM WAH \x0B\x16??????\x35\x00\x00\x00" +
+            # CodePageInfoHeader
+            b"\x01\x00\x01\x00\x06\x00" +
+            # ScreenFontHeader
+            b"\x04\x08\x00\x00\x00\x01"
+            )
+            
+        self.assertEqual(test_cpi.supported_sizes(5643), [(8, 4)])
+            
+    def test_bad_number_of_characters(self):
+        test_cpi = CodePageInformationFile()
+        test_cpi.load_from_data(
+            # FontFileHeader
+            b"\xFFFONT   ????????\x01\x00\x01\x17\x00\x00\x00" +
+            # FontInfoHeader
+            b"\x01\x00" +
+            # CodePageEntryHeader
+            b"\x1C\x00\x00\x00\x00\x00\x01\x00HAM WAH \x0B\x16??????\x35\x00\x00\x00" +
+            # CodePageInfoHeader
+            b"\x01\x00\x01\x00\x06\x00" +
+            # ScreenFontHeader
+            b"\x04\x08\x00\x00\x02\x01"
+            )
+            
+        with six.assertRaisesRegex(self, ValueError, "Invalid number of characters in font: 258") as context:
+            test_cpi.supported_sizes(5643)
+            
 class CPIFileAcceptanceTests(unittest.TestCase):
     def setUp(self):
         self.cpi = CodePageInformationFile()
