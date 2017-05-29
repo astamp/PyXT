@@ -544,7 +544,7 @@ class CPU(object):
         return self.mem_read_byte(address)
         
     def fetch(self):
-        """ Fetch and execute one instruction. """
+        """ Fetch and execute one instruction returing the number of cycles taken. """
         # Process any pending interrupts, including trap/single-step.
         self.process_interrupts()
         
@@ -785,6 +785,7 @@ class CPU(object):
         register = None
         rm_type = UNKNOWN
         rm_value = None
+        ea_clocks = 0
         
         # Get the mod r/m byte and decode it.
         modrm = self.read_instruction_byte()
@@ -820,18 +821,23 @@ class CPU(object):
                     self.segment_override = "SS"
             elif rm == 0x04:
                 rm_value = self.regs.SI
+                ea_clocks = 5
             elif rm == 0x05:
                 rm_value = self.regs.DI
+                ea_clocks = 5
             elif rm == 0x06:
                 # Mod 00 / r/m 110 is absolute address.
                 if mod == 0x00:
                     rm_value = self.get_word_immediate()
+                    ea_clocks = 6
                 else:
                     rm_value = self.regs.BP
+                    ea_clocks = 5
                     if self.segment_override is None:
                         self.segment_override = "SS"
             elif rm == 0x07:
                 rm_value = self.regs.BX
+                ea_clocks = 5
                 
             # Determine the displacement.
             displacement = 0
@@ -855,6 +861,7 @@ class CPU(object):
         assert register is not None
         assert rm_type != UNKNOWN
         assert rm_value is not None
+        assert not (rm_type == ADDRESS and ea_clocks == 0)
         
         # log_line = "reg = %s, " % register
         # if rm_type == REGISTER:
@@ -863,7 +870,7 @@ class CPU(object):
             # log_line += "r/m = 0x%04x" % rm_value
         # log.debug(log_line)
             
-        return register, rm_type, rm_value
+        return register, rm_type, rm_value, ea_clocks
         
     def get_immediate(self, word):
         """ Get either a byte or word immediate value from CS:IP. """
