@@ -30,6 +30,13 @@ REG_MASK = 0x38
 REG_SHIFT = 3
 RM_MASK = 0x07
 
+MODRM_LUT = []
+for modrm in xrange(256):
+    __mod = (modrm & MOD_MASK) >> MOD_SHIFT
+    __reg = (modrm & REG_MASK) >> REG_SHIFT
+    __rm = modrm & RM_MASK
+    MODRM_LUT.append((__mod, __reg, __rm))
+
 UNKNOWN = 0
 ADDRESS = 1
 REGISTER = 2
@@ -787,11 +794,7 @@ class CPU(object):
         rm_value = None
         
         # Get the mod r/m byte and decode it.
-        modrm = self.read_instruction_byte()
-        
-        mod = (modrm & MOD_MASK) >> MOD_SHIFT
-        reg = (modrm & REG_MASK) >> REG_SHIFT
-        rm = modrm & RM_MASK
+        mod, reg, rm = MODRM_LUT[self.read_instruction_byte()]
         
         if decode_register:
             if size == 8:
