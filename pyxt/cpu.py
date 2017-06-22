@@ -7,6 +7,9 @@ import struct
 import operator
 from ctypes import Structure, Union, c_ushort, c_ubyte
 
+# Six imports
+from six.moves import range # pylint: disable=redefined-builtin
+
 # PyXT imports
 from pyxt.exceptions import InvalidOpcodeException
 from pyxt.helpers import *
@@ -31,7 +34,7 @@ REG_SHIFT = 3
 RM_MASK = 0x07
 
 MODRM_LUT = []
-for modrm in xrange(256):
+for modrm in range(256):
     __mod = (modrm & MOD_MASK) >> MOD_SHIFT
     __reg = (modrm & REG_MASK) >> REG_SHIFT
     __rm = modrm & RM_MASK
