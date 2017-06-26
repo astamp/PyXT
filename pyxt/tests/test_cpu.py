@@ -4173,7 +4173,7 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
             # Reset IP to 1 so we can run multiple checks in the same test.
             self.cpu.regs.IP = 1
             self.load_code_string(code)
-            self.assertEqual(self.cpu.get_modrm_operands(16), (expected, ADDRESS, 0))
+            self.assertEqual(self.cpu.get_modrm_operands(16)[0:3], (expected, ADDRESS, 0))
             
         run_test("03 06 00 00", "AX") # add ax, [0x0000]
         run_test("03 0E 00 00", "CX") # add cx, [0x0000]
@@ -4190,7 +4190,7 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
             # Reset IP to 1 so we can run multiple checks in the same test.
             self.cpu.regs.IP = 1
             self.load_code_string(code)
-            self.assertEqual(self.cpu.get_modrm_operands(8), (expected, ADDRESS, 0))
+            self.assertEqual(self.cpu.get_modrm_operands(8)[0:3], (expected, ADDRESS, 0))
             
         run_test("02 06 00 00", "AL") # add al, [0x0000]
         run_test("02 0E 00 00", "CL") # add cl, [0x0000]
@@ -4208,7 +4208,7 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
             self.cpu.regs.IP = 1
             self.load_code_string(code)
             # The 2 is for the NOT sub-opcode.
-            self.assertEqual(self.cpu.get_modrm_operands(16, decode_register = False), (2, REGISTER, expected))
+            self.assertEqual(self.cpu.get_modrm_operands(16, decode_register = False)[0:3], (2, REGISTER, expected))
             
         run_test("F7 D0", "AX") # not ax
         run_test("F7 D1", "CX") # not cx
@@ -4226,7 +4226,7 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
             self.cpu.regs.IP = 1
             self.load_code_string(code)
             # The 2 is for the NOT sub-opcode.
-            self.assertEqual(self.cpu.get_modrm_operands(8, decode_register = False), (2, REGISTER, expected))
+            self.assertEqual(self.cpu.get_modrm_operands(8, decode_register = False)[0:3], (2, REGISTER, expected))
             
         run_test("F6 D0", "AL") # not al
         run_test("F6 D1", "CL") # not cl
@@ -4246,7 +4246,7 @@ class ModRMTests(BaseOpcodeAcceptanceTests):
         # Track the number of bytes loaded so we can check that IP is correct at the end.
         expected_ip = self.load_code_string(code)
         # We aren't doing register testing so we will just assume 16 bits and toss the register.
-        self.assertEqual(self.cpu.get_modrm_operands(16)[1:], (ADDRESS, expected_address))
+        self.assertEqual(self.cpu.get_modrm_operands(16)[1:3], (ADDRESS, expected_address))
         # Ensure that IP matches the number of bytes loaded.
         self.assertEqual(self.cpu.regs.IP, expected_ip)
         # Ensure any segment override is expected.
