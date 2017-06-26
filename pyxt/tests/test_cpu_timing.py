@@ -49,10 +49,10 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
     """ Based on Table 2-20 1981 iAPX 86/88 Users Manual (page 2-51). """
     def setUp(self):
         super(EffectiveAddressTimingTests, self).setUp()
-        self.cpu.regs.BX = 0xA1A1
-        self.cpu.regs.BP = 0xB2B2
-        self.cpu.regs.SI = 0xC3C3
-        self.cpu.regs.DI = 0xD4D4
+        self.cpu.regs.BX = 0x1000
+        self.cpu.regs.BP = 0x2080
+        self.cpu.regs.SI = 0x400F
+        self.cpu.regs.DI = 0x8C00
         
     # Displacement only (6 cycles)
     def test_displacement_only(self):
@@ -70,7 +70,7 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         """
         self.load_code_string("03 0F")
         self.cpu.regs.IP = 0x0001
-        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0xA1A1, 5))
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000, 5))
         
     @unittest.skip("BP always has a zero displacement because mod 0, rm 110 is absolute immediate.")
     def test_bp_only(self):
@@ -79,7 +79,7 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         """
         self.load_code_string("03 4E 00")
         self.cpu.regs.IP = 0x0001
-        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0xB2B2, 5))
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x2080, 5))
         
     def test_si_only(self):
         """
@@ -87,7 +87,7 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         """
         self.load_code_string("03 0C")
         self.cpu.regs.IP = 0x0001
-        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0xC3C3, 5))
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x400F, 5))
         
     def test_di_only(self):
         """
@@ -95,7 +95,7 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         """
         self.load_code_string("03 0D")
         self.cpu.regs.IP = 0x0001
-        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0xD4D4, 5))
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x8C00, 5))
         
     # Displacement + base or index (9 cycles)
     def test_bx_with_byte_displacement(self):
@@ -104,7 +104,7 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         """
         self.load_code_string("03 4F 18")
         self.cpu.regs.IP = 0x0001
-        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0xA1A1 + 24, 9))
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000 + 24, 9))
         
     def test_bx_with_word_displacement(self):
         """
@@ -112,7 +112,7 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         """
         self.load_code_string("03 8F 80 01")
         self.cpu.regs.IP = 0x0001
-        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0xA1A1 + 384, 9))
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000 + 384, 9))
         
     def test_bp_with_byte_displacement(self):
         """
@@ -120,7 +120,7 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         """
         self.load_code_string("03 4E 18")
         self.cpu.regs.IP = 0x0001
-        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0xB2B2 + 24, 9))
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x2080 + 24, 9))
         
     def test_bp_with_word_displacement(self):
         """
@@ -128,7 +128,7 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         """
         self.load_code_string("03 8E 80 01")
         self.cpu.regs.IP = 0x0001
-        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0xB2B2 + 384, 9))
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x2080 + 384, 9))
         
     def test_si_with_byte_displacement(self):
         """
@@ -136,7 +136,7 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         """
         self.load_code_string("03 4C 18")
         self.cpu.regs.IP = 0x0001
-        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0xC3C3 + 24, 9))
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x400F + 24, 9))
         
     def test_si_with_word_displacement(self):
         """
@@ -144,7 +144,7 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         """
         self.load_code_string("03 8C 80 01")
         self.cpu.regs.IP = 0x0001
-        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0xC3C3 + 384, 9))
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x400F + 384, 9))
         
     def test_di_with_byte_displacement(self):
         """
@@ -152,7 +152,7 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         """
         self.load_code_string("03 4D 18")
         self.cpu.regs.IP = 0x0001
-        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0xD4D4 + 24, 9))
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x8C00 + 24, 9))
         
     def test_di_with_word_displacement(self):
         """
@@ -160,5 +160,5 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         """
         self.load_code_string("03 8D 80 01")
         self.cpu.regs.IP = 0x0001
-        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0xD4D4 + 384, 9))
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x8C00 + 384, 9))
         
