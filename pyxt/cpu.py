@@ -374,6 +374,9 @@ class CPU(object):
             0x05 : self._alu_ax_imm16,
         }
         
+        # Cumulative cycles for the current instruction.
+        self.cycles = 0
+        
         # Prefix flags.
         self.repeat_prefix = REPEAT_NONE
         self.segment_override = None
@@ -547,6 +550,9 @@ class CPU(object):
         """ Fetch and execute one instruction returing the number of cycles taken. """
         # Process any pending interrupts, including trap/single-step.
         self.process_interrupts()
+        
+        # Clear the cycle counter for this instruction.
+        self.cycles = 0
         
         # Clear all prefixes.
         self.repeat_prefix = REPEAT_NONE
@@ -875,8 +881,10 @@ class CPU(object):
         # elif rm_type == ADDRESS:
             # log_line += "r/m = 0x%04x" % rm_value
         # log.debug(log_line)
+        
+        self.cycles += ea_clocks
             
-        return register, rm_type, rm_value, ea_clocks
+        return register, rm_type, rm_value
         
     def get_immediate(self, word):
         """ Get either a byte or word immediate value from CS:IP. """
