@@ -195,3 +195,76 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         self.cpu.regs.IP = 0x0001
         self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000 + 0x8C00, 8))
         
+    # Displacement + base + index (11 or 12 cycles)
+    def test_bp_plus_di_byte_displacement(self):
+        """
+        add cx, [bp + di + 24]
+        """
+        self.load_code_string("03 4B 18")
+        self.cpu.regs.IP = 0x0001
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x2080 + 0x8C00 + 24, 11))
+        
+    def test_bp_plus_di_word_displacement(self):
+        """
+        add cx, [bp + di + 384]
+        """
+        self.load_code_string("03 8B 80 01")
+        self.cpu.regs.IP = 0x0001
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x2080 + 0x8C00 + 384, 11))
+        
+    def test_bx_plus_si_byte_displacement(self):
+        """
+        add cx, [bx + si + 24]
+        """
+        self.load_code_string("03 48 18")
+        self.cpu.regs.IP = 0x0001
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000 + 0x400F + 24, 11))
+        
+    def test_bx_plus_si_word_displacement(self):
+        """
+        add cx, [bx + si + 384]
+        """
+        self.load_code_string("03 88 80 01")
+        self.cpu.regs.IP = 0x0001
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000 + 0x400F + 384, 11))
+        
+    def test_bp_plus_si_byte_displacement(self):
+        """
+        add cx, [bp + si + 24]
+        """
+        self.load_code_string("03 4A 18")
+        self.cpu.regs.IP = 0x0001
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x2080 + 0x400F + 24, 12))
+        
+    def test_bp_plus_si_word_displacement(self):
+        """
+        add cx, [bp + si + 384]
+        """
+        self.load_code_string("03 8A 80 01")
+        self.cpu.regs.IP = 0x0001
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x2080 + 0x400F + 384, 12))
+        
+    def test_bx_plus_di_byte_displacement(self):
+        """
+        add cx, [bx + di + 24]
+        """
+        self.load_code_string("03 49 18")
+        self.cpu.regs.IP = 0x0001
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000 + 0x8C00 + 24, 12))
+        
+    def test_bx_plus_di_word_displacement(self):
+        """
+        add cx, [bx + di + 384]
+        """
+        self.load_code_string("03 89 80 01")
+        self.cpu.regs.IP = 0x0001
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000 + 0x8C00 + 384, 12))
+        
+    # def test_bx_plus_di(self):
+        # """
+        # add cx, [bx + di]
+        # """
+        # self.load_code_string("03 09")
+        # self.cpu.regs.IP = 0x0001
+        # self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000 + 0x8C00, 8))
+        
