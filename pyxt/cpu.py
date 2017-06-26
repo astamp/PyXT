@@ -842,8 +842,10 @@ class CPU(object):
             # Determine the displacement.
             displacement = 0
             if mod == 0x01:
+                ea_clocks += 4
                 displacement = sign_extend_byte_to_word(self.get_byte_immediate())
             elif mod == 0x02:
+                ea_clocks += 4
                 displacement = self.get_word_immediate()
             
             # Negative displacements do two's complement math, we need to mask this to 16 bits for it to work.
