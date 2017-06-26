@@ -260,11 +260,3 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         self.cpu.regs.IP = 0x0001
         self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000 + 0x8C00 + 384, 12))
         
-    # def test_bx_plus_di(self):
-        # """
-        # add cx, [bx + di]
-        # """
-        # self.load_code_string("03 09")
-        # self.cpu.regs.IP = 0x0001
-        # self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000 + 0x8C00, 8))
-        
