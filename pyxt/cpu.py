@@ -754,7 +754,7 @@ class CPU(object):
         # ESCape opcodes (used to allow 8087 to access the bus).
         # These decode a ModRM field but we toss it for now because we don't have an 8087.
         elif opcode & 0xF8 == 0xD8:
-            _sub_opcode, _rm_type, _rm_value = self.get_modrm_operands(16, decode_register = False)
+            _sub_opcode, _rm_type, _rm_value, _ea_clocks = self.get_modrm_operands(16, decode_register = False)
             
         else:
             self.signal_invalid_opcode(opcode, "Opcode not implemented.")
@@ -906,37 +906,37 @@ class CPU(object):
         self.regs[dest] = value
         
     def _mov_r16_rm16(self):
-        register, rm_type, rm_value = self.get_modrm_operands(16)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16)
         self.regs[register] = self._get_rm16(rm_type, rm_value)
         
     def _mov_rm8_r8(self):
-        register, rm_type, rm_value = self.get_modrm_operands(8)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(8)
         self._set_rm8(rm_type, rm_value, self.regs[register])
         
     def opcode_mov_r8_rm8(self):
-        register, rm_type, rm_value = self.get_modrm_operands(8)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(8)
         self.regs[register] = self._get_rm8(rm_type, rm_value)
         
     def _mov_reg16_to_rm16(self):
-        register, rm_type, rm_value = self.get_modrm_operands(16)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16)
         self._set_rm16(rm_type, rm_value, self.regs[register])
         
     def _mov_rm8_imm8(self):
-        sub_opcode, rm_type, rm_value = self.get_modrm_operands(8, decode_register = False)
+        sub_opcode, rm_type, rm_value, ea_clocks = self.get_modrm_operands(8, decode_register = False)
         assert sub_opcode == 0
         self._set_rm8(rm_type, rm_value, self.get_byte_immediate())
         
     def _mov_rm16_imm16(self):
-        sub_opcode, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
+        sub_opcode, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16, decode_register = False)
         assert sub_opcode == 0
         self._set_rm16(rm_type, rm_value, self.get_word_immediate())
         
     def _mov_sreg_rm16(self):
-        segment_register, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
+        segment_register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16, decode_register = False)
         self.regs[decode_seg_reg(segment_register)] = self._get_rm16(rm_type, rm_value)
         
     def _mov_rm16_sreg(self):
-        segment_register, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
+        segment_register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16, decode_register = False)
         self._set_rm16(rm_type, rm_value, self.regs[decode_seg_reg(segment_register)])
         
     def opcode_mov_al_moffs8(self):
@@ -957,14 +957,14 @@ class CPU(object):
         
     def opcode_xchg_r8_rm8(self):
         """ Swap the contents of a byte register and memory location. """
-        register, rm_type, rm_value = self.get_modrm_operands(8)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(8)
         temp = self._get_rm8(rm_type, rm_value)
         self._set_rm8(rm_type, rm_value, self.regs[register])
         self.regs[register] = temp
         
     def opcode_xchg_r16_rm16(self):
         """ Swap the contents of a word register and memory location. """
-        register, rm_type, rm_value = self.get_modrm_operands(16)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16)
         temp = self._get_rm16(rm_type, rm_value)
         self._set_rm16(rm_type, rm_value, self.regs[register])
         self.regs[register] = temp
@@ -977,7 +977,7 @@ class CPU(object):
         
     def opcode_les(self):
         """ Load ES:r16 with the far pointer from r/m16. """
-        register, rm_type, rm_value = self.get_modrm_operands(16)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16)
         assert rm_type == ADDRESS
         
         offset = self._get_rm16(rm_type, rm_value)
@@ -988,7 +988,7 @@ class CPU(object):
         
     def opcode_lds(self):
         """ Load DS:r16 with the far pointer from r/m16. """
-        register, rm_type, rm_value = self.get_modrm_operands(16)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16)
         assert rm_type == ADDRESS
         
         offset = self._get_rm16(rm_type, rm_value)
@@ -999,7 +999,7 @@ class CPU(object):
         
     def opcode_lea(self):
         """ Load the destination register with the offset from r/m16. """
-        register, rm_type, rm_value = self.get_modrm_operands(16)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16)
         assert rm_type == ADDRESS
         
         self.regs[register] = rm_value
@@ -1018,7 +1018,7 @@ class CPU(object):
         
     def opcode_pop_rm16(self):
         """ Pop a word off of the stack and store it in an r/m16 destination. """
-        register, rm_type, rm_value = self.get_modrm_operands(16)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16)
         self._set_rm16(rm_type, rm_value, self.internal_pop())
         
     def opcode_push_sp(self, opcode):
@@ -1303,7 +1303,7 @@ class CPU(object):
         word_imm = opcode == 0x81
         sign_extend = opcode & 0x02
         
-        sub_opcode, rm_type, rm_value = self.get_modrm_operands(16 if word_reg else 8, decode_register = False)
+        sub_opcode, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16 if word_reg else 8, decode_register = False)
         if word_reg:
             value = self._get_rm16(rm_type, rm_value)
         else:
@@ -1386,14 +1386,14 @@ class CPU(object):
         
     def opcode_test_rm8_r8(self):
         """ AND an r/m8 value and a register value, update the flags, but don't store the value. """
-        register, rm_type, rm_value = self.get_modrm_operands(8)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(8)
         value = self._get_rm8(rm_type, rm_value) & self.regs[register]
         self.flags.set_from_alu_no_carry_byte(value)
         self.flags.clear_logical()
         
     def opcode_test_rm16_r16(self):
         """ AND an r/m16 value and a register value, update the flags, but don't store the value. """
-        register, rm_type, rm_value = self.get_modrm_operands(16)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16)
         value = self._get_rm16(rm_type, rm_value) & self.regs[register]
         self.flags.set_from_alu_no_carry_word(value)
         self.flags.clear_logical()
@@ -1401,7 +1401,7 @@ class CPU(object):
     # Generic ALU helper functions.
     def _alu_rm8_r8(self, operation):
         """ Generic r/m8 r8 ALU processor. """
-        register, rm_type, rm_value = self.get_modrm_operands(8)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(8)
         op1 = self._get_rm8(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = operation(op1, op2)
@@ -1410,7 +1410,7 @@ class CPU(object):
         
     def _alu_rm16_r16(self, operation):
         """ Generic r/m16 r16 ALU processor. """
-        register, rm_type, rm_value = self.get_modrm_operands(16)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         op1 = operation(op1, op2)
@@ -1419,7 +1419,7 @@ class CPU(object):
         
     def _alu_r8_rm8(self, operation):
         """ Generic r8 r/m8 ALU processor. """
-        register, rm_type, rm_value = self.get_modrm_operands(8)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(8)
         op1 = self.regs[register]
         op2 = self._get_rm8(rm_type, rm_value)
         op1 = operation(op1, op2)
@@ -1428,7 +1428,7 @@ class CPU(object):
         
     def _alu_r16_rm16(self, operation):
         """ Generic r16 r/m16 ALU processor. """
-        register, rm_type, rm_value = self.get_modrm_operands(16)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16)
         op1 = self.regs[register]
         op2 = self._get_rm16(rm_type, rm_value)
         op1 = operation(op1, op2)
@@ -1530,7 +1530,7 @@ class CPU(object):
     # CMP
     def opcode_cmp_rm8_r8(self, _opcode):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
-        register, rm_type, rm_value = self.get_modrm_operands(8)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(8)
         op1 = self._get_rm8(rm_type, rm_value)
         op2 = self.regs[register]
         result = self.operator_sub_8(op1, op2)
@@ -1538,7 +1538,7 @@ class CPU(object):
         
     def opcode_cmp_rm16_r16(self, _opcode):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
-        register, rm_type, rm_value = self.get_modrm_operands(16)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16)
         op1 = self._get_rm16(rm_type, rm_value)
         op2 = self.regs[register]
         result = self.operator_sub_16(op1, op2)
@@ -1546,7 +1546,7 @@ class CPU(object):
         
     def opcode_cmp_r8_rm8(self, _opcode):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
-        register, rm_type, rm_value = self.get_modrm_operands(8)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(8)
         op1 = self.regs[register]
         op2 = self._get_rm8(rm_type, rm_value)
         result = self.operator_sub_8(op1, op2)
@@ -1554,7 +1554,7 @@ class CPU(object):
         
     def opcode_cmp_r16_rm16(self, _opcode):
         """ Subtract op2 from op1, update the flags, but don't store the value. """
-        register, rm_type, rm_value = self.get_modrm_operands(16)
+        register, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16)
         op1 = self.regs[register]
         op2 = self._get_rm16(rm_type, rm_value)
         result = self.operator_sub_16(op1, op2)
@@ -1585,7 +1585,7 @@ class CPU(object):
     def opcode_group_f6f7(self, opcode):
         """ "Group 1" byte and word instructions. """
         bits = 16 if opcode == 0xF7 else 8
-        sub_opcode, rm_type, rm_value = self.get_modrm_operands(bits, decode_register = False)
+        sub_opcode, rm_type, rm_value, ea_clocks = self.get_modrm_operands(bits, decode_register = False)
         value = self._get_rm_bits(bits, rm_type, rm_value)
         
         if sub_opcode == 0: # TEST
@@ -1716,7 +1716,7 @@ class CPU(object):
         
     def opcode_group_fe(self):
         """ Opcode group "2" for r/m8 which only has sub-opcodes 0 (INC) and 1 (DEC) defined. """
-        sub_opcode, rm_type, rm_value = self.get_modrm_operands(8, decode_register = False)
+        sub_opcode, rm_type, rm_value, ea_clocks = self.get_modrm_operands(8, decode_register = False)
         value = self._get_rm8(rm_type, rm_value)
         
         if sub_opcode == 0: # INC
@@ -1733,7 +1733,7 @@ class CPU(object):
         
     def opcode_group_ff(self):
         """ Opcode group "2" for r/m16. """
-        sub_opcode, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
+        sub_opcode, rm_type, rm_value, ea_clocks = self.get_modrm_operands(16, decode_register = False)
         value = self._get_rm16(rm_type, rm_value)
         
         if sub_opcode == 0: # INC
@@ -1784,7 +1784,7 @@ class CPU(object):
             
         high_bit_mask = 1 << (bits - 1)
         
-        sub_opcode, rm_type, rm_value = self.get_modrm_operands(bits, decode_register = False)
+        sub_opcode, rm_type, rm_value, ea_clocks = self.get_modrm_operands(bits, decode_register = False)
         
         old_value = value = self._get_rm_bits(bits, rm_type, rm_value)
         
