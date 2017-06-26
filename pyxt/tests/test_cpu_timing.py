@@ -162,3 +162,36 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         self.cpu.regs.IP = 0x0001
         self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x8C00 + 384, 9))
         
+    # Base + index (7 or 8 cycles)
+    def test_bp_plus_di(self):
+        """
+        add cx, [bp + di]
+        """
+        self.load_code_string("03 0B")
+        self.cpu.regs.IP = 0x0001
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x2080 + 0x8C00, 7))
+        
+    def test_bx_plus_si(self):
+        """
+        add cx, [bx + si]
+        """
+        self.load_code_string("03 08")
+        self.cpu.regs.IP = 0x0001
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000 + 0x400F, 7))
+        
+    def test_bp_plus_si(self):
+        """
+        add cx, [bp + si]
+        """
+        self.load_code_string("03 0A")
+        self.cpu.regs.IP = 0x0001
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x2080 + 0x400F, 8))
+        
+    def test_bx_plus_di(self):
+        """
+        add cx, [bx + di]
+        """
+        self.load_code_string("03 09")
+        self.cpu.regs.IP = 0x0001
+        self.assertEqual(self.cpu.get_modrm_operands(16), ("CX", ADDRESS, 0x1000 + 0x8C00, 8))
+        

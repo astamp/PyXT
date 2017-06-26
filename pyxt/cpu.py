@@ -808,14 +808,18 @@ class CPU(object):
             
             # Determine the calculated base.
             if rm == 0x00:
+                ea_clocks = 7
                 rm_value = self.regs.BX + self.regs.SI
             elif rm == 0x01:
+                ea_clocks = 8
                 rm_value = self.regs.BX + self.regs.DI
             elif rm == 0x02:
+                ea_clocks = 8
                 rm_value = self.regs.BP + self.regs.SI
                 if self.segment_override is None:
                     self.segment_override = "SS"
             elif rm == 0x03:
+                ea_clocks = 7
                 rm_value = self.regs.BP + self.regs.DI
                 if self.segment_override is None:
                     self.segment_override = "SS"
