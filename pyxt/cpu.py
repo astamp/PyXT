@@ -586,18 +586,23 @@ class CPU(object):
         # First check if the opcode is in the instruction decoding table.
         opcode_handler = self.opcode_vector[opcode]
         if opcode_handler is not None:
-            opcode_handler(opcode)
+            temp_cycles = opcode_handler(opcode)
+            if temp_cycles is not None:
+                self.cycles += temp_cycles
             
             # HACK: Remove this and the return when all instructions are converted.
             if self.repeat_prefix != REPEAT_NONE:
                 self.signal_invalid_opcode(opcode, "Opcode doesn't support repeat prefix.")
             
-            return
+            return self.cycles
             
         if opcode == 0xF4:
             self._hlt()
         elif opcode & 0xFC == 0x80:
             self.opcode_group_8x(opcode)
+        # NOP maps to XCHG AX, AX so it needs to come first.
+        elif opcode == 0x90:
+            self.cycles += self._nop()
         elif opcode & 0xF8 == 0x90:
             self._xchg_r16_ax(opcode)
         elif opcode & 0xFE == 0xF6:
@@ -672,8 +677,6 @@ class CPU(object):
         elif opcode == 0xFB:
             self.opcode_sti()
             
-        elif opcode == 0x90:
-            self._nop()
         elif opcode == 0xE9:
             self._jmp_rel16()
         elif opcode == 0xEB:
@@ -770,6 +773,8 @@ class CPU(object):
         if self.repeat_prefix != REPEAT_NONE:
             self.signal_invalid_opcode(opcode, "Opcode doesn't support repeat prefix.")
             
+        return self.cycles
+        
     def signal_invalid_opcode(self, opcode, message = None):
         """ Invalid opcode handler. """
         log.error("Invalid opcode: 0x%02x at CS:IP %04x:%04x", opcode, self.regs.CS, self.regs.IP)
@@ -1915,7 +1920,7 @@ class CPU(object):
         
     # ********** Miscellaneous opcodes. **********
     def _nop(self):
-        pass
+        return 3
         
     def _hlt(self):
         log.critical("HLT encountered!")

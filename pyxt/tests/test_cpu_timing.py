@@ -258,3 +258,13 @@ class EffectiveAddressTimingTests(BaseOpcodeTimingTests):
         self.cpu.get_modrm_operands(16)
         self.assertEqual(self.cpu.cycles, 12)
         
+class SimpleTimingTests(BaseOpcodeTimingTests):
+    def setUp(self):
+        super(SimpleTimingTests, self).setUp()
+        
+    def test_nop(self):
+        """
+        nop
+        """
+        self.load_code_string("90")
+        self.assertEqual(self.run_single_instruction(), 3)
