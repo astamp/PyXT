@@ -388,6 +388,9 @@ class CPU(object):
         self.repeat_prefix = REPEAT_NONE
         self.segment_override = None
         
+        # Input signals.
+        self.interrupt_signaled = False
+        
         # Fast instruction decoding.
         self.opcode_vector = [
             # 0x00 - 0x0F
@@ -1159,8 +1162,9 @@ class CPU(object):
         
     def process_interrupts(self):
         """ Process non-software interrupts. """
-        if self.flags.interrupt_enable and self.bus.pic and self.bus.pic.interrupt_pending():
-            interrupt = self.bus.pic.pop_interrupt_vector()
+        if self.flags.interrupt_enable and self.interrupt_signaled:
+            assert self.bus.pic
+            interrupt = self.bus.pic.interrupt_acknowledge()
             log.debug("External interrupt requested INT %02xh.", interrupt)
             self.internal_service_interrupt(interrupt)
             
