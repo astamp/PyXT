@@ -1162,7 +1162,7 @@ class CPU(object):
         
     def process_interrupts(self):
         """ Process non-software interrupts. """
-        if self.flags.interrupt_enable and self.interrupt_signaled:
+        if self.interrupt_signaled and self.flags.interrupt_enable:
             assert self.bus.pic
             interrupt = self.bus.pic.interrupt_acknowledge()
             log.debug("External interrupt requested INT %02xh.", interrupt)
