@@ -90,6 +90,12 @@ class SystemBus(object):
         
         self.pic = pic
         self.dma = dma
+        self.cpu = None
+        
+    def install_cpu(self, cpu):
+        """ Install the CPU into the system bus. """
+        cpu.install_bus(self)
+        self.cpu = cpu
         
     def install_device(self, prefix, device):
         """ Install a device into the system bus. """

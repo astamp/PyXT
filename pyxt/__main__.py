@@ -159,7 +159,7 @@ def main():
         pprint(bus.io_decoder)
     
     cpu = CPU()
-    cpu.install_bus(bus)
+    bus.install_cpu(cpu)
     
     # Select the desired LOOP instruction handler.
     cpu.collapse_delay_loops(options.collapse_delay_loops)
