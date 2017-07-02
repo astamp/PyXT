@@ -8,6 +8,7 @@ http://www.seasip.info/VintagePC/mda.html
 # Standard library imports
 import array
 import random
+from collections import namedtuple
 
 # Six imports
 import six
@@ -63,6 +64,12 @@ MDA_RAM_SIZE = 4096
 MDA_BLACK = (0x00, 0x00, 0x00)
 MDA_GREEN = (0x00, 0xAA, 0x00)
 MDA_BRIGHT_GREEN = (0x55, 0xFF, 0x55)
+MDA_AMBER = (0xFF, 0xB0, 0x00)
+MDA_BRIGHT_AMBER = (0xFF, 0xCC, 0x00)
+
+MonoPalette = namedtuple("MonoPalette", ["off", "on", "bright"])
+PALETTE_GREEN = MonoPalette(MDA_BLACK, MDA_GREEN, MDA_BRIGHT_GREEN)
+PALETTE_AMBER = MonoPalette(MDA_BLACK, MDA_AMBER, MDA_BRIGHT_AMBER)
 
 # Classes
 class Cursor(object):
@@ -142,6 +149,9 @@ class MonochromeDisplayAdapter(Device):
         
         # Cursor parameters.
         self.cursor = Cursor()
+        
+        # Palette (black, normal, bright).
+        self.palette = PALETTE_AMBER
         
     def reset(self):
         pygame.init()
@@ -268,7 +278,7 @@ class MonochromeDisplayAdapter(Device):
                 # Draw the cursor over the current character.
                 row = cursor.addr // MDA_COLUMNS
                 column = cursor.addr % MDA_COLUMNS
-                pygame.draw.rect(self.screen, MDA_GREEN, [column * 9, (row * 14) + cursor.start, 9, (cursor.end - cursor.start) + 1])
+                pygame.draw.rect(self.screen, self.palette.on, [column * 9, (row * 14) + cursor.start, 9, (cursor.end - cursor.start) + 1])
                 
                 # Log where the cursor is located so we can erase it.
                 cursor.displayed_addr = cursor.addr
@@ -307,13 +317,13 @@ class MonochromeDisplayAdapter(Device):
             return
             
         # Calculate the character generator attributes.
-        foreground = MDA_GREEN
-        background = MDA_BLACK
+        foreground = self.palette.on
+        background = self.palette.off
         if attributes & MDA_ATTR_BACKGROUND == MDA_ATTR_BACKGROUND:
-            foreground = MDA_BLACK
-            background = MDA_GREEN
+            foreground = self.palette.off
+            background = self.palette.on
         if attributes & MDA_ATTR_INTENSITY:
-            foreground = MDA_BRIGHT_GREEN
+            foreground = self.palette.bright
             
         # Blit the character to the bitmap.
         self.char_generator.blit_character(self.screen, (column * self.char_generator.char_width, row * self.char_generator.char_height), character, foreground, background)
