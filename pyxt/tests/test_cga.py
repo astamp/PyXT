@@ -1,7 +1,7 @@
 import unittest
 
 from pyxt.cga import *
-from pyxt.chargen import CharacterGeneratorMock, CHARGEN_ATTR_NONE, CHARGEN_ATTR_BRIGHT
+from pyxt.chargen import CharacterGeneratorMock
 
 class CGATests(unittest.TestCase):
     def setUp(self):
