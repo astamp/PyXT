@@ -53,14 +53,17 @@ def parse_cmdline():
                       help = "Set the flag to skip the POST memory test.")
     parser.add_option("--no-collapse-delay-loops", action = "store_false", dest = "collapse_delay_loops", default = True,
                       help = "Set this flag to use the proper LOOP handler that doesn't optimize LOOP back to itself.")
-    parser.add_option("--diskette", action = "store", dest = "diskette",
+                      
+    diskette_group = OptionGroup(parser, "Diskette Options")
+    diskette_group.add_option("--diskette", action = "store", dest = "diskette",
                       help = "Diskette image to load into the first drive (A:).")
-    parser.add_option("--no-wp-a", action = "store_false", dest = "diskette_write_protect", default = True,
+    diskette_group.add_option("--no-wp-a", action = "store_false", dest = "diskette_write_protect", default = True,
                       help = "Disable write protection for the first drive (A:).")
-    parser.add_option("--diskette2", action = "store", dest = "diskette2",
+    diskette_group.add_option("--diskette2", action = "store", dest = "diskette2",
                       help = "Diskette image to load into the second drive (B:).")
-    parser.add_option("--no-wp-b", action = "store_false", dest = "diskette2_write_protect", default = True,
+    diskette_group.add_option("--no-wp-b", action = "store_false", dest = "diskette2_write_protect", default = True,
                       help = "Disable write protection for the second drive (B:).")
+    parser.add_option_group(diskette_group)
                       
     display_group = OptionGroup(parser, "Display Options")
     display_group.add_option("--display", action = "store", dest = "display", default = "mda",
