@@ -9,12 +9,20 @@ Always having had an interest in how old DOS-based machines worked I decided tha
 It has also proven to be an interesting challenge in both learning x86 assembly and keeping Python code running fast.
 
 ### Getting started
-To run PyXT you will need a system BIOS image as well as an MDA (or CGA) character ROM.
+To run PyXT you will need a system BIOS image and some form of character generation.
 
 You also will need [Pygame](http://pygame.org/news.html) and [six](https://pythonhosted.org/six/).
 
+This will start PyXT using the monochrome display adapter and the MDA character ROM.
+
 ```
-python -m pyxt --bios [BIOS IMAGE] --mda-rom [CHARACTER ROM] --diskette [DISK IMAGE]
+python -m pyxt --bios [BIOS IMAGE] --display mda --mda-rom [CHARACTER ROM] --diskette [DISK IMAGE]
+```
+
+This will start PyXT using the color graphics adapter and the included FreeDOS CPI files (US encoding).
+
+```
+python -m pyxt --bios [BIOS IMAGE] --display cga --cpi-file files\cpidos11\BIN\CPI\ega.cpi --cpi-codepage 437 --diskette [DISK IMAGE]
 ```
 
 Additionally the `--debug` flag can be used to enable debug logging as well as the [interactive debugger](pyxt/debugger.py).
@@ -23,6 +31,8 @@ The `--skip-memory-test` flag can be used to speed up the boot process by settin
 
 BIOS images need to be padded to 64k to be loaded at F000:0000 (0xF0000) in [conventional memory](https://en.wikipedia.org/wiki/Conventional_memory).
 I have had success dumping the BIOS from a physical box using these steps (for F0000-FFFFF): http://www.mess.org/dumping/dump_bios_using_debug
+
+All available command line options can be listed by running: `python -m pyxt --help`
 
 ### Status
 PyXT can currently complete the [POST](https://en.wikipedia.org/wiki/Power-on_self-test#IBM-compatible_PC_POST) with the following BIOSes:
