@@ -45,8 +45,6 @@ DEFAULT_DIP_SWITCHES = (SWITCHES_NORMAL_BOOT | SWITCHES_MEMORY_BANKS_FOUR | SWIT
 def parse_cmdline():
     """ Parse the command line arguments. """
     parser = OptionParser()
-    parser.add_option("--debug", action = "store_true", dest = "debug",
-                      help = "Enable DEBUG log level.")
     parser.add_option("--bios", action = "store", dest = "bios",
                       help = "ROM BIOS image to load at 0xF0000.")
     parser.add_option("--dip-switches", action = "store", type = "int", dest = "dip_switches",
@@ -63,10 +61,6 @@ def parse_cmdline():
                       help = "Diskette image to load into the second drive (B:).")
     parser.add_option("--no-wp-b", action = "store_false", dest = "diskette2_write_protect", default = True,
                       help = "Disable write protection for the second drive (B:).")
-    parser.add_option("--log-file", action = "store", dest = "log_file",
-                      help = "File to output debugging log.")
-    parser.add_option("--log-filter", action = "store", dest = "log_filter",
-                      help = "Log filter to apply to stderr handler.")
                       
     display_group = OptionGroup(parser, "Display Options")
     display_group.add_option("--display", action = "store", dest = "display", default = "mda",
@@ -85,6 +79,15 @@ def parse_cmdline():
     chargen_group.add_option("--cpi-codepage", action = "store", type = "int", dest = "cpi_codepage",
                              help = "Codepage to use in CPI file.")
     parser.add_option_group(chargen_group)
+    
+    debugging_group = OptionGroup(parser, "Debugging Options")
+    debugging_group.add_option("--debug", action = "store_true", dest = "debug",
+                               help = "Enable DEBUG log level.")
+    debugging_group.add_option("--log-file", action = "store", dest = "log_file",
+                               help = "File to output debugging log.")
+    debugging_group.add_option("--log-filter", action = "store", dest = "log_filter",
+                               help = "Log filter to apply to stderr handler.")
+    parser.add_option_group(debugging_group)
     
     return parser.parse_args()
     
