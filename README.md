@@ -37,11 +37,12 @@ PyXT can currently complete the [POST](https://en.wikipedia.org/wiki/Power-on_se
 * ROM (also [memory.py](pyxt/memory.py))
 * Floppy diskette controller and 360KB drive ([fdc.py](pyxt/fdc.py))
 * Monochrome display adapter ([mda.py](pyxt/mda.py))
+* Color graphics adapater ([cga.py](pyxt/cga.py))
 * Keyboard via PPI ([ppi.py](pyxt/ppi.py))
 * DIP switches via PPI ([ppi.py](pyxt/ppi.py))
 
 ### What doesn't
-* CGA/EGA
+* EGA
 * Serial ports
 * Parallel ports
 * Non-maskable interrupt
@@ -65,5 +66,7 @@ C:\PyXT>SET PYXT_PROFILING=
 ### Screenshots
 
 ![FreeDOS via Svarog86](files/freedos.png "FreeDOS via Svarog86")
+
+![Cassette BASIC](files/cassette-basic.png "Cassette BASIC")
 
 ![PB500 memory test](files/memory-test.png "PB500 memory test")
