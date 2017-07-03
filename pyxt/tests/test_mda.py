@@ -1,7 +1,7 @@
 import unittest
 
 from pyxt.mda import *
-from pyxt.chargen import CharacterGeneratorMock, CHARGEN_ATTR_NONE, CHARGEN_ATTR_BRIGHT
+from pyxt.chargen import CharacterGeneratorMock
 
 class MDATests(unittest.TestCase):
     def setUp(self):
@@ -36,23 +36,23 @@ class MDATests(unittest.TestCase):
         
     def test_mem_write_byte_calls_char_generator_top_left(self):
         self.mda.mem_write_byte(0x0000, 0x41)
-        self.assertEqual(self.cg.last_blit, (None, (0, 0), 0x41, CHARGEN_ATTR_NONE))
+        self.assertEqual(self.cg.last_blit, (None, (0, 0), 0x41, MDA_GREEN, MDA_BLACK))
         
     def test_mem_write_byte_calls_char_generator_bottom_right(self):
         self.mda.mem_write_byte(3998, 0xFF)
-        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0xFF, CHARGEN_ATTR_NONE))
+        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0xFF, MDA_GREEN, MDA_BLACK))
         
     def test_mem_write_byte_char_before_attribute(self):
         self.mda.mem_write_byte(3998, 0xFF)
-        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0xFF, CHARGEN_ATTR_NONE))
+        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0xFF, MDA_GREEN, MDA_BLACK))
         self.mda.mem_write_byte(3999, MDA_ATTR_INTENSITY)
-        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0xFF, CHARGEN_ATTR_BRIGHT))
+        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0xFF, MDA_BRIGHT_GREEN, MDA_BLACK))
         
     def test_mem_write_byte_attribute_before_char(self):
         self.mda.mem_write_byte(3999, MDA_ATTR_INTENSITY)
-        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0x00, CHARGEN_ATTR_BRIGHT))
+        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0x00, MDA_BRIGHT_GREEN, MDA_BLACK))
         self.mda.mem_write_byte(3998, 0xFF)
-        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0xFF, CHARGEN_ATTR_BRIGHT))
+        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0xFF, MDA_BRIGHT_GREEN, MDA_BLACK))
         
     def test_mem_write_byte_write_off_screen(self):
         self.mda.mem_write_byte(4000, 0xFF)
@@ -80,19 +80,19 @@ class MDATests(unittest.TestCase):
         self.mda.mem_write_word(0x0000, 0x0841) # 'A' with intensity.
         self.assertEqual(self.mda.video_ram[0x0000], 0x41)
         self.assertEqual(self.mda.video_ram[0x0001], 0x08)
-        self.assertEqual(self.cg.last_blit, (None, (0, 0), 0x41, CHARGEN_ATTR_BRIGHT))
+        self.assertEqual(self.cg.last_blit, (None, (0, 0), 0x41, MDA_BRIGHT_GREEN, MDA_BLACK))
         
     def test_mem_write_word_at_bottom_right(self):
         self.mda.mem_write_word(3998, 0x085A) # 'Z' with intensity.
         self.assertEqual(self.mda.video_ram[3998], 0x5A)
         self.assertEqual(self.mda.video_ram[3999], 0x08)
-        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0x5A, CHARGEN_ATTR_BRIGHT))
+        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0x5A, MDA_BRIGHT_GREEN, MDA_BLACK))
         
     def test_mem_write_word_at_bottom_right_just_past(self):
         self.mda.mem_write_word(3999, 0xFF08) # 'Z' with intensity.
         self.assertEqual(self.mda.video_ram[3998], 0x00) # Should be unmodified.
         self.assertEqual(self.mda.video_ram[3999], 0x08)
-        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0x00, CHARGEN_ATTR_BRIGHT))
+        self.assertEqual(self.cg.last_blit, (None, (711, 336), 0x00, MDA_BRIGHT_GREEN, MDA_BLACK))
         
     def test_mem_read_word(self):
         self.mda.video_ram[0x0000] = 0x41

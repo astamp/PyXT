@@ -18,7 +18,7 @@ from six.moves import range # pylint: disable=redefined-builtin
 from pyxt.bus import Device
 from pyxt.helpers import *
 from pyxt.constants import *
-from pyxt.chargen import *
+from pyxt.chargen import CharacterGeneratorMDA_CGA_ROM
 
 # Pygame Imports
 import pygame
@@ -61,7 +61,22 @@ MDA_BYTES_PER_CHAR = 2
 # MDA_RAM_SIZE = MDA_COLUMNS * MDA_ROWS * MDA_BYTES_PER_CHAR
 MDA_RAM_SIZE = 4096
 
-BITS_LO_TO_HI = [7, 6, 5, 4, 3, 2, 1, 0]
+MDA_BLACK = (0x00, 0x00, 0x00)
+MDA_GREEN = (0x00, 0xAA, 0x00)
+MDA_BRIGHT_GREEN = (0x55, 0xFF, 0x55)
+
+# https://superuser.com/questions/361297/what-colour-is-the-dark-green-on-old-fashioned-green-screen-computer-displays
+MDA_CRT_BACKGROUND = (0x28, 0x28, 0x28)
+MDA_AMBER = (0xFF, 0xB0, 0x00)
+MDA_BRIGHT_AMBER = (0xFF, 0xCC, 0x00)
+
+MonoPalette = namedtuple("MonoPalette", ["off", "on", "bright"])
+PALETTE_GREEN = MonoPalette(MDA_BLACK, MDA_GREEN, MDA_BRIGHT_GREEN)
+PALETTE_AMBER = MonoPalette(MDA_CRT_BACKGROUND, MDA_AMBER, MDA_BRIGHT_AMBER)
+MONO_PALETTES = {
+    "green" : PALETTE_GREEN,
+    "amber" : PALETTE_AMBER,
+}
 
 # Classes
 class Cursor(object):
@@ -112,7 +127,7 @@ class Cursor(object):
                 self.interval = self.SLOW_BLINK_RATE
                 
 class MonochromeDisplayAdapter(Device):
-    def __init__(self, char_generator, randomize = False):
+    def __init__(self, char_generator, randomize = False, palette = PALETTE_GREEN):
         super(MonochromeDisplayAdapter, self).__init__()
         
         self.char_generator = char_generator
@@ -141,6 +156,9 @@ class MonochromeDisplayAdapter(Device):
         
         # Cursor parameters.
         self.cursor = Cursor()
+        
+        # Palette (off, on, bright).
+        self.palette = palette
         
     def reset(self):
         pygame.init()
@@ -267,7 +285,7 @@ class MonochromeDisplayAdapter(Device):
                 # Draw the cursor over the current character.
                 row = cursor.addr // MDA_COLUMNS
                 column = cursor.addr % MDA_COLUMNS
-                pygame.draw.rect(self.screen, EGA_GREEN, [column * 9, (row * 14) + cursor.start, 9, (cursor.end - cursor.start) + 1])
+                pygame.draw.rect(self.screen, self.palette.on, [column * 9, (row * 14) + cursor.start, 9, (cursor.end - cursor.start) + 1])
                 
                 # Log where the cursor is located so we can erase it.
                 cursor.displayed_addr = cursor.addr
@@ -306,14 +324,16 @@ class MonochromeDisplayAdapter(Device):
             return
             
         # Calculate the character generator attributes.
-        cg_attributes = CHARGEN_ATTR_NONE
+        foreground = self.palette.on
+        background = self.palette.off
         if attributes & MDA_ATTR_BACKGROUND == MDA_ATTR_BACKGROUND:
-            cg_attributes |= CHARGEN_ATTR_REVERSE
+            foreground = self.palette.off
+            background = self.palette.on
         if attributes & MDA_ATTR_INTENSITY:
-            cg_attributes |= CHARGEN_ATTR_BRIGHT
+            foreground = self.palette.bright
             
         # Blit the character to the bitmap.
-        self.char_generator.blit_character(self.screen, (column * self.char_generator.char_width, row * self.char_generator.char_height), character, cg_attributes)
+        self.char_generator.blit_character(self.screen, (column * self.char_generator.char_width, row * self.char_generator.char_height), character, foreground, background)
         
     def get_current_pixel(self):
         """ Returns if the current pixel is on or off and increments the pixel index. """
@@ -330,101 +350,7 @@ class MonochromeDisplayAdapter(Device):
             if self.current_pixel[1] >= MDA_RESOLUTION[1]:
                 self.current_pixel[1] = 0
                 
-        return color[0:3] != EGA_BLACK
-        
-class CharacterGeneratorMDA_CGA_ROM(CharacterGenerator):
-    """
-    Character generator that uses the ROM image from the IBM MDA and printer card.
-    
-    This part was also used on the CGA adapter and contains those fonts as well.
-    Many thanks to Jonathan Hunt who dumped the contents of the ROM and wrote code to interpret it.
-    """
-    MDA_FONT = 0
-    CGA_NARROW_FONT = 1
-    CGA_WIDE_FONT = 2
-    
-    PAGE_SIZE = 2048
-    CHAR_COUNT = 256
-    
-    FontInfo = namedtuple("FontInfo", ["start_address", "byte_width", "rows_stored", "cols_actual", "rows_actual"])
-    
-    FONT_INFO = {
-        # (Start address, byte width, rows in data, cols actual, rows actual)
-        MDA_FONT : FontInfo(0x0000, 1, 16, 9, 14),
-        CGA_NARROW_FONT : FontInfo(0x1000, 1, 8, 8, 8),
-        CGA_WIDE_FONT : FontInfo(0x1800, 1, 8, 8, 8),
-    }
-    
-    def __init__(self, rom_file, font = MDA_FONT):
-        self.font_info = self.FONT_INFO[font]
-        
-        self.font_data_normal = pygame.Surface((self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual))
-        self.font_data_normal.fill(EGA_BLACK)
-        
-        self.font_data_bright = pygame.Surface((self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual))
-        self.font_data_bright.fill(EGA_BLACK)
-        
-        self.font_data_reverse = pygame.Surface((self.font_info.cols_actual * self.CHAR_COUNT, self.font_info.rows_actual))
-        self.font_data_reverse.fill(EGA_GREEN)
-        
-        pix_normal = pygame.PixelArray(self.font_data_normal)
-        pix_bright = pygame.PixelArray(self.font_data_bright)
-        pix_reverse = pygame.PixelArray(self.font_data_reverse)
-        
-        # The characters are split top and bottom across the first 2 2k pages of the part.
-        with open(rom_file, "rb") as fileptr:
-            fileptr.seek(self.font_info.start_address)
-            upper_half = fileptr.read(self.PAGE_SIZE)
-            lower_half = fileptr.read(self.PAGE_SIZE)
-            
-        for index in range(self.CHAR_COUNT):
-            for row in range(0, self.font_info.rows_actual):
-                if row < 8:
-                    byte = six.indexbytes(upper_half, (index * 8) + row)
-                else:
-                    byte = six.indexbytes(lower_half, (index  * 8) + (row - 8))
-                    
-                for bit in BITS_LO_TO_HI:
-                    if (1 << bit) & byte:
-                        pix_normal[(index * self.char_width) + (7 - bit), row] = EGA_GREEN
-                        pix_bright[(index * self.char_width) + (7 - bit), row] = EGA_BRIGHT_GREEN
-                        pix_reverse[(index * self.char_width) + (7 - bit), row] = EGA_BLACK
-                        
-                # For the box drawing characters, the last column is duplicated for continuous lines.
-                if self.char_width == 9 and 0xC0 <= index <= 0xDF:
-                    if byte & 0x01:
-                        pix_normal[(index * self.char_width) + 8, row] = EGA_GREEN
-                        pix_bright[(index * self.char_width) + 8, row] = EGA_BRIGHT_GREEN
-                        pix_reverse[(index * self.char_width) + 8, row] = EGA_BLACK
-                        
-        # Make sure to explicitly del this to free the surface lock.
-        del pix_normal
-        del pix_bright
-        del pix_reverse
-        
-    def blit_character(self, surface, location, index, attributes = CHARGEN_ATTR_NONE):
-        """ Place a character onto a surface at the given location. """
-        if index >= self.CHAR_COUNT:
-            return
-            
-        font_data = self.font_data_normal
-        # Reverse video overrides brightness.
-        if attributes & CHARGEN_ATTR_REVERSE:
-            font_data = self.font_data_reverse
-        elif attributes & CHARGEN_ATTR_BRIGHT:
-            font_data = self.font_data_bright
-            
-        surface.blit(font_data, location, area = (self.char_width * index, 0, self.char_width, self.char_height))
-        
-    @property
-    def char_width(self):
-        """ Returns the width of characters in pixels. """
-        return self.font_info.cols_actual
-        
-    @property
-    def char_height(self):
-        """ Returns the width of characters in pixels. """
-        return self.font_info.rows_actual
+        return color[0:3] != MDA_BLACK
         
 # Test application.
 def main():
