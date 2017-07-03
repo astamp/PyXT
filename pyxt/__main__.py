@@ -22,7 +22,7 @@ from pyxt.debugger import Debugger
 from pyxt.bus import SystemBus
 from pyxt.memory import RAM, ROM
 from pyxt.chargen import CharacterGeneratorMDA_CGA_ROM
-from pyxt.mda import MonochromeDisplayAdapter, MDA_START_ADDRESS
+from pyxt.mda import MonochromeDisplayAdapter, MDA_START_ADDRESS, MONO_PALETTES
 from pyxt.cga import ColorGraphicsAdapter, CGA_START_ADDRESS
 from pyxt.cpi import CharacterGeneratorCPI, CPI_MDA_SIZE, CPI_CGA_SIZE
 from pyxt.ui import PygameManager
@@ -49,8 +49,6 @@ def parse_cmdline():
                       help = "Enable DEBUG log level.")
     parser.add_option("--bios", action = "store", dest = "bios",
                       help = "ROM BIOS image to load at 0xF0000.")
-    parser.add_option("--display", action = "store", dest = "display", default = "mda",
-                      help = "Display adapter type to use, default: mda.")
     parser.add_option("--dip-switches", action = "store", type = "int", dest = "dip_switches",
                       help = "DIP switch byte to use.", default = DEFAULT_DIP_SWITCHES)
     parser.add_option("--skip-memory-test", action = "store_true", dest = "skip_memory_test",
@@ -70,6 +68,15 @@ def parse_cmdline():
     parser.add_option("--log-filter", action = "store", dest = "log_filter",
                       help = "Log filter to apply to stderr handler.")
                       
+    display_group = OptionGroup(parser, "Display Options")
+    display_group.add_option("--display", action = "store", dest = "display", default = "mda",
+                             type = "choice", choices = ("mda", "cga"),
+                             help = "Display adapter type to use, default: mda.")
+    display_group.add_option("--mono-palette", action = "store", dest = "mono_palette",
+                             default = "green", type = "choice", choices = MONO_PALETTES.keys(),
+                             help = "Monochrome display color palette, default: green.")
+    parser.add_option_group(display_group)
+    
     chargen_group = OptionGroup(parser, "Character Generator Options")
     chargen_group.add_option("--mda-rom", "--cga-rom", action = "store", dest = "mda_cga_rom",
                              help = "MDA/CGA ROM to use for a virtual MDA/CGA card.")
@@ -77,6 +84,7 @@ def parse_cmdline():
                              help = "DOS CPI file to load character glyphs from.")
     chargen_group.add_option("--cpi-codepage", action = "store", type = "int", dest = "cpi_codepage",
                              help = "Codepage to use in CPI file.")
+    parser.add_option_group(chargen_group)
     
     return parser.parse_args()
     
@@ -128,7 +136,8 @@ def main():
             char_generator = CharacterGeneratorCPI(options.cpi_file, options.cpi_codepage, CPI_MDA_SIZE, width_override = 9)
         else:
             raise ValueError("No character ROM provided for the MonochromeDisplayAdapter.")
-        video_card = MonochromeDisplayAdapter(char_generator, randomize = True)
+            
+        video_card = MonochromeDisplayAdapter(char_generator, randomize = True, palette = MONO_PALETTES[options.mono_palette])
         bus.install_device(MDA_START_ADDRESS, video_card)
     elif options.display == "cga":
         if options.mda_cga_rom:

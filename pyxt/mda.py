@@ -64,12 +64,19 @@ MDA_RAM_SIZE = 4096
 MDA_BLACK = (0x00, 0x00, 0x00)
 MDA_GREEN = (0x00, 0xAA, 0x00)
 MDA_BRIGHT_GREEN = (0x55, 0xFF, 0x55)
+
+# https://superuser.com/questions/361297/what-colour-is-the-dark-green-on-old-fashioned-green-screen-computer-displays
+MDA_CRT_BACKGROUND = (0x28, 0x28, 0x28)
 MDA_AMBER = (0xFF, 0xB0, 0x00)
 MDA_BRIGHT_AMBER = (0xFF, 0xCC, 0x00)
 
 MonoPalette = namedtuple("MonoPalette", ["off", "on", "bright"])
 PALETTE_GREEN = MonoPalette(MDA_BLACK, MDA_GREEN, MDA_BRIGHT_GREEN)
-PALETTE_AMBER = MonoPalette(MDA_BLACK, MDA_AMBER, MDA_BRIGHT_AMBER)
+PALETTE_AMBER = MonoPalette(MDA_CRT_BACKGROUND, MDA_AMBER, MDA_BRIGHT_AMBER)
+MONO_PALETTES = {
+    "green" : PALETTE_GREEN,
+    "amber" : PALETTE_AMBER,
+}
 
 # Classes
 class Cursor(object):
@@ -120,7 +127,7 @@ class Cursor(object):
                 self.interval = self.SLOW_BLINK_RATE
                 
 class MonochromeDisplayAdapter(Device):
-    def __init__(self, char_generator, randomize = False):
+    def __init__(self, char_generator, randomize = False, palette = PALETTE_GREEN):
         super(MonochromeDisplayAdapter, self).__init__()
         
         self.char_generator = char_generator
@@ -150,8 +157,8 @@ class MonochromeDisplayAdapter(Device):
         # Cursor parameters.
         self.cursor = Cursor()
         
-        # Palette (black, normal, bright).
-        self.palette = PALETTE_AMBER
+        # Palette (off, on, bright).
+        self.palette = palette
         
     def reset(self):
         pygame.init()
