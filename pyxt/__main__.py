@@ -49,20 +49,16 @@ def parse_cmdline():
                       help = "ROM BIOS image to load at 0xF0000.")
     parser.add_option("--dip-switches", action = "store", type = "int", dest = "dip_switches",
                       help = "DIP switch byte to use.", default = DEFAULT_DIP_SWITCHES)
-    parser.add_option("--skip-memory-test", action = "store_true", dest = "skip_memory_test",
-                      help = "Set the flag to skip the POST memory test.")
-    parser.add_option("--no-collapse-delay-loops", action = "store_false", dest = "collapse_delay_loops", default = True,
-                      help = "Set this flag to use the proper LOOP handler that doesn't optimize LOOP back to itself.")
                       
     diskette_group = OptionGroup(parser, "Diskette Options")
     diskette_group.add_option("--diskette", action = "store", dest = "diskette",
-                      help = "Diskette image to load into the first drive (A:).")
+                              help = "Diskette image to load into the first drive (A:).")
     diskette_group.add_option("--no-wp-a", action = "store_false", dest = "diskette_write_protect", default = True,
-                      help = "Disable write protection for the first drive (A:).")
+                              help = "Disable write protection for the first drive (A:).")
     diskette_group.add_option("--diskette2", action = "store", dest = "diskette2",
-                      help = "Diskette image to load into the second drive (B:).")
+                              help = "Diskette image to load into the second drive (B:).")
     diskette_group.add_option("--no-wp-b", action = "store_false", dest = "diskette2_write_protect", default = True,
-                      help = "Disable write protection for the second drive (B:).")
+                              help = "Disable write protection for the second drive (B:).")
     parser.add_option_group(diskette_group)
                       
     display_group = OptionGroup(parser, "Display Options")
@@ -83,6 +79,13 @@ def parse_cmdline():
                              help = "Codepage to use in CPI file.")
     parser.add_option_group(chargen_group)
     
+    optimization_group = OptionGroup(parser, "Optimization Options")
+    optimization_group.add_option("--skip-memory-test", action = "store_true", dest = "skip_memory_test",
+                                  help = "Set the flag to skip the POST memory test.")
+    optimization_group.add_option("--no-collapse-delay-loops", action = "store_false", dest = "collapse_delay_loops", default = True,
+                                  help = "Set this flag to use the proper LOOP handler that doesn't optimize LOOP back to itself.")
+    parser.add_option_group(optimization_group)
+                  
     debugging_group = OptionGroup(parser, "Debugging Options")
     debugging_group.add_option("--debug", action = "store_true", dest = "debug",
                                help = "Enable DEBUG log level.")
