@@ -74,6 +74,8 @@ def parse_cmdline():
                       help = "File to output debugging log.")
     parser.add_option("--log-filter", action = "store", dest = "log_filter",
                       help = "Log filter to apply to stderr handler.")
+    parser.add_option("--at-class", action = "store_true", dest = "at_class",
+                      help = "Build up an AT-class system.")
     return parser.parse_args()
     
 def main():
@@ -148,8 +150,12 @@ def main():
         b_drive.load_diskette(options.diskette2, options.diskette2_write_protect)
         
     bus.install_device(None, dma_controller)
-    nmi_mask = NMIMaskRegister(0x0A0)
-    bus.install_device(None, nmi_mask)
+    
+    # NMI mask register is XT only.
+    if not options.at_class:
+        nmi_mask = NMIMaskRegister(0x0A0)
+        bus.install_device(None, nmi_mask)
+        
     bus.install_device(None, pic)
     
     pit = ProgrammableIntervalTimer(0x0040)
