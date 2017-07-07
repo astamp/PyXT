@@ -47,6 +47,11 @@ def parse_cmdline():
                       help = "Enable DEBUG log level.")
     parser.add_option("--bios", action = "store", dest = "bios",
                       help = "ROM BIOS image to load at 0xF0000.")
+    parser.add_option("--even", action = "store", dest = "bios_even",
+                      help = "ROM BIOS image to load at 0xF0000 (even bytes).")
+    parser.add_option("--odd", action = "store", dest = "bios_odd",
+                      help = "ROM BIOS image to load at 0xF0000 (odd bytes).")
+    
     parser.add_option("--mda-rom", action = "store", dest = "mda_rom",
                       help = "MDA ROM to use for the virtual MDA card.")
     parser.add_option("--display", action = "store", dest = "display", default = "mda",
@@ -104,6 +109,11 @@ def main():
     # ROM BIOS
     if options.bios:
         bus.install_device(BIOS_LOCATION, ROM(SIXTY_FOUR_KB, init_file = options.bios))
+    elif options.bios_even and options.bios_odd:
+        with open(options.bios_even, "rb") as even_fp, open(options.bios_odd, "rb") as odd_fp:
+            # Combine the even/odd images into a contiguous block.
+            data = b"".join([word[i] for word in zip(even_fp.read(), odd_fp.read()) for i in (0, 1)])
+            bus.install_device(BIOS_LOCATION, ROM(SIXTY_FOUR_KB, init_data = data))
         
     # Set the flag to skip the memory test if desired.
     # See the POST section here: http://www.bioscentral.com/misc/biosbasics.htm
