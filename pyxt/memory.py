@@ -45,10 +45,12 @@ class RAM(Device): # pylint:disable=abstract-method
         
 class ROM(RAM): # pylint:disable=abstract-method
     """ A device emulating a ROM storage device. """
-    def __init__(self, size, init_file = None, **kwargs):
+    def __init__(self, size, init_file = None, init_data = None, **kwargs):
         super(ROM, self).__init__(size, **kwargs)
         if init_file is not None:
             self.load_from_file(init_file)
+        elif init_data is not None:
+            self.load_from_data(init_data)
             
         # Ensure this points at a version that doesn't allow setting.
         self.mem_write_byte = self.local_mem_write_byte
@@ -58,6 +60,11 @@ class ROM(RAM): # pylint:disable=abstract-method
         with open(filename, "rb") as fileptr:
             data = fileptr.read()
             
+        for index, byte in enumerate(six.iterbytes(data), start = offset):
+            self.contents[index] = byte
+            
+    def load_from_data(self, data, offset = 0):
+        """ Load this ROM with the contents of a file. """
         for index, byte in enumerate(six.iterbytes(data), start = offset):
             self.contents[index] = byte
             
