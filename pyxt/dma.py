@@ -115,7 +115,7 @@ class DmaController(Device):
     def get_ports_list(self):
         return [x for x in range(self.base, self.base + 16)] + [channel.page_register_port for channel in self.channels]
         
-    def clock(self):
+    def clock(self, cycles):
         if self.enable:
             for index, channel in enumerate(self.channels):
                 if channel.requested:

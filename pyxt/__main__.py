@@ -179,9 +179,9 @@ def main():
     try:
         while not cpu.hlt:
             pygame_manager.poll()
-            pit.clock()
-            dma_controller.clock()
-            cpu_or_debugger.fetch()
+            cycles = cpu_or_debugger.fetch() or 1
+            pit.clock(cycles)
+            dma_controller.clock(cycles)
             
         raise RuntimeError("System halted.")
         
