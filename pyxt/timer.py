@@ -109,6 +109,9 @@ class Counter(object):
                 self.output = not self.output
                 self.value = self.count
                 
+        else:
+            raise NotImplementedError("Timer mode %d not supported!" % self.mode)
+            
     def latch(self):
         """ Latch the running counter into the holding register. """
         self.latched_value = self.value
