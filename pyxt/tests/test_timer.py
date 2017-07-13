@@ -99,27 +99,27 @@ class PITCounterTests(unittest.TestCase):
         self.assertFalse(self.counter.output)
         
         # Gate low inhibits counting.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0003)
         self.assertFalse(self.counter.output)
         
         # Gate high allows counting.
         self.counter.gate = True
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0002)
         self.assertFalse(self.counter.output)
         
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0001)
         self.assertFalse(self.counter.output)
         
         # On hitting zero, it raises the output line.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0000)
         self.assertTrue(self.counter.output)
         
         # The timer keeps decrementing, but output stays high.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0xFFFF) # Not sure if this should roll over to 0x0003?
         self.assertTrue(self.counter.output)
         
@@ -175,21 +175,21 @@ class PITCounterTests(unittest.TestCase):
         self.assertTrue(self.counter.output)
         self.assertTrue(self.counter.enabled)
         
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0002)
         self.assertTrue(self.counter.output)
         
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0001)
         self.assertFalse(self.counter.output) # Gets deasserted on 1.
         
         # On hitting zero, it reloads and raises the output line.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0003)
         self.assertTrue(self.counter.output) # Gets asserted on reload.
         
         # Then it resets.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0002)
         self.assertTrue(self.counter.output)
         
@@ -243,45 +243,45 @@ class PITCounterTests(unittest.TestCase):
         self.assertTrue(self.counter.enabled)
         
         # Output high and odd should decrement by 1.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0006)
         self.assertTrue(self.counter.output)
         
         # Output high and even should decrement by 2.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0004)
         self.assertTrue(self.counter.output)
         
         # Output high and even should decrement by 2 (repeat).
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0002)
         self.assertTrue(self.counter.output)
         
         # On hitting zero with output high, lowers output and reloads count.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0007)
         self.assertFalse(self.counter.output)
         
         # Output low and odd should decrement by 3.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0004)
         self.assertFalse(self.counter.output)
         
         # Output low and even should decrement by 2.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0002)
         self.assertFalse(self.counter.output)
         
         # On hitting zero with output low, raises output and reloads count.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0007)
         self.assertTrue(self.counter.output)
         
         # Make sure this loops forever...
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0006)
         self.assertTrue(self.counter.output)
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0004)
         self.assertTrue(self.counter.output)
         # ... and so on.
@@ -310,12 +310,12 @@ class PITCounterTests(unittest.TestCase):
         self.assertTrue(self.counter.enabled)
         
         # Output high and even should decrement by 2, should roll over not go negative.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0xFFFE)
         self.assertTrue(self.counter.output)
         
         # Output high and even should decrement by 2.
-        self.counter.clock()
+        self.counter.clock(1)
         self.assertEqual(self.counter.value, 0xFFFC)
         self.assertTrue(self.counter.output)
         

@@ -74,7 +74,7 @@ class Counter(object):
             if callable(self.output_changed_callback):
                 self.output_changed_callback(self.__output)
             
-    def clock(self):
+    def clock(self, cycles):
         """ Handle the clock input to the channel. """
         if not self.enabled:
             return
@@ -210,25 +210,17 @@ class SpeakerChannel(Counter):
                 GLOBAL_SPEAKER.stop()
                 
 class ProgrammableIntervalTimer(Device):
-    """ An IOComponent emulating an 8253 PIT timer. """
-    # This is intentionally not 4 so that it is misaligned with the CPU which currenly assumes 1
-    # clock cycle per instruction.
-    CLOCK_DIVISOR = 2
-    
+    """ A Device emulating an 8253 PIT timer. """
     def __init__(self, base, **kwargs):
         super(ProgrammableIntervalTimer, self).__init__(**kwargs)
         self.base = base
         self.channels = [Counter(self.counter_0_callback), Counter(self.counter_1_callback), SpeakerChannel()]
-        self.divisor = self.CLOCK_DIVISOR
         
     # Device interface.
-    def clock(self):
-        self.divisor -= 1
-        if self.divisor == 0:
-            self.divisor = self.CLOCK_DIVISOR
-            for channel in self.channels:
-                channel.clock()
-                
+    def clock(self, cycles):
+        for channel in self.channels:
+            channel.clock(cycles)
+            
     def get_ports_list(self):
         return [x for x in range(self.base, self.base + 4)]
         
