@@ -1,5 +1,5 @@
 """
-pyxt.components - Various components needed for PyXT.
+pyxt.timer - Programmable interval timer for PyXT.
 """
 
 # Standard library imports
