@@ -145,12 +145,17 @@ def main():
     pit = ProgrammableIntervalTimer(0x0040)
     pit.channels[0].gate = True
     pit.channels[1].gate = True
-    pit.channels[2].gate = True
     bus.install_device(None, pit)
     
     ppi = ProgrammablePeripheralInterface(0x060)
     ppi.dip_switches = options.dip_switches
     log.info("dip_switches = 0x%02x", ppi.dip_switches)
+    
+    def timer_2_gate_wire(value):
+        """ Callback for changes to the gate signal in the PPI. """
+        pit.channels[2].gate = value
+    ppi.timer_2_gate_callable = timer_2_gate_wire
+    
     bus.install_device(None, ppi)
     
     if options.debug:
