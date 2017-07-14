@@ -121,10 +121,10 @@ class Counter(object):
                     cycles -= 1
                     
                 # Otherwise we are in the main decrement (even).
-                else:
+                elif self.value > 0:
                     # Determine if we can use all of the cycles or need to process the reload.
                     cycle_allowance = min(cycles, self.value >> 1)
-                    assert cycle_allowance > 0, "Timer is bankrupt!"
+                    
                     self.value = self.value - (cycle_allowance << 1)
                     cycles -= cycle_allowance
                     
