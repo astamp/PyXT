@@ -383,3 +383,21 @@ class PITCounterTests(unittest.TestCase):
         self.assertEqual(self.counter.value, 0x0010)
         self.assertFalse(self.counter.output)
         
+    def test_multiple_clocks_mode_0_cross_through_zero(self):
+        self.counter.reconfigure(PIT_READ_WRITE_BOTH, 0, 0)
+        self.counter.write(0x10)
+        self.counter.write(0x00)
+        self.assertEqual(self.counter.value, 0x0010)
+        self.assertFalse(self.counter.output)
+        
+        # Gate high allows counting.
+        self.counter.gate = True
+        self.counter.clock(3)
+        self.assertEqual(self.counter.value, 0x000D)
+        self.assertFalse(self.counter.output)
+        
+        # On crossing zero, it raises the output line.
+        self.counter.clock(16)
+        self.assertEqual(self.counter.value, 0xFFFD)
+        self.assertTrue(self.counter.output)
+        
