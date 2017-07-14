@@ -88,11 +88,15 @@ class Counter(object):
                     self.output = True
                     
         elif self.mode == 2:
-            self.value = (self.value - 1) & 0xFFFF
+            self.value = self.value - cycles
+            
+            # If we crossed one, pulse the output low for one "cycle".
             if self.value == 1:
                 self.output = False
-            elif self.value == 0:
-                self.value = self.count
+                
+            # If we crossed zero, set the output back high and reset the counter.
+            if self.value < 1:
+                self.value = self.count + self.value # Add any negative to the next round.
                 self.output = True
                 
         elif self.mode == 3:

@@ -401,3 +401,39 @@ class PITCounterTests(unittest.TestCase):
         self.assertEqual(self.counter.value, 0xFFFD)
         self.assertTrue(self.counter.output)
         
+    def test_multiple_clocks_mode_2_land_on_1_cross_through_0(self):
+        self.counter.reconfigure(PIT_READ_WRITE_BOTH, 2, 0)
+        
+        # Gate low stops counting and raises output.
+        self.counter.gate = False
+        self.assertTrue(self.counter.output)
+        self.assertFalse(self.counter.enabled)
+        
+        # Writing the value enables counting.
+        self.counter.write(0x10)
+        self.counter.write(0x00)
+        self.assertTrue(self.counter.enabled)
+        
+        # These should not have changed.
+        self.assertEqual(self.counter.value, 0x0000)
+        self.assertTrue(self.counter.output)
+        
+        # Gate high reloads.
+        self.counter.gate = True
+        self.assertEqual(self.counter.value, 0x0010)
+        self.assertTrue(self.counter.output)
+        self.assertTrue(self.counter.enabled)
+        
+        self.counter.clock(3)
+        self.assertEqual(self.counter.value, 0x000D)
+        self.assertTrue(self.counter.output)
+        
+        self.counter.clock(12)
+        self.assertEqual(self.counter.value, 0x0001)
+        self.assertFalse(self.counter.output) # Gets deasserted on 1.
+        
+        # On crossing zero, it reloads and raises the output line.
+        self.counter.clock(5)
+        self.assertEqual(self.counter.value, 0x000C) # Extra cycles through 0.
+        self.assertTrue(self.counter.output) # Gets asserted on reload.
+        
