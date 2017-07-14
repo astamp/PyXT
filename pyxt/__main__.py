@@ -176,11 +176,19 @@ def main():
     
     pygame_manager = PygameManager(ppi, video_card)
     
+    # Implement a divisor for the clock input to the timer component.
+    timer_cycles = 0
+    
     try:
         while not cpu.hlt:
             pygame_manager.poll()
             cycles = cpu_or_debugger.fetch() or 1
-            pit.clock(cycles)
+            
+            # Divide the input "clock" by 4 for the timer.
+            timer_cycles += cycles
+            pit.clock(timer_cycles >> 2)
+            timer_cycles &= 0x03
+            
             dma_controller.clock(cycles)
             
         raise RuntimeError("System halted.")

@@ -208,7 +208,6 @@ class Counter(object):
                 self.value = self.count
             elif self.mode == 2 or self.mode == 3:
                 self.enabled = True
-                self.value = self.count
             
         elif self.read_write_mode == PIT_READ_WRITE_BOTH:
             if self.low_byte:
