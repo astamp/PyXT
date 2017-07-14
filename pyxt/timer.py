@@ -98,7 +98,7 @@ class Counter(object):
             # If we crossed zero, set the output back high and reset the counter.
             if self.value < 1:
                 # TODO: What if the leftover cycles crosses another expiration?
-                self.value = self.count + self.value # Add any negative to the next round.
+                self.value = (self.count + self.value) & 0xFFFF # Add any negative to the next round.
                 self.output = True
                 
         elif self.mode == 3:

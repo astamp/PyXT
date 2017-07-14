@@ -195,6 +195,33 @@ class PITCounterTests(unittest.TestCase):
         self.assertEqual(self.counter.value, 0x0002)
         self.assertTrue(self.counter.output)
         
+    def test_clock_mode_2_starting_at_zero(self):
+        self.counter.reconfigure(PIT_READ_WRITE_BOTH, 2, 0)
+        
+        # Gate low stops counting and raises output.
+        self.counter.gate = False
+        self.assertTrue(self.counter.output)
+        self.assertFalse(self.counter.enabled)
+        
+        # Writing the value enables counting.
+        self.counter.write(0x00)
+        self.counter.write(0x00)
+        self.assertTrue(self.counter.enabled)
+        
+        # These should not have changed.
+        self.assertEqual(self.counter.value, 0x0000)
+        self.assertTrue(self.counter.output)
+        
+        # Gate high reloads and starts.
+        self.counter.gate = True
+        self.assertEqual(self.counter.value, 0x0000)
+        self.assertTrue(self.counter.output)
+        self.assertTrue(self.counter.enabled)
+        
+        self.counter.clock(1)
+        self.assertEqual(self.counter.value, 0xFFFF)
+        self.assertTrue(self.counter.output)
+        
     def test_reconfigure_mode_3(self):
         # Should be same as mode 2.
         self.counter.output = True
