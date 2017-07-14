@@ -97,6 +97,7 @@ class Counter(object):
                 
             # If we crossed zero, set the output back high and reset the counter.
             if self.value < 1:
+                # TODO: What if the leftover cycles crosses another expiration?
                 self.value = self.count + self.value # Add any negative to the next round.
                 self.output = True
                 
@@ -135,6 +136,7 @@ class Counter(object):
             self.value = self.count
             
         elif self.mode == 2 or self.mode == 3:
+            # TODO: If you are gated during reconfigure should that take effect immediately?
             pass
             
         else:
