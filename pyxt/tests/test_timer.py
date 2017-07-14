@@ -45,10 +45,12 @@ class PITDeviceTests(unittest.TestCase):
 class PITCounterTests(unittest.TestCase):
     def setUp(self):
         self.last_callback = None
+        self.output_callback_log = []
         self.counter = Counter(self.output_changed_callback)
         
     def output_changed_callback(self, value):
         self.last_callback = value
+        self.output_callback_log.append(value)
         
     def test_initial_state(self):
         self.assertEqual(self.counter.count, 0)
@@ -403,11 +405,13 @@ class PITCounterTests(unittest.TestCase):
         
     def test_multiple_clocks_mode_2_land_on_1_cross_through_0(self):
         self.counter.reconfigure(PIT_READ_WRITE_BOTH, 2, 0)
+        self.assertEqual(self.output_callback_log, [])
         
         # Gate low stops counting and raises output.
         self.counter.gate = False
         self.assertTrue(self.counter.output)
         self.assertFalse(self.counter.enabled)
+        self.assertEqual(self.output_callback_log, [True])
         
         # Writing the value enables counting.
         self.counter.write(0x10)
@@ -428,12 +432,89 @@ class PITCounterTests(unittest.TestCase):
         self.assertEqual(self.counter.value, 0x000D)
         self.assertTrue(self.counter.output)
         
+        # Should not get an output changed until we hit 1 or 0.
+        self.assertEqual(self.output_callback_log, [True])
+        
         self.counter.clock(12)
         self.assertEqual(self.counter.value, 0x0001)
         self.assertFalse(self.counter.output) # Gets deasserted on 1.
+        self.assertEqual(self.output_callback_log, [True, False])
         
         # On crossing zero, it reloads and raises the output line.
         self.counter.clock(5)
         self.assertEqual(self.counter.value, 0x000C) # Extra cycles through 0.
         self.assertTrue(self.counter.output) # Gets asserted on reload.
+        self.assertEqual(self.output_callback_log, [True, False, True])
+        
+    def test_multiple_clocks_mode_2_cross_through_1_land_on_0(self):
+        self.counter.reconfigure(PIT_READ_WRITE_BOTH, 2, 0)
+        self.assertEqual(self.output_callback_log, [])
+        
+        # Gate low stops counting and raises output.
+        self.counter.gate = False
+        self.assertTrue(self.counter.output)
+        self.assertFalse(self.counter.enabled)
+        self.assertEqual(self.output_callback_log, [True])
+        
+        # Writing the value enables counting.
+        self.counter.write(0x10)
+        self.counter.write(0x00)
+        self.assertTrue(self.counter.enabled)
+        
+        # These should not have changed.
+        self.assertEqual(self.counter.value, 0x0000)
+        self.assertTrue(self.counter.output)
+        
+        # Gate high reloads.
+        self.counter.gate = True
+        self.assertEqual(self.counter.value, 0x0010)
+        self.assertTrue(self.counter.output)
+        self.assertTrue(self.counter.enabled)
+        
+        self.counter.clock(3)
+        self.assertEqual(self.counter.value, 0x000D)
+        self.assertTrue(self.counter.output)
+        
+        # Should not get an output changed until we hit 1 or 0.
+        self.assertEqual(self.output_callback_log, [True])
+        
+        # On landing on zero, it reloads and raises the output line.
+        self.counter.clock(13)
+        self.assertEqual(self.counter.value, 0x0010) # No extra cycles carried through.
+        self.assertTrue(self.counter.output) # Gets asserted on reload.
+        self.assertEqual(self.output_callback_log, [True, False, True])
+        
+    def test_multiple_clocks_mode_2_cross_through_1_and_0(self):
+        self.counter.reconfigure(PIT_READ_WRITE_BOTH, 2, 0)
+        self.assertEqual(self.output_callback_log, [])
+        
+        # Gate low stops counting and raises output.
+        self.counter.gate = False
+        self.assertTrue(self.counter.output)
+        self.assertFalse(self.counter.enabled)
+        self.assertEqual(self.output_callback_log, [True])
+        
+        # Writing the value enables counting.
+        self.counter.write(0x10)
+        self.counter.write(0x00)
+        self.assertTrue(self.counter.enabled)
+        
+        # These should not have changed.
+        self.assertEqual(self.counter.value, 0x0000)
+        self.assertTrue(self.counter.output)
+        
+        # Gate high reloads.
+        self.counter.gate = True
+        self.assertEqual(self.counter.value, 0x0010)
+        self.assertTrue(self.counter.output)
+        self.assertTrue(self.counter.enabled)
+        
+        # Should not get an output changed until we hit 1 or 0.
+        self.assertEqual(self.output_callback_log, [True])
+        
+        # On crossing one and zero, it pulses the output low for one cycle.
+        self.counter.clock(30)
+        self.assertEqual(self.counter.value, 0x0002)
+        self.assertTrue(self.counter.output) # Gets asserted on reload.
+        self.assertEqual(self.output_callback_log, [True, False, True])
         
