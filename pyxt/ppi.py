@@ -62,6 +62,7 @@ class ProgrammablePeripheralInterface(Device, KeyboardController):
         self.dip_switches = 0x00
         self.last_scancode = 0x00
         self.port_b_output = 0x00
+        self.timer_2_gate_callable = None
         
     # Device interface.
     def get_ports_list(self):
@@ -116,6 +117,10 @@ class ProgrammablePeripheralInterface(Device, KeyboardController):
         # Update the speaker to reflect the enable bits.
         self.speaker_control(value & PORT_B_SPEAKER_ENABLE == PORT_B_SPEAKER_ENABLE)
         
+        # Gate the operation of timer 2.
+        if callable(self.timer_2_gate_callable):
+            self.timer_2_gate_callable(value & PORT_B_TIMER_2_GATE == PORT_B_TIMER_2_GATE)
+            
         self.port_b_output = value
         
     def signal_keyboard_reset(self):
