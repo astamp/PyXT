@@ -81,7 +81,7 @@ class Counter(object):
             
         if self.mode == 0:
             if self.gate:
-                self.value -= 1
+                self.value = (self.value - cycles) & 0xFFFF
                 
             if self.value == 0:
                 self.output = True

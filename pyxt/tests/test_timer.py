@@ -346,3 +346,40 @@ class PITCounterTests(unittest.TestCase):
         self.counter.output = True
         self.assertIsNone(self.last_callback)
         
+    def test_multiple_clocks_mode_0_end_exactly_on_zero(self):
+        self.counter.reconfigure(PIT_READ_WRITE_BOTH, 0, 0)
+        self.counter.write(0x10)
+        self.counter.write(0x00)
+        self.assertEqual(self.counter.value, 0x0010)
+        self.assertFalse(self.counter.output)
+        
+        # Gate low inhibits counting.
+        self.counter.clock(3)
+        self.assertEqual(self.counter.value, 0x0010)
+        self.assertFalse(self.counter.output)
+        
+        # Gate high allows counting.
+        self.counter.gate = True
+        self.counter.clock(3)
+        self.assertEqual(self.counter.value, 0x000D)
+        self.assertFalse(self.counter.output)
+        
+        self.counter.clock(10)
+        self.assertEqual(self.counter.value, 0x0003)
+        self.assertFalse(self.counter.output)
+        
+        # On hitting zero (exactly), it raises the output line.
+        self.counter.clock(3)
+        self.assertEqual(self.counter.value, 0x0000)
+        self.assertTrue(self.counter.output)
+        
+        # The timer keeps decrementing, rolls over through 0xFFFF, but output stays high.
+        self.counter.clock(4)
+        self.assertEqual(self.counter.value, 0xFFFC)
+        self.assertTrue(self.counter.output)
+        
+        # Reselecting the mode should reload the programmed count and clear the output.
+        self.counter.reconfigure(PIT_READ_WRITE_BOTH, 0, 0)
+        self.assertEqual(self.counter.value, 0x0010)
+        self.assertFalse(self.counter.output)
+        
