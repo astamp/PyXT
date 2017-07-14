@@ -128,6 +128,9 @@ class Counter(object):
                     self.value = self.value - (cycle_allowance << 1)
                     cycles -= cycle_allowance
                     
+                elif self.value < 0:
+                    assert False, "This case should be impossible."
+                    
                 # Do the normal zero processing.
                 if self.value == 0:
                     self.output = not self.output
@@ -136,7 +139,7 @@ class Counter(object):
         else:
             raise NotImplementedError("Timer mode %d not supported!" % self.mode)
             
-        assert self.value >= 0, ("Timer value fell into a bottomless pit! (mode=%d, count=%d, value=%d, output=%r" % (self.mode, self.count, self.value, self.output))
+        assert self.value >= 0, ("Timer value fell into a bottomless pit! (mode=%d, count=%d, value=%d, output=%r)" % (self.mode, self.count, self.value, self.output))
         
     def latch(self):
         """ Latch the running counter into the holding register. """
