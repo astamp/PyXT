@@ -51,16 +51,17 @@ class Counter(object):
     @gate.setter
     def gate(self, value):
         """ Sets the gate value. """
-        self.__gate = value
-        
-        if self.mode == 2 or self.mode == 3:
-            if value:
-                self.value = self.count
-                self.enabled = True
-            else:
-                self.enabled = False
-                self.output = True
-                
+        if self.__gate != value:
+            self.__gate = value
+            
+            if self.mode == 2 or self.mode == 3:
+                if value:
+                    self.value = self.count
+                    self.enabled = True
+                else:
+                    self.enabled = False
+                    self.output = True
+                    
     @property
     def output(self):
         """ Returns the current output pin state. """

@@ -47,6 +47,7 @@ class PITCounterTests(unittest.TestCase):
         self.last_callback = None
         self.output_callback_log = []
         self.counter = Counter(self.output_changed_callback)
+        self.counter.gate = True
         
     def output_changed_callback(self, value):
         self.last_callback = value
@@ -101,6 +102,7 @@ class PITCounterTests(unittest.TestCase):
         self.assertFalse(self.counter.output)
         
         # Gate low inhibits counting.
+        self.counter.gate = False
         self.counter.clock(1)
         self.assertEqual(self.counter.value, 0x0003)
         self.assertFalse(self.counter.output)
@@ -383,6 +385,7 @@ class PITCounterTests(unittest.TestCase):
         self.assertFalse(self.counter.output)
         
         # Gate low inhibits counting.
+        self.counter.gate = False
         self.counter.clock(3)
         self.assertEqual(self.counter.value, 0x0010)
         self.assertFalse(self.counter.output)
