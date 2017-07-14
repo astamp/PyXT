@@ -102,21 +102,41 @@ class Counter(object):
                 self.output = True
                 
         elif self.mode == 3:
-            if self.value & 0x0001:
-                if self.output:
-                    self.value = (self.value - 1) & 0xFFFF
+            while cycles:
+                last_value = self.value
+                
+                # First, deal with an odd value, this should be rare (only on reload).
+                if self.value & 0x0001:
+                    if self.output:
+                        self.value = self.value - 1
+                    else:
+                        self.value = self.value - 3
+                        
+                    cycles -= 1
+                    
+                # HACK: Handle the special case of a zero count (i.e. a count of 0x10000).
+                elif self.count == 0 and self.value == 0:
+                    self.value = 0xFFFE
+                    cycles -= 1
+                    
+                # Otherwise we are in the main decrement (even).
                 else:
-                    self.value = (self.value - 3) & 0xFFFF
-            else:
-                self.value = (self.value - 2) & 0xFFFF
-                
-            if self.value == 0:
-                self.output = not self.output
-                self.value = self.count
-                
+                    # Determine if we can use all of the cycles or need to process the reload.
+                    cycle_allowance = min(cycles, self.value >> 1)
+                    assert cycle_allowance > 0, "Timer is bankrupt!"
+                    self.value = self.value - (cycle_allowance << 1)
+                    cycles -= cycle_allowance
+                    
+                # Do the normal zero processing.
+                if self.value == 0:
+                    self.output = not self.output
+                    self.value = self.count
+                    
         else:
             raise NotImplementedError("Timer mode %d not supported!" % self.mode)
             
+        assert self.value >= 0, ("Timer value fell into a bottomless pit! (mode=%d, count=%d, value=%d, output=%r" % (self.mode, self.count, self.value, self.output))
+        
     def latch(self):
         """ Latch the running counter into the holding register. """
         self.latched_value = self.value

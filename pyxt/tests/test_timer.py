@@ -518,3 +518,51 @@ class PITCounterTests(unittest.TestCase):
         self.assertTrue(self.counter.output) # Gets asserted on reload.
         self.assertEqual(self.output_callback_log, [True, False, True])
         
+    def test_multiple_clocks_mode_3_odd(self):
+        self.counter.reconfigure(PIT_READ_WRITE_BOTH, 3, 0)
+        self.assertEqual(self.output_callback_log, [])
+        
+        # Gate low stops counting and raises output.
+        self.counter.gate = False
+        self.assertTrue(self.counter.output)
+        self.assertFalse(self.counter.enabled)
+        self.assertEqual(self.output_callback_log, [True])
+        
+        # Writing the value enables counting.
+        self.counter.write(0x0F)
+        self.counter.write(0x00)
+        self.assertTrue(self.counter.enabled)
+        
+        # These should not have changed.
+        self.assertEqual(self.counter.value, 0x0000)
+        self.assertTrue(self.counter.output)
+        
+        # Gate high reloads and starts.
+        self.counter.gate = True
+        self.assertEqual(self.counter.value, 0x000F)
+        self.assertTrue(self.counter.output)
+        self.assertTrue(self.counter.enabled)
+        
+        # Output high and odd should decrement by 1, even should decrement by 2.
+        # Should net 7 counts (1 + 2 + 2 + 2).
+        self.counter.clock(4)
+        self.assertEqual(self.counter.value, 0x0008)
+        self.assertTrue(self.counter.output)
+        
+        # Land on zero with output high, lowers output and reloads count.
+        self.counter.clock(4)
+        self.assertEqual(self.counter.value, 0x000F)
+        self.assertFalse(self.counter.output)
+        
+        # Output low and odd should decrement by 3, even should decrement by 2.
+        # Should net 5 counts (3 + 2).
+        self.counter.clock(2)
+        self.assertEqual(self.counter.value, 0x000A)
+        self.assertFalse(self.counter.output)
+        
+        # Cross through zero, raises output and reloads count, handles carryover.
+        # Should net 13 counts (2 + 2 + 2 + 2 + 2 [hit zero] + 1 + 2).
+        self.counter.clock(7)
+        self.assertEqual(self.counter.value, 0x000C)
+        self.assertTrue(self.counter.output)
+        
