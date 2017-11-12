@@ -146,10 +146,19 @@ ST_WRTDATA_READ_STATUS_REG_0 = ST_READ_MASK | 0x007A
 # Drive type definitions.
 DriveInfo = namedtuple("DriveInfo", ["bytes_per_sector", "sectors_per_track", "tracks_per_side", "sides"])
 
+FIVE_INCH_180_KB = DriveInfo(512, 9, 40, 1)
 FIVE_INCH_360_KB = DriveInfo(512, 9, 40, 2)
 FIVE_INCH_1_2_MB = DriveInfo(512, 15, 80, 2)
 THREE_INCH_720_KB = DriveInfo(512, 9, 80, 2)
 THREE_INCH_1_4_MB = DriveInfo(512, 18, 80, 2)
+
+IMAGE_SIZE_TO_DRIVE_INFO = {
+    184320 : FIVE_INCH_180_KB,
+    368640 : FIVE_INCH_360_KB,
+    1228800 : FIVE_INCH_1_2_MB,
+    737280 : THREE_INCH_720_KB,
+    1474560 : THREE_INCH_1_4_MB,
+}
 
 # Helper functions
 # See: https://en.wikipedia.org/wiki/Cylinder-head-sector#CHS_to_LBA_mapping
@@ -175,6 +184,10 @@ def calculate_parameters(drive_info, command_parms):
     # sectors = (final_sector - starting_sector) + 1
     length = sectors * drive_info.bytes_per_sector
     return offset, length
+    
+def detect_diskette_type_from_image_size(size):
+    """ Return the appropriate DriveInfo definition for the given image size. """
+    return IMAGE_SIZE_TO_DRIVE_INFO.get(size, None)
     
 # Command parameters.
 class CommandParameters(object):

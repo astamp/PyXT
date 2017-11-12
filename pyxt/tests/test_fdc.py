@@ -62,6 +62,14 @@ class HelperTests(unittest.TestCase):
             self.assertEqual(parms.head, new_head)
             self.assertEqual(parms.sector, new_sector)
             
+    def test_detect_diskette_type_from_image_size(self):
+        self.assertEqual(FIVE_INCH_180_KB, detect_diskette_type_from_image_size(184320))
+        self.assertEqual(FIVE_INCH_360_KB, detect_diskette_type_from_image_size(368640))
+        self.assertEqual(FIVE_INCH_1_2_MB, detect_diskette_type_from_image_size(1228800))
+        self.assertEqual(THREE_INCH_720_KB, detect_diskette_type_from_image_size(737280))
+        self.assertEqual(THREE_INCH_1_4_MB, detect_diskette_type_from_image_size(1474560))
+        self.assertIsNone(None, detect_diskette_type_from_image_size(100))
+        
 class FDCTests(unittest.TestCase):
     def setUp(self):
         self.fdc = FloppyDisketteController(0x3F0)
