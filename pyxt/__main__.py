@@ -10,7 +10,7 @@ from __future__ import print_function
 import os
 import signal
 from pprint import pprint
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 
 # Six imports
 from six.moves import range # pylint: disable=redefined-builtin
@@ -21,8 +21,10 @@ from pyxt.cpu import CPU
 from pyxt.debugger import Debugger
 from pyxt.bus import SystemBus
 from pyxt.memory import RAM, ROM
-from pyxt.mda import CharacterGeneratorMDA_CGA_ROM, MonochromeDisplayAdapter, MDA_START_ADDRESS
-from pyxt.cga import ColorGraphicsAdapter, CGA_START_ADDRESS, CharacterGeneratorCGA
+from pyxt.chargen import CharacterGeneratorMDA_CGA_ROM
+from pyxt.mda import MonochromeDisplayAdapter, MDA_START_ADDRESS, MONO_PALETTES
+from pyxt.cga import ColorGraphicsAdapter, CGA_START_ADDRESS
+from pyxt.cpi import CharacterGeneratorCPI, CPI_MDA_SIZE, CPI_CGA_SIZE
 from pyxt.ui import PygameManager
 
 from pyxt.fdc import FloppyDisketteController, FloppyDisketteDrive, FIVE_INCH_360_KB
@@ -44,34 +46,58 @@ DEFAULT_RAM_SIZE_KB = 640
 def parse_cmdline():
     """ Parse the command line arguments. """
     parser = OptionParser()
-    parser.add_option("--debug", action = "store_true", dest = "debug",
-                      help = "Enable DEBUG log level.")
     parser.add_option("--bios", action = "store", dest = "bios",
                       help = "ROM BIOS image to load at 0xF0000.")
-    parser.add_option("--mda-rom", action = "store", dest = "mda_rom",
-                      help = "MDA ROM to use for the virtual MDA card.")
-    parser.add_option("--display", action = "store", dest = "display", default = "mda",
-                      help = "Display adapter type to use, default: mda.")
     parser.add_option("--dip-switches", action = "store", type = "int", dest = "dip_switches",
                       help = "DIP switch byte to use.", default = DEFAULT_DIP_SWITCHES)
-    parser.add_option("--skip-memory-test", action = "store_true", dest = "skip_memory_test",
-                      help = "Set the flag to skip the POST memory test.")
-    parser.add_option("--no-collapse-delay-loops", action = "store_false", dest = "collapse_delay_loops", default = True,
-                      help = "Set this flag to use the proper LOOP handler that doesn't optimize LOOP back to itself.")
     parser.add_option("--ram-size", action = "store", dest = "ram_size", default = DEFAULT_RAM_SIZE_KB, type = "int",
                       help = "Amount of RAM to add to the system in KB, default: 640.")
-    parser.add_option("--diskette", action = "store", dest = "diskette",
-                      help = "Diskette image to load into the first drive (A:).")
-    parser.add_option("--no-wp-a", action = "store_false", dest = "diskette_write_protect", default = True,
-                      help = "Disable write protection for the first drive (A:).")
-    parser.add_option("--diskette2", action = "store", dest = "diskette2",
-                      help = "Diskette image to load into the second drive (B:).")
-    parser.add_option("--no-wp-b", action = "store_false", dest = "diskette2_write_protect", default = True,
-                      help = "Disable write protection for the second drive (B:).")
-    parser.add_option("--log-file", action = "store", dest = "log_file",
-                      help = "File to output debugging log.")
-    parser.add_option("--log-filter", action = "store", dest = "log_filter",
-                      help = "Log filter to apply to stderr handler.")
+                      
+    diskette_group = OptionGroup(parser, "Diskette Options")
+    diskette_group.add_option("--diskette", action = "store", dest = "diskette",
+                              help = "Diskette image to load into the first drive (A:).")
+    diskette_group.add_option("--no-wp-a", action = "store_false", dest = "diskette_write_protect", default = True,
+                              help = "Disable write protection for the first drive (A:).")
+    diskette_group.add_option("--diskette2", action = "store", dest = "diskette2",
+                              help = "Diskette image to load into the second drive (B:).")
+    diskette_group.add_option("--no-wp-b", action = "store_false", dest = "diskette2_write_protect", default = True,
+                              help = "Disable write protection for the second drive (B:).")
+    parser.add_option_group(diskette_group)
+                      
+    display_group = OptionGroup(parser, "Display Options")
+    display_group.add_option("--display", action = "store", dest = "display", default = "mda",
+                             type = "choice", choices = ("mda", "cga"),
+                             help = "Display adapter type to use, default: mda.")
+    display_group.add_option("--mono-palette", action = "store", dest = "mono_palette",
+                             default = "green", type = "choice", choices = MONO_PALETTES.keys(),
+                             help = "Monochrome display color palette, default: green.")
+    parser.add_option_group(display_group)
+    
+    chargen_group = OptionGroup(parser, "Character Generator Options")
+    chargen_group.add_option("--mda-rom", "--cga-rom", action = "store", dest = "mda_cga_rom",
+                             help = "MDA/CGA ROM to use for a virtual MDA/CGA card.")
+    chargen_group.add_option("--cpi-file", action = "store", dest = "cpi_file",
+                             help = "DOS CPI file to load character glyphs from.")
+    chargen_group.add_option("--cpi-codepage", action = "store", type = "int", dest = "cpi_codepage",
+                             help = "Codepage to use in CPI file.")
+    parser.add_option_group(chargen_group)
+    
+    optimization_group = OptionGroup(parser, "Optimization Options")
+    optimization_group.add_option("--skip-memory-test", action = "store_true", dest = "skip_memory_test",
+                                  help = "Set the flag to skip the POST memory test.")
+    optimization_group.add_option("--no-collapse-delay-loops", action = "store_false", dest = "collapse_delay_loops", default = True,
+                                  help = "Set this flag to use the proper LOOP handler that doesn't optimize LOOP back to itself.")
+    parser.add_option_group(optimization_group)
+                  
+    debugging_group = OptionGroup(parser, "Debugging Options")
+    debugging_group.add_option("--debug", action = "store_true", dest = "debug",
+                               help = "Enable DEBUG log level.")
+    debugging_group.add_option("--log-file", action = "store", dest = "log_file",
+                               help = "File to output debugging log.")
+    debugging_group.add_option("--log-filter", action = "store", dest = "log_filter",
+                               help = "Log filter to apply to stderr handler.")
+    parser.add_option_group(debugging_group)
+    
     return parser.parse_args()
     
 def main():
@@ -117,11 +143,22 @@ def main():
     # Other onboard hardware devices.
     video_card = None
     if options.display == "mda":
-        char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
-        video_card = MonochromeDisplayAdapter(char_generator, randomize = True)
+        if options.mda_cga_rom:
+            char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_cga_rom, CharacterGeneratorMDA_CGA_ROM.MDA_FONT)
+        elif options.cpi_file and options.cpi_codepage:
+            char_generator = CharacterGeneratorCPI(options.cpi_file, options.cpi_codepage, CPI_MDA_SIZE, width_override = 9)
+        else:
+            raise ValueError("No character ROM provided for the MonochromeDisplayAdapter.")
+            
+        video_card = MonochromeDisplayAdapter(char_generator, randomize = True, palette = MONO_PALETTES[options.mono_palette])
         bus.install_device(MDA_START_ADDRESS, video_card)
     elif options.display == "cga":
-        char_generator = CharacterGeneratorCGA(options.mda_rom, CharacterGeneratorMDA_CGA_ROM.CGA_WIDE_FONT)
+        if options.mda_cga_rom:
+            char_generator = CharacterGeneratorMDA_CGA_ROM(options.mda_cga_rom, CharacterGeneratorMDA_CGA_ROM.CGA_WIDE_FONT)
+        elif options.cpi_file and options.cpi_codepage:
+            char_generator = CharacterGeneratorCPI(options.cpi_file, options.cpi_codepage, CPI_CGA_SIZE)
+        else:
+            raise ValueError("No character ROM provided for the ColorGraphicsAdapter.")
         video_card = ColorGraphicsAdapter(char_generator, randomize = True)
         # Use MDA start address until devices can be installed on non-64k boundaries.
         bus.install_device(MDA_START_ADDRESS, video_card)
