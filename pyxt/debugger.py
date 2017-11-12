@@ -55,7 +55,9 @@ class Debugger(object):
             self.dump_all()
             
         next_instruction = self.peek_instruction_byte()
-        
+        if self.dump_enabled:
+            log.debug("next_instruction = 0x%02x", next_instruction)
+            
         if self.trace_fileptr:
             if self.cpu.regs.CS >= 0xF000:
                 self.trace_fileptr.write("\t".join([
