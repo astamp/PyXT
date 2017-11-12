@@ -38,6 +38,7 @@ log = logging.getLogger("pyxt")
 
 # Constants
 DEFAULT_DIP_SWITCHES = (SWITCHES_NORMAL_BOOT | SWITCHES_MEMORY_BANKS_FOUR | SWITCHES_VIDEO_MDA_HERC | SWITCHES_DISKETTES_TWO)
+DEFAULT_RAM_SIZE_KB = 640
 
 # Functions
 def parse_cmdline():
@@ -57,6 +58,8 @@ def parse_cmdline():
                       help = "Set the flag to skip the POST memory test.")
     parser.add_option("--no-collapse-delay-loops", action = "store_false", dest = "collapse_delay_loops", default = True,
                       help = "Set this flag to use the proper LOOP handler that doesn't optimize LOOP back to itself.")
+    parser.add_option("--ram-size", action = "store", dest = "ram_size", default = DEFAULT_RAM_SIZE_KB, type = "int",
+                      help = "Amount of RAM to add to the system in KB, default: 640.")
     parser.add_option("--diskette", action = "store", dest = "diskette",
                       help = "Diskette image to load into the first drive (A:).")
     parser.add_option("--no-wp-a", action = "store_false", dest = "diskette_write_protect", default = True,
@@ -97,8 +100,9 @@ def main():
     
     bus = SystemBus(pic, dma_controller)
     
-    # 640KB OK
-    for index in range(10):
+    # Round up to the next 64k.
+    ram_blocks = (options.ram_size + 63) // 64
+    for index in range(ram_blocks):
         bus.install_device(index * SIXTY_FOUR_KB, RAM(SIXTY_FOUR_KB))
         
     # ROM BIOS
