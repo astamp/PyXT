@@ -46,13 +46,16 @@ DEFAULT_RAM_SIZE_KB = 640
 def parse_cmdline():
     """ Parse the command line arguments. """
     parser = OptionParser()
-    parser.add_option("--bios", action = "store", dest = "bios",
-                      help = "ROM BIOS image to load at 0xF0000.")
-    parser.add_option("--dip-switches", action = "store", type = "int", dest = "dip_switches",
-                      help = "DIP switch byte to use.", default = DEFAULT_DIP_SWITCHES)
-    parser.add_option("--ram-size", action = "store", dest = "ram_size", default = DEFAULT_RAM_SIZE_KB, type = "int",
-                      help = "Amount of RAM to add to the system in KB, default: 640.")
-                      
+    
+    system_group = OptionGroup(parser, "System Options")
+    system_group.add_option("--bios", action = "store", dest = "bios",
+                            help = "ROM BIOS image to load at 0xF0000.")
+    system_group.add_option("--dip-switches", action = "store", type = "int", dest = "dip_switches",
+                            help = "DIP switch byte to use.", default = DEFAULT_DIP_SWITCHES)
+    system_group.add_option("--ram-size", action = "store", dest = "ram_size", default = DEFAULT_RAM_SIZE_KB, type = "int",
+                            help = "Amount of RAM to add to the system in KB, default: 640.")
+    parser.add_option_group(system_group)
+    
     diskette_group = OptionGroup(parser, "Diskette Options")
     diskette_group.add_option("--diskette", action = "store", dest = "diskette",
                               help = "Diskette image to load into the first drive (A:).")
