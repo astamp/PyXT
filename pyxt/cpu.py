@@ -556,7 +556,7 @@ class CPU(object):
             self.opcode_pop_rm16,
             
             # 0x90 - 0x9F
-            self.opcode_group_xchg_r16_ax,
+            self.opcode_nop,
             self.opcode_group_xchg_r16_ax,
             self.opcode_group_xchg_r16_ax,
             self.opcode_group_xchg_r16_ax,
@@ -1898,6 +1898,9 @@ class CPU(object):
         self.flags.value = self.internal_pop()
         
     # ********** Miscellaneous opcodes. **********
+    def opcode_nop(self, _opcode):
+        """ Do nothing for one instruction. """
+        
     def _hlt(self):
         log.critical("HLT encountered!")
         self.hlt = True
