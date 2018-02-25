@@ -7,6 +7,9 @@ import struct
 import operator
 from ctypes import Structure, Union, c_ushort, c_ubyte
 
+# Six imports
+from six.moves import range # pylint: disable=redefined-builtin
+
 # PyXT imports
 from pyxt.exceptions import InvalidOpcodeException
 from pyxt.helpers import *
@@ -29,6 +32,13 @@ MOD_RM_IS_REG = 0x03
 REG_MASK = 0x38
 REG_SHIFT = 3
 RM_MASK = 0x07
+
+MODRM_LUT = []
+for modrm in range(256):
+    __mod = (modrm & MOD_MASK) >> MOD_SHIFT
+    __reg = (modrm & REG_MASK) >> REG_SHIFT
+    __rm = modrm & RM_MASK
+    MODRM_LUT.append((__mod, __reg, __rm))
 
 UNKNOWN = 0
 ADDRESS = 1
@@ -377,6 +387,9 @@ class CPU(object):
         # Prefix flags.
         self.repeat_prefix = REPEAT_NONE
         self.segment_override = None
+        
+        # Input signals.
+        self.interrupt_signaled = False
         
         # Fast instruction decoding.
         self.opcode_vector = [
@@ -787,11 +800,7 @@ class CPU(object):
         rm_value = None
         
         # Get the mod r/m byte and decode it.
-        modrm = self.read_instruction_byte()
-        
-        mod = (modrm & MOD_MASK) >> MOD_SHIFT
-        reg = (modrm & REG_MASK) >> REG_SHIFT
-        rm = modrm & RM_MASK
+        mod, reg, rm = MODRM_LUT[self.read_instruction_byte()]
         
         if decode_register:
             if size == 8:
@@ -1153,8 +1162,9 @@ class CPU(object):
         
     def process_interrupts(self):
         """ Process non-software interrupts. """
-        if self.flags.interrupt_enable and self.bus.pic and self.bus.pic.interrupt_pending():
-            interrupt = self.bus.pic.pop_interrupt_vector()
+        if self.interrupt_signaled and self.flags.interrupt_enable:
+            assert self.bus.pic
+            interrupt = self.bus.pic.interrupt_acknowledge()
             log.debug("External interrupt requested INT %02xh.", interrupt)
             self.internal_service_interrupt(interrupt)
             

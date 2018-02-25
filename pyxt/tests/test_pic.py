@@ -197,14 +197,14 @@ class PICTests(unittest.TestCase):
         self.obj.interrupt_request(4)
         self.assertTrue(self.obj.interrupt_pending())
         
-    def test_pop_interrupt_vector_with_no_pending_interrupt(self):
+    def test_interrupt_acknowledge_with_no_pending_interrupt(self):
         with self.assertRaises(RuntimeError):
-            self.obj.pop_interrupt_vector()
+            self.obj.interrupt_acknowledge()
             
-    def test_pop_interrupt_vector(self):
+    def test_interrupt_acknowledge(self):
         self.obj.vector_base = 0x08
         self.obj.interrupt_request(4)
         self.assertEqual(self.obj.interrupt_request_register, 0x10)
-        self.assertEqual(self.obj.pop_interrupt_vector(), 0x0C)
+        self.assertEqual(self.obj.interrupt_acknowledge(), 0x0C)
         self.assertEqual(self.obj.interrupt_request_register, 0x00)
         

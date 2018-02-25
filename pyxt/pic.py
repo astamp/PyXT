@@ -51,6 +51,8 @@ class ProgrammableInterruptController(Device):
         self.interrupt_request_register = 0x00
         self.interrupt_in_service_register = 0x00
         
+        self.__interrupt_pending = False
+        
     # Device interface.
     def get_ports_list(self):
         return [x for x in range(self.base, self.base + 2)]
@@ -153,11 +155,10 @@ class ProgrammableInterruptController(Device):
         # Log that the interrupt is pending service.
         self.interrupt_request_register |= irq_mask
         
-    def interrupt_pending(self):
-        """ Returns True if an interrupt request is pending. """
-        return self.interrupt_request_register != 0x00
+        # Signal the CPU that an interrupt has occured.
+        self.set_interrupt_signal(True)
         
-    def pop_interrupt_vector(self):
+    def interrupt_acknowledge(self):
         """ Acknowledges the highest priority interrupt and returns the vector number. """
         # TODO: Proper priority handling.
         for irq in range(8):
@@ -165,7 +166,22 @@ class ProgrammableInterruptController(Device):
             if irq_mask & self.interrupt_request_register == irq_mask:
                 self.interrupt_request_register &= ~irq_mask
                 self.interrupt_in_service_register |= irq_mask
+                
+                # If this was the only bit set, clear the interrupt line.
+                if self.interrupt_request_register == 0x00 and self.bus:
+                    self.set_interrupt_signal(False)
+                    
                 return self.vector_base + irq
         
-        raise RuntimeError("pop_interrupt_vector() called with no pending interrupts!")
+        raise RuntimeError("interrupt_acknowledge() called with no pending interrupts!")
         
+    def interrupt_pending(self):
+        """ Returns the state of the INT line to the CPU for unit testing. """
+        return self.__interrupt_pending
+        
+    def set_interrupt_signal(self, value):
+        """ Set the state of the INT line to the CPU. """
+        self.__interrupt_pending = value
+        if self.bus and self.bus.cpu:
+            self.bus.cpu.interrupt_signaled = value
+            

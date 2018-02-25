@@ -10,7 +10,6 @@ import six
 
 # PyXT imports
 from pyxt.bus import Device
-from pyxt.helpers import bytes_to_word, word_to_bytes
 
 # Classes
 
@@ -35,13 +34,13 @@ class RAM(Device): # pylint:disable=abstract-method
         # return self.contents[offset]
         
     def mem_read_word(self, offset):
-        return bytes_to_word((self.contents[offset], self.contents[offset + 1]))
+        return self.contents[offset + 1] << 8 | self.contents[offset]
         
     # def mem_write_byte(self, offset, value):
         # self.contents[offset] = value
         
     def mem_write_word(self, offset, value):
-        self.contents[offset], self.contents[offset + 1] = word_to_bytes(value)
+        self.contents[offset], self.contents[offset + 1] = (value & 0x00FF), ((value & 0xFF00) >> 8)
         
 class ROM(RAM): # pylint:disable=abstract-method
     """ A device emulating a ROM storage device. """

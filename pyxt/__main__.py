@@ -203,7 +203,7 @@ def main():
         pprint(bus.io_decoder)
     
     cpu = CPU()
-    cpu.install_bus(bus)
+    bus.install_cpu(cpu)
     
     # Select the desired LOOP instruction handler.
     cpu.collapse_delay_loops(options.collapse_delay_loops)
@@ -221,14 +221,15 @@ def main():
     pygame_manager = PygameManager(ppi, video_card)
     
     try:
-        while not cpu.hlt:
+        while True:
             pygame_manager.poll()
-            pit.clock()
-            dma_controller.clock()
-            cpu_or_debugger.fetch()
             
-        raise RuntimeError("System halted.")
-        
+            # Run 50 iterations of PyXT between calls to the Pygame machine.
+            for _ in range(50):
+                pit.clock()
+                dma_controller.clock()
+                cpu_or_debugger.fetch()
+            
     except Exception:
         debugger.dump_all(logging.ERROR)
         log.exception("Unhandled exception at CS:IP 0x%04x:0x%04x", cpu.regs.CS, cpu.regs.IP)

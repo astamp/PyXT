@@ -150,6 +150,10 @@ class PygameManager(object):
         self.display.reset()
         pygame.time.set_timer(UPDATE_DISPLAY, 20)
         
+        # Disable all events except those we are processing below.
+        pygame.event.set_allowed(None)
+        pygame.event.set_allowed([QUIT, KEYDOWN, KEYUP, UPDATE_DISPLAY, KEYBOARD_RESET])
+        
     def poll(self):
         """ Run one iteration of the Pygame machine. """
         for event in pygame.event.get():
@@ -176,6 +180,12 @@ class PygameManager(object):
                 # This should be a one-shot timer, setting the interval to zero disables it.
                 pygame.time.set_timer(KEYBOARD_RESET, 0)
                 self.keyboard.self_test_complete()
+                
+            else:
+                raise RuntimeError("Event type: %r (%d) not handled!" % (
+                    pygame.event.event_name(event.type),
+                    event.type,
+                ))
                 
     @staticmethod
     def set_timer(timer, interval):
