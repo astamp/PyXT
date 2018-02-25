@@ -544,8 +544,8 @@ class CPU(object):
             self.opcode_group_8x,
             self.opcode_test_rm8_r8,
             self.opcode_test_rm16_r16,
-            None,
-            None,
+            self.opcode_xchg_r8_rm8,
+            self.opcode_xchg_r16_rm16,
             None,
             None,
             None,
@@ -701,10 +701,6 @@ class CPU(object):
             self._jmp_rel16()
         elif opcode == 0xEB:
             self._jmp_rel8()
-        elif opcode == 0x86:
-            self.opcode_xchg_r8_rm8()
-        elif opcode == 0x87:
-            self.opcode_xchg_r16_rm16()
         elif opcode == 0xFE:
             self.opcode_group_fe()
         elif opcode == 0xFF:
@@ -963,14 +959,14 @@ class CPU(object):
         """ Load a word from AX into DS:offset. """
         self.write_data_word(self.get_word_immediate(), self.regs.AX)
         
-    def opcode_xchg_r8_rm8(self):
+    def opcode_xchg_r8_rm8(self, _opcode):
         """ Swap the contents of a byte register and memory location. """
         register, rm_type, rm_value = self.get_modrm_operands(8)
         temp = self._get_rm8(rm_type, rm_value)
         self._set_rm8(rm_type, rm_value, self.regs[register])
         self.regs[register] = temp
         
-    def opcode_xchg_r16_rm16(self):
+    def opcode_xchg_r16_rm16(self, _opcode):
         """ Swap the contents of a word register and memory location. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         temp = self._get_rm16(rm_type, rm_value)
