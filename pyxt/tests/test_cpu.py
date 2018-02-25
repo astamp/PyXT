@@ -2339,6 +2339,34 @@ class MovOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.BH, 0x12) # Should be unmodified.
         self.assertEqual(self.cpu.regs.BL, 0x5A)
         
+    def test_mov_rm16_r16(self):
+        """
+        mov [value], bx
+        hlt
+        value:
+            dw 0x1234
+        """
+        self.cpu.regs.BX = 0x5643
+        self.load_code_string("89 1E 05 00 F4 34 12")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 0x5643) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_word(0x05), 0x5643)
+        
+    def test_mov_rm8_r8(self):
+        """
+        mov [value], bl
+        hlt
+        value:
+            db 0x5A
+            db 0x77
+        """
+        self.cpu.regs.BX = 0x1234
+        self.load_code_string("88 1E 05 00 F4 5A 77")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 0x1234) # Should be unmodified.
+        self.assertEqual(self.memory.mem_read_byte(0x05), 0x34)
+        self.assertEqual(self.memory.mem_read_byte(0x06), 0x77) # Should be unmodified.
+        
     def test_mov_al_moffs8(self):
         """
         mov al, [5643]
