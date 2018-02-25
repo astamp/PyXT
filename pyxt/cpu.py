@@ -548,8 +548,8 @@ class CPU(object):
             self.opcode_xchg_r16_rm16,
             self.opcode_mov_rm8_r8,
             self.opcode_mov_rm16_r16,
-            None,
-            None,
+            self.opcode_mov_r8_rm8,
+            self.opcode_mov_r16_rm16,
             None,
             None,
             None,
@@ -651,10 +651,6 @@ class CPU(object):
         # MOV instructions.
         elif opcode & 0xF0 == 0xB0:
             self._mov_imm_to_reg(opcode)
-        elif opcode == 0x8B:
-            self._mov_r16_rm16()
-        elif opcode == 0x8A:
-            self.opcode_mov_r8_rm8()
         elif opcode == 0xC6:
             self._mov_rm8_imm8()
         elif opcode == 0xC7:
@@ -905,7 +901,8 @@ class CPU(object):
         value = self.get_immediate(word)
         self.regs[dest] = value
         
-    def _mov_r16_rm16(self):
+    def opcode_mov_r16_rm16(self, _opcode):
+        """ Move the contents of a 16-bit register or memory location into a 16-bit register. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         self.regs[register] = self._get_rm16(rm_type, rm_value)
         
@@ -914,7 +911,8 @@ class CPU(object):
         register, rm_type, rm_value = self.get_modrm_operands(8)
         self._set_rm8(rm_type, rm_value, self.regs[register])
         
-    def opcode_mov_r8_rm8(self):
+    def opcode_mov_r8_rm8(self, _opcode):
+        """ Move the contents of an 8-bit register or memory location into an 8-bit register. """
         register, rm_type, rm_value = self.get_modrm_operands(8)
         self.regs[register] = self._get_rm8(rm_type, rm_value)
         
