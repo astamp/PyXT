@@ -536,6 +536,24 @@ class CPU(object):
             self.opcode_jnl,
             self.opcode_jle,
             self.opcode_jnle,
+            
+            # 0x80 - 0x8F
+            self.opcode_group_8x,
+            self.opcode_group_8x,
+            self.opcode_group_8x,
+            self.opcode_group_8x,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -603,8 +621,6 @@ class CPU(object):
             
         if opcode == 0xF4:
             self._hlt()
-        elif opcode & 0xFC == 0x80:
-            self.opcode_group_8x(opcode)
         elif opcode & 0xF8 == 0x90:
             self._xchg_r16_ax(opcode)
         elif opcode & 0xFE == 0xF6:

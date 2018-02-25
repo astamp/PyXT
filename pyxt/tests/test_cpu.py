@@ -619,6 +619,51 @@ class AddOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 35536) # -30000
         self.assert_flags("oSzpC") # ODITSZAPC
         
+    def test_add_8x_8_bit(self):
+        """
+        add bl, 20
+        hlt
+        """
+        self.cpu.regs.BL = 50
+        self.load_code_string("80 C3 14 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BL, 70)
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_add_8x_16_bit(self):
+        """
+        add bx, 2000
+        hlt
+        """
+        self.cpu.regs.BX = 5000
+        self.load_code_string("81 C3 D0 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 7000)
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_add_8x_16_bit_8_bit_const_positive(self):
+        """
+        add bx, byte 8
+        hlt
+        """
+        self.cpu.regs.BX = 5000
+        self.load_code_string("83 C3 08 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 5008)
+        self.assert_flags("oszPc") # ODITSZAPC
+        
+    def test_add_8x_16_bit_8_bit_const_negative(self):
+        """
+        add bx, byte -1
+        hlt
+        """
+        self.cpu.regs.BX = 5000
+        self.load_code_string("83 C3 FF F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 4999)
+        # Carry is set from the sign extension.
+        self.assert_flags("oszPC") # ODITSZAPC
+        
 class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_adc_operator_carry_clear(self):
         self.assertFalse(self.cpu.flags.carry)
@@ -895,6 +940,67 @@ class AdcOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 35536) # -30000
         self.assert_flags("oSzpC") # ODITSZAPC
         
+    def test_adc_8x_8_bit(self):
+        """
+        adc bl, 20
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.regs.BL = 50
+        self.load_code_string("80 D3 14 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BL, 71)
+        self.assert_flags("oszPc") # ODITSZAPC
+        
+    def test_adc_8x_8_bit_no_carry(self):
+        """
+        adc bl, 20
+        hlt
+        """
+        self.cpu.flags.carry = False
+        self.cpu.regs.BL = 50
+        self.load_code_string("80 D3 14 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BL, 70)
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_adc_8x_16_bit(self):
+        """
+        adc bx, 2000
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.regs.BX = 5000
+        self.load_code_string("81 D3 D0 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 7001)
+        self.assert_flags("oszPc") # ODITSZAPC
+        
+    def test_adc_8x_16_bit_8_bit_const_positive(self):
+        """
+        adc bx, byte 8
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.regs.BX = 5000
+        self.load_code_string("83 D3 08 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 5009)
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_adc_8x_16_bit_8_bit_const_negative(self):
+        """
+        adc bx, byte -2
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.regs.BX = 5000
+        self.load_code_string("83 D3 FE F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 4999)
+        # Carry is set from the sign extension.
+        self.assert_flags("oszPC") # ODITSZAPC
+        
 class SubOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_sub_rm8_r8(self):
         """
@@ -1065,6 +1171,51 @@ class SubOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 35536) # -30000
         self.assert_flags("oSzpc") # ODITSZAPC
         # Note sure why carry is clear above, but DEBUG.COM confirms...
+        
+    def test_sub_8x_8_bit(self):
+        """
+        sub bl, 20
+        hlt
+        """
+        self.cpu.regs.BL = 50
+        self.load_code_string("80 DB 14 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BL, 30)
+        self.assert_flags("oszPc") # ODITSZAPC
+        
+    def test_sub_8x_16_bit(self):
+        """
+        sub bx, 2000
+        hlt
+        """
+        self.cpu.regs.BX = 5000
+        self.load_code_string("81 DB D0 07 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 3000)
+        self.assert_flags("oszPc") # ODITSZAPC
+        
+    def test_sub_8x_16_bit_8_bit_const_positive(self):
+        """
+        sub bx, byte 8
+        hlt
+        """
+        self.cpu.regs.BX = 5000
+        self.load_code_string("83 DB 08 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 4992)
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_sub_8x_16_bit_8_bit_const_negative(self):
+        """
+        sub bx, byte -1
+        hlt
+        """
+        self.cpu.regs.BX = 5000
+        self.load_code_string("83 DB FF F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 5001)
+        # Carry is set from the sign extension.
+        self.assert_flags("oszpC") # ODITSZAPC
         
 class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_sbb_operator_carry_clear(self):
@@ -1339,6 +1490,18 @@ class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
         sbb bl, 20
         hlt
         """
+        self.cpu.flags.carry = True
+        self.cpu.regs.BL = 50
+        self.load_code_string("80 DB 14 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BL, 29)
+        self.assert_flags("oszPc") # ODITSZAPC
+        
+    def test_sbb_8x_8_bit_no_carry(self):
+        """
+        sbb bl, 20
+        hlt
+        """
         self.cpu.regs.BL = 50
         self.load_code_string("80 DB 14 F4")
         self.assertEqual(self.run_to_halt(), 2)
@@ -1356,6 +1519,31 @@ class SbbOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.BX, 2999)
         self.assert_flags("oszPc") # ODITSZAPC
+        
+    def test_sbb_8x_16_bit_8_bit_const_positive(self):
+        """
+        sbb bx, byte 8
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.regs.BX = 5000
+        self.load_code_string("83 DB 08 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 4991)
+        self.assert_flags("oszpc") # ODITSZAPC
+        
+    def test_sbb_8x_16_bit_8_bit_const_negative(self):
+        """
+        sbb bx, byte -1
+        hlt
+        """
+        self.cpu.flags.carry = True
+        self.cpu.regs.BX = 5000
+        self.load_code_string("83 DB FF F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.BX, 5000)
+        # Carry is set from the sign extension.
+        self.assert_flags("oszPC") # ODITSZAPC
         
 class CmpOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_cmp_rm8_r8_none(self):
@@ -7735,3 +7923,4 @@ class AdjustFlagTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.AX, 0xFFFB)
         self.assertTrue(self.cpu.flags.adjust)
+        
