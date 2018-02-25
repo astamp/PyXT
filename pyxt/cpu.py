@@ -564,6 +564,8 @@ class CPU(object):
             self.opcode_group_xchg_r16_ax,
             self.opcode_group_xchg_r16_ax,
             self.opcode_group_xchg_r16_ax,
+            self.opcode_cbw,
+            self.opcode_cwd,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -734,10 +736,6 @@ class CPU(object):
             self.opcode_les()
         elif opcode == 0xC5:
             self.opcode_lds()
-        elif opcode == 0x98:
-            self.opcode_cbw()
-        elif opcode == 0x99:
-            self.opcode_cwd()
         elif opcode == 0xD7:
             self.opcode_xlat()
             
@@ -1573,11 +1571,11 @@ class CPU(object):
         result = self.operator_sub_16(self.regs.AX, self.get_word_immediate())
         self.flags.set_from_alu_word(result)
         
-    def opcode_cbw(self):
+    def opcode_cbw(self, _opcode):
         """ Sign extends the byte in AL to a word in AX. """
         self.regs.AX = sign_extend_byte_to_word(self.regs.AL)
         
-    def opcode_cwd(self):
+    def opcode_cwd(self, _opcode):
         """ Sign extends the word in AX to a double word in DX:AX. """
         self.regs.DX = 0xFFFF if self.regs.AX & 0x8000 == 0x8000 else 0x0000
         
