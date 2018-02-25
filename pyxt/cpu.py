@@ -566,6 +566,12 @@ class CPU(object):
             self.opcode_group_xchg_r16_ax,
             self.opcode_cbw,
             self.opcode_cwd,
+            self.opcode_call_far_immediate,
+            None, # WAIT is not needed since no 8087 present.
+            self.opcode_pushf,
+            self.opcode_popf,
+            self.opcode_sahf,
+            self.opcode_lahf,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -705,19 +711,6 @@ class CPU(object):
             self.opcode_group_ff()
         elif opcode == 0xEA:
             self._jmpf()
-        elif opcode == 0x9A:
-            self.opcode_callf()
-            
-        # Flags opcodes.
-        elif opcode == 0x9E:
-            self.opcode_sahf()
-        elif opcode == 0x9F:
-            self.opcode_lahf()
-        elif opcode == 0x9C:
-            self.opcode_pushf()
-        elif opcode == 0x9D:
-            self.opcode_popf()
-            
         elif opcode & 0xFC == 0xD0:
             self.opcode_group_rotate_and_shift(opcode)
         elif opcode == 0xE4:
@@ -1192,8 +1185,9 @@ class CPU(object):
         self.regs.CS = new_cs
         # log.debug("JMP FAR to CS: 0x%04x  IP:0x%04x", self.regs.CS, self.regs.IP)
         
-    def opcode_callf(self):
+    def opcode_call_far_immediate(self, _opcode):
         """ Calls a far function from the parameters given in the instruction. """
+        # This may look silly, but you can't modify IP or CS while reading the JUMP FAR parameters.
         new_ip = self.get_word_immediate()
         new_cs = self.get_word_immediate()
         self.internal_push(self.regs.CS)
@@ -1890,19 +1884,19 @@ class CPU(object):
         """ Enable interrupts. """
         self.flags.interrupt_enable = True
         
-    def opcode_sahf(self):
+    def opcode_sahf(self, _opcode):
         """ Copy AH into the lower byte of FLAGS (SF, ZF, AF, PF, CF). """
         self.flags.value = (self.flags.value & 0xFF00) | self.regs.AH
         
-    def opcode_lahf(self):
+    def opcode_lahf(self, _opcode):
         """ Copy the lower byte of FLAGS into AH (SF, ZF, AF, PF, CF). """
         self.regs.AH = self.flags.value & 0x00FF
         
-    def opcode_pushf(self):
+    def opcode_pushf(self, _opcode):
         """ Pushes the FLAGS register onto the stack. """
         self.internal_push(self.flags.value)
         
-    def opcode_popf(self):
+    def opcode_popf(self, _opcode):
         """ Pops the FLAGS register off the stack. """
         self.flags.value = self.internal_pop()
         
