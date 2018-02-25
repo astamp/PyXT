@@ -542,8 +542,8 @@ class CPU(object):
             self.opcode_group_8x,
             self.opcode_group_8x,
             self.opcode_group_8x,
-            None,
-            None,
+            self.opcode_test_rm8_r8,
+            self.opcode_test_rm16_r16,
             None,
             None,
             None,
@@ -738,10 +738,6 @@ class CPU(object):
             self.opcode_test_al_imm8()
         elif opcode == 0xA9:
             self.opcode_test_ax_imm16()
-        elif opcode == 0x84:
-            self.opcode_test_rm8_r8()
-        elif opcode == 0x85:
-            self.opcode_test_rm16_r16()
         elif opcode == 0xC4:
             self.opcode_les()
         elif opcode == 0xC5:
@@ -1397,14 +1393,14 @@ class CPU(object):
         self.flags.set_from_alu_word(value)
         self.flags.clear_logical()
         
-    def opcode_test_rm8_r8(self):
+    def opcode_test_rm8_r8(self, _opcode):
         """ AND an r/m8 value and a register value, update the flags, but don't store the value. """
         register, rm_type, rm_value = self.get_modrm_operands(8)
         value = self._get_rm8(rm_type, rm_value) & self.regs[register]
         self.flags.set_from_alu_no_carry_byte(value)
         self.flags.clear_logical()
         
-    def opcode_test_rm16_r16(self):
+    def opcode_test_rm16_r16(self, _opcode):
         """ AND an r/m16 value and a register value, update the flags, but don't store the value. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         value = self._get_rm16(rm_type, rm_value) & self.regs[register]
