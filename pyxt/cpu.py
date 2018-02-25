@@ -550,9 +550,9 @@ class CPU(object):
             self.opcode_mov_rm16_r16,
             self.opcode_mov_r8_rm8,
             self.opcode_mov_r16_rm16,
+            self.opcode_mov_rm16_sreg,
             None,
-            None,
-            None,
+            self.opcode_mov_sreg_rm16,
             None,
         ]
         
@@ -655,10 +655,6 @@ class CPU(object):
             self._mov_rm8_imm8()
         elif opcode == 0xC7:
             self._mov_rm16_imm16()
-        elif opcode == 0x8E:
-            self._mov_sreg_rm16()
-        elif opcode == 0x8C:
-            self._mov_rm16_sreg()
         elif opcode == 0xA0:
             self.opcode_mov_al_moffs8()
         elif opcode == 0xA1:
@@ -931,11 +927,13 @@ class CPU(object):
         assert sub_opcode == 0
         self._set_rm16(rm_type, rm_value, self.get_word_immediate())
         
-    def _mov_sreg_rm16(self):
+    def opcode_mov_sreg_rm16(self, _opcode):
+        """ Move the contents of a 16-bit register or memory location into a segment register. """
         segment_register, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
         self.regs[decode_seg_reg(segment_register)] = self._get_rm16(rm_type, rm_value)
         
-    def _mov_rm16_sreg(self):
+    def opcode_mov_rm16_sreg(self, _opcode):
+        """ Move the contents of a segment register into a 16-bit register or memory location. """
         segment_register, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
         self._set_rm16(rm_type, rm_value, self.regs[decode_seg_reg(segment_register)])
         
