@@ -553,7 +553,7 @@ class CPU(object):
             self.opcode_mov_rm16_sreg,
             self.opcode_lea,
             self.opcode_mov_sreg_rm16,
-            None,
+            self.opcode_pop_rm16,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -754,9 +754,6 @@ class CPU(object):
             self.opcode_cmpsb()
         elif opcode == 0xA7:
             self.opcode_cmpsw()
-            
-        elif opcode == 0x8F:
-            self.opcode_pop_rm16()
             
         # ESCape opcodes (used to allow 8087 to access the bus).
         # These decode a ModRM field but we toss it for now because we don't have an 8087.
@@ -1012,7 +1009,7 @@ class CPU(object):
         dest = WORD_REG[opcode & 0x07]
         self.regs[dest] = self.internal_pop()
         
-    def opcode_pop_rm16(self):
+    def opcode_pop_rm16(self, _opcode):
         """ Pop a word off of the stack and store it in an r/m16 destination. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         self._set_rm16(rm_type, rm_value, self.internal_pop())
