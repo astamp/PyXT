@@ -698,9 +698,6 @@ class CPU(object):
             self.opcode_cli()
         elif opcode == 0xFB:
             self.opcode_sti()
-            
-        elif opcode == 0x90:
-            self._nop()
         elif opcode == 0xE9:
             self._jmp_rel16()
         elif opcode == 0xEB:
@@ -1901,9 +1898,6 @@ class CPU(object):
         self.flags.value = self.internal_pop()
         
     # ********** Miscellaneous opcodes. **********
-    def _nop(self):
-        pass
-        
     def _hlt(self):
         log.critical("HLT encountered!")
         self.hlt = True
