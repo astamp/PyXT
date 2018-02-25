@@ -6884,7 +6884,7 @@ class JnleOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(starting_ip = 0x0003), 3)
         self.assertEqual(self.cpu.regs.AL, 1)
         
-class LeaTests(BaseOpcodeAcceptanceTests):
+class LeaOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_lea_direct(self):
         """
         lea ax, [foo]
@@ -6906,6 +6906,16 @@ class LeaTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.run_to_halt(), 2)
         self.assertEqual(self.cpu.regs.AX, 0x1006)
         
+    def test_lea_register_invalid(self):
+        """
+        lea bx, bx ; Invalid, won't assemble, hand crafted below.
+        hlt
+        """
+        self.cpu.regs.BX = 0x1000
+        self.load_code_string("8D DB")
+        with self.assertRaises(AssertionError) as context:
+            self.run_to_halt()
+            
 class CmpsOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_cmpsb_incrementing(self):
         """

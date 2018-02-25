@@ -551,7 +551,7 @@ class CPU(object):
             self.opcode_mov_r8_rm8,
             self.opcode_mov_r16_rm16,
             self.opcode_mov_rm16_sreg,
-            None,
+            self.opcode_lea,
             self.opcode_mov_sreg_rm16,
             None,
         ]
@@ -726,8 +726,6 @@ class CPU(object):
             self.opcode_les()
         elif opcode == 0xC5:
             self.opcode_lds()
-        elif opcode == 0x8D:
-            self.opcode_lea()
         elif opcode == 0x98:
             self.opcode_cbw()
         elif opcode == 0x99:
@@ -995,8 +993,8 @@ class CPU(object):
         self.regs[register] = offset
         self.regs.DS = segment
         
-    def opcode_lea(self):
-        """ Load the destination register with the offset from r/m16. """
+    def opcode_lea(self, _opcode):
+        """ Load the destination register with the memory offset from an r/m16. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         assert rm_type == ADDRESS
         
