@@ -4348,6 +4348,74 @@ class XchgOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_word(0x05), 0xFACE)
         self.assertEqual(self.cpu.regs.AX, 0xCAFE)
         
+    def run_xchg_shortcut_test(self, code_string, register):
+        """ Generic function for testing the POP [register] opcodes. """
+        self.cpu.regs.AX = 0xCAFE
+        self.cpu.regs[register] = 0xBEEF
+        self.load_code_string(code_string)
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xBEEF)
+        self.assertEqual(self.cpu.regs[register], 0xCAFE)
+        
+    def test_xchg_ax_ax_aka_nop(self):
+        """
+        xchg ax, ax
+        hlt
+        """
+        self.cpu.regs.AX = 0xCAFE
+        self.load_code_string("90 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AX, 0xCAFE)
+        
+    def test_xchg_bx(self):
+        """
+        xchg ax, bx
+        hlt
+        """
+        self.run_xchg_shortcut_test("93 F4", "BX")
+        
+    def test_xchg_cx(self):
+        """
+        xchg ax, cx
+        hlt
+        """
+        self.run_xchg_shortcut_test("91 F4", "CX")
+        
+    def test_xchg_dx(self):
+        """
+        xchg ax, dx
+        hlt
+        """
+        self.run_xchg_shortcut_test("92 F4", "DX")
+        
+    def test_xchg_sp(self):
+        """
+        xchg ax, sp
+        hlt
+        """
+        self.run_xchg_shortcut_test("94 F4", "SP")
+        
+    def test_xchg_bp(self):
+        """
+        xchg ax, bp
+        hlt
+        """
+        self.run_xchg_shortcut_test("95 F4", "BP")
+        
+    def test_xchg_si(self):
+        """
+        xchg ax, si
+        hlt
+        """
+        self.run_xchg_shortcut_test("96 F4", "SI")
+        
+    def test_xchg_di(self):
+        """
+        xchg ax, di
+        hlt
+        """
+        self.run_xchg_shortcut_test("97 F4", "DI")
+        
 class NotOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_not_rm8(self):
         """

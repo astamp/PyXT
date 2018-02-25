@@ -554,6 +554,16 @@ class CPU(object):
             self.opcode_lea,
             self.opcode_mov_sreg_rm16,
             self.opcode_pop_rm16,
+            
+            # 0x90 - 0x9F
+            self.opcode_group_xchg_r16_ax,
+            self.opcode_group_xchg_r16_ax,
+            self.opcode_group_xchg_r16_ax,
+            self.opcode_group_xchg_r16_ax,
+            self.opcode_group_xchg_r16_ax,
+            self.opcode_group_xchg_r16_ax,
+            self.opcode_group_xchg_r16_ax,
+            self.opcode_group_xchg_r16_ax,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -621,8 +631,6 @@ class CPU(object):
             
         if opcode == 0xF4:
             self._hlt()
-        elif opcode & 0xF8 == 0x90:
-            self._xchg_r16_ax(opcode)
         elif opcode & 0xFE == 0xF6:
             self.opcode_group_f6f7(opcode)
         elif opcode == 0xE0:
@@ -962,7 +970,8 @@ class CPU(object):
         self._set_rm16(rm_type, rm_value, self.regs[register])
         self.regs[register] = temp
         
-    def _xchg_r16_ax(self, opcode):
+    def opcode_group_xchg_r16_ax(self, opcode):
+        """ Swap the contents of AX and another 16-bit register. """
         dest = WORD_REG[opcode & 0x07]
         temp = self.regs[dest]
         self.regs[dest] = self.regs.AX
