@@ -578,6 +578,18 @@ class CPU(object):
             self.opcode_mov_ax_moffs16,
             self.opcode_mov_moffs8_al,
             self.opcode_mov_moffs16_ax,
+            self.opcode_movsb,
+            self.opcode_movsw,
+            self.opcode_cmpsb,
+            self.opcode_cmpsw,
+            None, # TODO: test al, imm8
+            None, # TODO: test ax, imm16
+            self.opcode_stosb,
+            self.opcode_stosw,
+            self.opcode_lodsb,
+            self.opcode_lodsw,
+            self.opcode_scasb,
+            self.opcode_scasw,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -726,28 +738,6 @@ class CPU(object):
             self.opcode_lds()
         elif opcode == 0xD7:
             self.opcode_xlat()
-            
-        # String operations.
-        elif opcode == 0xA4:
-            self.opcode_movsb()
-        elif opcode == 0xA5:
-            self.opcode_movsw()
-        elif opcode == 0xAA:
-            self.opcode_stosb()
-        elif opcode == 0xAB:
-            self.opcode_stosw()
-        elif opcode == 0xAC:
-            self.opcode_lodsb()
-        elif opcode == 0xAD:
-            self.opcode_lodsw()
-        elif opcode == 0xAE:
-            self.opcode_scasb()
-        elif opcode == 0xAF:
-            self.opcode_scasw()
-        elif opcode == 0xA6:
-            self.opcode_cmpsb()
-        elif opcode == 0xA7:
-            self.opcode_cmpsw()
             
         # ESCape opcodes (used to allow 8087 to access the bus).
         # These decode a ModRM field but we toss it for now because we don't have an 8087.
@@ -1935,31 +1925,31 @@ class CPU(object):
         
     # ********** String opcodes. **********
     @supports_rep_prefix
-    def opcode_stosb(self):
+    def opcode_stosb(self, _opcode):
         """ Write the value in AL to ES:DI and increments or decrements DI. """
         self.bus.mem_write_byte(segment_offset_to_address(self.regs.ES, self.regs.DI), self.regs.AL)
         self.regs.DI += -1 if self.flags.direction else 1
         
     @supports_rep_prefix
-    def opcode_stosw(self):
+    def opcode_stosw(self, _opcode):
         """ Write the word in AX to ES:DI and increments or decrements DI by 2. """
         self.bus.mem_write_word(segment_offset_to_address(self.regs.ES, self.regs.DI), self.regs.AX)
         self.regs.DI += -2 if self.flags.direction else 2
         
     @supports_rep_prefix
-    def opcode_lodsb(self):
+    def opcode_lodsb(self, _opcode):
         """ Reads a byte from DS:SI into AL and increments or decrements SI. """
         self.regs.AL = self.read_data_byte(self.regs.SI)
         self.regs.SI += -1 if self.flags.direction else 1
         
     @supports_rep_prefix
-    def opcode_lodsw(self):
+    def opcode_lodsw(self, _opcode):
         """ Reads a word from DS:SI into AX and increments or decrements SI by 2. """
         self.regs.AX = self.read_data_word(self.regs.SI)
         self.regs.SI += -2 if self.flags.direction else 2
         
     @supports_rep_prefix
-    def opcode_movsb(self):
+    def opcode_movsb(self, _opcode):
         """ Reads a byte from DS:SI and writes it to ES:DI. """
         self.bus.mem_write_byte(
             segment_offset_to_address(self.regs.ES, self.regs.DI),
@@ -1969,7 +1959,7 @@ class CPU(object):
         self.regs.DI += -1 if self.flags.direction else 1
         
     @supports_rep_prefix
-    def opcode_movsw(self):
+    def opcode_movsw(self, _opcode):
         """ Reads a word from DS:SI and writes it to ES:DI. """
         self.bus.mem_write_word(
             segment_offset_to_address(self.regs.ES, self.regs.DI),
@@ -1979,7 +1969,7 @@ class CPU(object):
         self.regs.DI += -2 if self.flags.direction else 2
         
     @supports_repz_repnz_prefix
-    def opcode_scasb(self):
+    def opcode_scasb(self, _opcode):
         """ Compare the byte at ES:DI with AL and update the flags. """
         result = self.operator_sub_8(
             self.regs.AL,
@@ -1989,7 +1979,7 @@ class CPU(object):
         self.regs.DI += -1 if self.flags.direction else 1
         
     @supports_repz_repnz_prefix
-    def opcode_scasw(self):
+    def opcode_scasw(self, _opcode):
         """ Compare the word at ES:DI with AX and update the flags. """
         result = self.operator_sub_16(
             self.regs.AX,
@@ -1999,7 +1989,7 @@ class CPU(object):
         self.regs.DI += -2 if self.flags.direction else 2
         
     @supports_repz_repnz_prefix
-    def opcode_cmpsb(self):
+    def opcode_cmpsb(self, _opcode):
         """ Compare the byte at ES:DI with the byte at DS:SI and update the flags. """
         result = self.operator_sub_8(
             self.bus.mem_read_byte(segment_offset_to_address(self.get_data_segment(), self.regs.SI)),
@@ -2010,7 +2000,7 @@ class CPU(object):
         self.regs.DI += -1 if self.flags.direction else 1
         
     @supports_repz_repnz_prefix
-    def opcode_cmpsw(self):
+    def opcode_cmpsw(self, _opcode):
         """ Compare the word at ES:DI with the word at DS:SI and update the flags. """
         result = self.operator_sub_16(
             self.bus.mem_read_word(segment_offset_to_address(self.get_data_segment(), self.regs.SI)),
