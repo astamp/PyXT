@@ -2484,6 +2484,69 @@ class MovOpcodeTests(BaseOpcodeAcceptanceTests):
         """
         self.run_mov_immediate_test_8_bit("B6 7A F4", "DH", "DL")
         
+    def run_mov_immediate_test_16_bit(self, code_string, register):
+        """ Generic function for testing the MOV register, word immediate opcodes. """
+        self.cpu.regs[register] = 0x0000
+        self.load_code_string(code_string)
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs[register], 0x5643)
+        
+    def test_mov_ax_imm16(self):
+        """
+        mov ax, 0x5643
+        hlt
+        """
+        self.run_mov_immediate_test_16_bit("B8 43 56 F4", "AX")
+        
+    def test_mov_bx_imm16(self):
+        """
+        mov bx, 0x5643
+        hlt
+        """
+        self.run_mov_immediate_test_16_bit("BB 43 56 F4", "BX")
+        
+    def test_mov_cx_imm16(self):
+        """
+        mov cx, 0x5643
+        hlt
+        """
+        self.run_mov_immediate_test_16_bit("B9 43 56 F4", "CX")
+        
+    def test_mov_dx_imm16(self):
+        """
+        mov dx, 0x5643
+        hlt
+        """
+        self.run_mov_immediate_test_16_bit("BA 43 56 F4", "DX")
+        
+    def test_mov_sp_imm16(self):
+        """
+        mov sp, 0x5643
+        hlt
+        """
+        self.run_mov_immediate_test_16_bit("BC 43 56 F4", "SP")
+        
+    def test_mov_bp_imm16(self):
+        """
+        mov bp, 0x5643
+        hlt
+        """
+        self.run_mov_immediate_test_16_bit("BD 43 56 F4", "BP")
+        
+    def test_mov_si_imm16(self):
+        """
+        mov si, 0x5643
+        hlt
+        """
+        self.run_mov_immediate_test_16_bit("BE 43 56 F4", "SI")
+        
+    def test_mov_di_imm16(self):
+        """
+        mov di, 0x5643
+        hlt
+        """
+        self.run_mov_immediate_test_16_bit("BF 43 56 F4", "DI")
+        
 class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_stc(self):
         """
