@@ -2419,6 +2419,71 @@ class MovOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(5644), 0x12)
         self.assertEqual(self.memory.mem_read_byte(5645), 0x00) # Should be unmodified.
         
+    def run_mov_immediate_test_8_bit(self, code_string, register, other_hi_lo_register):
+        """ Generic function for testing the MOV register, byte immediate opcodes. """
+        self.cpu.regs[register] = 0x00
+        self.cpu.regs[other_hi_lo_register] = 0x00
+        self.load_code_string(code_string)
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs[register], 0x7A)
+        self.assertEqual(self.cpu.regs[other_hi_lo_register], 0x00) # Should be unmodified.
+        
+    def test_mov_al_imm8(self):
+        """
+        mov al, 0x7A
+        hlt
+        """
+        self.run_mov_immediate_test_8_bit("B0 7A F4", "AL", "AH")
+        
+    def test_mov_bl_imm8(self):
+        """
+        mov bl, 0x7A
+        hlt
+        """
+        self.run_mov_immediate_test_8_bit("B3 7A F4", "BL", "BH")
+        
+    def test_mov_cl_imm8(self):
+        """
+        mov cl, 0x7A
+        hlt
+        """
+        self.run_mov_immediate_test_8_bit("B1 7A F4", "CL", "CH")
+        
+    def test_mov_dl_imm8(self):
+        """
+        mov dl, 0x7A
+        hlt
+        """
+        self.run_mov_immediate_test_8_bit("B2 7A F4", "DL", "DH")
+        
+    def test_mov_ah_imm8(self):
+        """
+        mov ah, 0x7A
+        hlt
+        """
+        self.run_mov_immediate_test_8_bit("B4 7A F4", "AH", "AL")
+        
+    def test_mov_bh_imm8(self):
+        """
+        mov bh, 0x7A
+        hlt
+        """
+        self.run_mov_immediate_test_8_bit("B7 7A F4", "BH", "BL")
+        
+    def test_mov_ch_imm8(self):
+        """
+        mov ch, 0x7A
+        hlt
+        """
+        self.run_mov_immediate_test_8_bit("B5 7A F4", "CH", "CL")
+        
+    def test_mov_dh_imm8(self):
+        """
+        mov dh, 0x7A
+        hlt
+        """
+        self.run_mov_immediate_test_8_bit("B6 7A F4", "DH", "DL")
+        
 class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_stc(self):
         """

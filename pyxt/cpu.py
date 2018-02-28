@@ -590,6 +590,16 @@ class CPU(object):
             self.opcode_lodsw,
             self.opcode_scasb,
             self.opcode_scasw,
+            
+            # 0xB0 - 0xBF
+            self.opcode_mov_r8_imm8,
+            self.opcode_mov_r8_imm8,
+            self.opcode_mov_r8_imm8,
+            self.opcode_mov_r8_imm8,
+            self.opcode_mov_r8_imm8,
+            self.opcode_mov_r8_imm8,
+            self.opcode_mov_r8_imm8,
+            self.opcode_mov_r8_imm8,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -866,11 +876,15 @@ class CPU(object):
         word = opcode & 0x08
         if word:
             dest = WORD_REG[opcode & 0x07]
-        else:
-            dest = BYTE_REG[opcode & 0x07]
+        # else:
+            # dest = BYTE_REG[opcode & 0x07]
             
         value = self.get_immediate(word)
         self.regs[dest] = value
+        
+    def opcode_mov_r8_imm8(self, opcode):
+        """ Move an immediate byte value into an 8-bit register. """
+        self.regs[BYTE_REG[opcode & 0x07]] = self.get_byte_immediate()
         
     def opcode_mov_r16_rm16(self, _opcode):
         """ Move the contents of a 16-bit register or memory location into a 16-bit register. """
