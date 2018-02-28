@@ -582,8 +582,8 @@ class CPU(object):
             self.opcode_movsw,
             self.opcode_cmpsb,
             self.opcode_cmpsw,
-            None, # TODO: test al, imm8
-            None, # TODO: test ax, imm16
+            self.opcode_test_al_imm8,
+            self.opcode_test_ax_imm16,
             self.opcode_stosb,
             self.opcode_stosw,
             self.opcode_lodsb,
@@ -728,10 +728,6 @@ class CPU(object):
             self._out_imm8_al()
         elif opcode == 0xEE:
             self._out_dx_al()
-        elif opcode == 0xA8:
-            self.opcode_test_al_imm8()
-        elif opcode == 0xA9:
-            self.opcode_test_ax_imm16()
         elif opcode == 0xC4:
             self.opcode_les()
         elif opcode == 0xC5:
@@ -1353,12 +1349,13 @@ class CPU(object):
         self.alu_vector_table[opcode & 0x07](operator.xor)
         self.flags.clear_logical()
         
-    def opcode_test_al_imm8(self):
+    def opcode_test_al_imm8(self, _opcode):
         """ AND al with imm8, update the flags, but don't store the value. """
         value = self.regs.AL & self.get_byte_immediate()
         self.flags.set_from_alu_byte(value)
+        self.flags.clear_logical()
         
-    def opcode_test_ax_imm16(self):
+    def opcode_test_ax_imm16(self, _opcode):
         """ AND ax with imm16, update the flags, but don't store the value. """
         value = self.regs.AX & self.get_word_immediate()
         self.flags.set_from_alu_word(value)

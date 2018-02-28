@@ -3202,6 +3202,17 @@ class TestOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertTrue(self.cpu.flags.sign)
         self.assertFalse(self.cpu.flags.carry)
         
+    def test_test_al_imm8_clears_overflow_and_carry(self):
+        """
+        test al, 0x80
+        hlt
+        """
+        self.cpu.flags.overflow = True
+        self.cpu.flags.carry = True
+        self.load_code_string("A8 80 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assert_flags("oc") # ODITSZAPC
+        
     def test_test_rm8_r8_zero(self):
         """
         test bl, [value]
