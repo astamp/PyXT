@@ -572,6 +572,12 @@ class CPU(object):
             self.opcode_popf,
             self.opcode_sahf,
             self.opcode_lahf,
+            
+            # 0xA0 - 0xAF
+            self.opcode_mov_al_moffs8,
+            self.opcode_mov_ax_moffs16,
+            self.opcode_mov_moffs8_al,
+            self.opcode_mov_moffs16_ax,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -671,14 +677,6 @@ class CPU(object):
             self._mov_rm8_imm8()
         elif opcode == 0xC7:
             self._mov_rm16_imm16()
-        elif opcode == 0xA0:
-            self.opcode_mov_al_moffs8()
-        elif opcode == 0xA1:
-            self.opcode_mov_ax_moffs16()
-        elif opcode == 0xA2:
-            self.opcode_mov_moffs8_al()
-        elif opcode == 0xA3:
-            self.opcode_mov_moffs16_ax()
             
         elif opcode == 0xE3:
             self.opcode_jcxz()
@@ -928,19 +926,19 @@ class CPU(object):
         segment_register, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
         self._set_rm16(rm_type, rm_value, self.regs[decode_seg_reg(segment_register)])
         
-    def opcode_mov_al_moffs8(self):
+    def opcode_mov_al_moffs8(self, _opcode):
         """ Load a byte from DS:offset into AL. """
         self.regs.AL = self.read_data_byte(self.get_word_immediate())
         
-    def opcode_mov_ax_moffs16(self):
+    def opcode_mov_ax_moffs16(self, _opcode):
         """ Load a word from DS:offset into AX. """
         self.regs.AX = self.read_data_word(self.get_word_immediate())
         
-    def opcode_mov_moffs8_al(self):
+    def opcode_mov_moffs8_al(self, _opcode):
         """ Load a byte from AL into DS:offset. """
         self.write_data_byte(self.get_word_immediate(), self.regs.AL)
         
-    def opcode_mov_moffs16_ax(self):
+    def opcode_mov_moffs16_ax(self, _opcode):
         """ Load a word from AX into DS:offset. """
         self.write_data_word(self.get_word_immediate(), self.regs.AX)
         
