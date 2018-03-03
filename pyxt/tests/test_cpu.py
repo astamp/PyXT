@@ -2547,6 +2547,32 @@ class MovOpcodeTests(BaseOpcodeAcceptanceTests):
         """
         self.run_mov_immediate_test_16_bit("BF 43 56 F4", "DI")
         
+    def test_mov_rm8_imm8_register(self):
+        """
+        mov ch, 0x77
+        hlt
+        """
+        self.cpu.regs.CX = 0x00
+        # This is handcrafted since NASM will generate B5 77 F4.
+        self.load_code_string("C6 C5 77 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.CH, 0x77)
+        self.assertEqual(self.cpu.regs.CL, 0x00) # Should be unmodified.
+        
+    def test_mov_rm8_imm8_memory(self):
+        """
+        mov byte [value], 0x77
+        hlt
+        value:
+            db 0xAA
+            db 0x55
+        """
+        self.load_code_string("C6 06 06 00 77 F4 AA 55")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.memory.mem_read_byte(6), 0x77)
+        self.assertEqual(self.memory.mem_read_byte(7), 0x55) # Should be unmodified.
+        
+        
 class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_stc(self):
         """

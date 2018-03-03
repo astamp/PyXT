@@ -616,6 +616,7 @@ class CPU(object):
             self.opcode_ret,
             self.opcode_les,
             self.opcode_lds,
+            self.opcode_mov_rm8_imm8,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -707,8 +708,6 @@ class CPU(object):
         # MOV instructions.
         elif opcode & 0xF0 == 0xB0:
             self._mov_imm_to_reg(opcode)
-        elif opcode == 0xC6:
-            self._mov_rm8_imm8()
         elif opcode == 0xC7:
             self._mov_rm16_imm16()
             
@@ -908,7 +907,13 @@ class CPU(object):
         register, rm_type, rm_value = self.get_modrm_operands(16)
         self._set_rm16(rm_type, rm_value, self.regs[register])
         
-    def _mov_rm8_imm8(self):
+    def opcode_mov_rm8_imm8(self, _opcode):
+        """
+        Store an immediate byte into an 8-bit register or memory location.
+        
+        This will likely only be used for a memory location as there are shortcuts that will
+        generate shorter instructions for all 8-bit registers (0xB0-0xB7).
+        """
         sub_opcode, rm_type, rm_value = self.get_modrm_operands(8, decode_register = False)
         assert sub_opcode == 0
         self._set_rm8(rm_type, rm_value, self.get_byte_immediate())
