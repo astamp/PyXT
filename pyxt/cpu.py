@@ -618,6 +618,10 @@ class CPU(object):
             self.opcode_lds,
             self.opcode_mov_rm8_imm8,
             self.opcode_mov_rm16_imm16,
+            self.signal_invalid_opcode,
+            self.signal_invalid_opcode,
+            self.opcode_retf_imm16,
+            self.opcode_retf,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -695,10 +699,6 @@ class CPU(object):
             self.opcode_loop()
         elif opcode == 0xE8:
             self.opcode_call_rel16()
-        elif opcode == 0xCA:
-            self.opcode_retf_imm16()
-        elif opcode == 0xCB:
-            self.opcode_retf()
             
         # Interrupt instructions.
         elif opcode == 0xCD:
@@ -1220,14 +1220,14 @@ class CPU(object):
         self.regs.IP = self.internal_pop()
         self.regs.SP += adjustment
         
-    def opcode_retf(self):
+    def opcode_retf(self, _opcode):
         """ RETF - Far return, pops IP and CS. """
         new_ip = self.internal_pop()
         new_cs = self.internal_pop()
         self.regs.IP = new_ip
         self.regs.CS = new_cs
         
-    def opcode_retf_imm16(self):
+    def opcode_retf_imm16(self, _opcode):
         """ RETF - Far return, pops IP and CS and adds imm16 to SP. """
         adjustment = self.get_word_immediate()
         new_ip = self.internal_pop()
