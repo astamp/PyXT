@@ -614,6 +614,8 @@ class CPU(object):
             self.signal_invalid_opcode,
             self.opcode_ret_imm16,
             self.opcode_ret,
+            self.opcode_les,
+            self.opcode_lds,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -748,10 +750,6 @@ class CPU(object):
             self._out_imm8_al()
         elif opcode == 0xEE:
             self._out_dx_al()
-        elif opcode == 0xC4:
-            self.opcode_les()
-        elif opcode == 0xC5:
-            self.opcode_lds()
         elif opcode == 0xD7:
             self.opcode_xlat()
             
@@ -967,7 +965,7 @@ class CPU(object):
         self.regs[dest] = self.regs.AX
         self.regs.AX = temp
         
-    def opcode_les(self):
+    def opcode_les(self, _opcode):
         """ Load ES:r16 with the far pointer from r/m16. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         assert rm_type == ADDRESS
@@ -978,7 +976,7 @@ class CPU(object):
         self.regs[register] = offset
         self.regs.ES = segment
         
-    def opcode_lds(self):
+    def opcode_lds(self, _opcode):
         """ Load DS:r16 with the far pointer from r/m16. """
         register, rm_type, rm_value = self.get_modrm_operands(16)
         assert rm_type == ADDRESS
