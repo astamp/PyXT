@@ -617,6 +617,7 @@ class CPU(object):
             self.opcode_les,
             self.opcode_lds,
             self.opcode_mov_rm8_imm8,
+            self.opcode_mov_rm16_imm16,
         ]
         
         while len(self.opcode_vector) < 256:
@@ -708,8 +709,6 @@ class CPU(object):
         # MOV instructions.
         elif opcode & 0xF0 == 0xB0:
             self._mov_imm_to_reg(opcode)
-        elif opcode == 0xC7:
-            self._mov_rm16_imm16()
             
         elif opcode == 0xE3:
             self.opcode_jcxz()
@@ -918,7 +917,13 @@ class CPU(object):
         assert sub_opcode == 0
         self._set_rm8(rm_type, rm_value, self.get_byte_immediate())
         
-    def _mov_rm16_imm16(self):
+    def opcode_mov_rm16_imm16(self, _opcode):
+        """
+        Store an immediate word into a 16-bit register or memory location.
+        
+        This will likely only be used for a memory location as there are shortcuts that will
+        generate shorter instructions for all 16-bit registers (0xB8-0xBF).
+        """
         sub_opcode, rm_type, rm_value = self.get_modrm_operands(16, decode_register = False)
         assert sub_opcode == 0
         self._set_rm16(rm_type, rm_value, self.get_word_immediate())

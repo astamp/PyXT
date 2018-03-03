@@ -2572,6 +2572,28 @@ class MovOpcodeTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.memory.mem_read_byte(6), 0x77)
         self.assertEqual(self.memory.mem_read_byte(7), 0x55) # Should be unmodified.
         
+    def test_mov_rm16_imm16_register(self):
+        """
+        mov cx, 0x5643
+        hlt
+        """
+        self.cpu.regs.CX = 0x00
+        # This is handcrafted since NASM will generate B9 43 56 F4.
+        self.load_code_string("C7 C1 43 56 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.CX, 0x5643)
+        
+    def test_mov_rm16_imm16_memory(self):
+        """
+        mov word [value], 0x5643
+        hlt
+        value:
+            dw 0xAA55
+        """
+        self.load_code_string("C7 06 07 00 43 56 F4 55 AA")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.memory.mem_read_word(7), 0x5643)
+        
         
 class FlagOpcodeTests(BaseOpcodeAcceptanceTests):
     def test_stc(self):
