@@ -144,9 +144,10 @@ assert len(PYGAME_KEY_TO_XT_SCANCODES) == 83
 # Classes
 class PygameManager(object):
     """ Manages interactions with the Pygame UI for PyXT. """
-    def __init__(self, keyboard, display):
+    def __init__(self, keyboard, display, debugger=None):
         self.keyboard = keyboard
         self.display = display
+        self.debugger = debugger
         self.display.reset()
         pygame.time.set_timer(UPDATE_DISPLAY, 20)
         
@@ -158,9 +159,12 @@ class PygameManager(object):
         """ Run one iteration of the Pygame machine. """
         for event in pygame.event.get():
             if event.type == QUIT:
-                log.critical("Pygame QUIT detected, powering down...")
-                sys.exit()
-                
+                if self.debugger is not None:
+                    self.debugger.break_signal(None, None)
+                else:
+                    log.critical("Pygame QUIT detected, powering down...")
+                    sys.exit()
+                    
             elif event.type == KEYDOWN:
                 scancode = PYGAME_KEY_TO_XT_SCANCODES.get(event.key, None)
                 if scancode:

@@ -218,7 +218,7 @@ def main():
     
     cpu_or_debugger = debugger if options.debug else cpu
     
-    pygame_manager = PygameManager(ppi, video_card)
+    pygame_manager = PygameManager(ppi, video_card, debugger if options.debug else None)
     
     try:
         while True:
