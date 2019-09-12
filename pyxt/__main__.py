@@ -72,7 +72,7 @@ def parse_cmdline():
                              type = "choice", choices = ("mda", "cga"),
                              help = "Display adapter type to use, default: mda.")
     display_group.add_option("--mono-palette", action = "store", dest = "mono_palette",
-                             default = "green", type = "choice", choices = MONO_PALETTES.keys(),
+                             default = "green", type = "choice", choices = list(MONO_PALETTES.keys()),
                              help = "Monochrome display color palette, default: green.")
     parser.add_option_group(display_group)
     
