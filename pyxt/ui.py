@@ -185,6 +185,10 @@ class PygameManager(object):
                 pygame.time.set_timer(KEYBOARD_RESET, 0)
                 self.keyboard.self_test_complete()
                 
+            # NOP-away system-dependant events to avoid a crash below.
+            elif event.type == SYSWMEVENT:
+                pass
+                
             else:
                 raise RuntimeError("Event type: %r (%d) not handled!" % (
                     pygame.event.event_name(event.type),
