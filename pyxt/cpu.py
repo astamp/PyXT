@@ -750,6 +750,8 @@ class CPU(object):
             self._out_dx_al()
         elif opcode == 0xD7:
             self.opcode_xlat()
+        elif opcode == 0xD5:
+            self.opcode_aad()
             
         # ESCape opcodes (used to allow 8087 to access the bus).
         # These decode a ModRM field but we toss it for now because we don't have an 8087.
@@ -1584,6 +1586,11 @@ class CPU(object):
     def opcode_xlat(self):
         """ Fetches the value at DS:[BX+AL] into AL. """
         self.regs.AL = self.read_data_byte(self.regs.BX + self.regs.AL)
+        
+    def opcode_aad(self):
+        """ Adjust unpacked BCD value prior to division to allow DIV to yield unpacked BCD. """
+        self.regs.AL = self.regs.AL + (self.get_byte_immediate() * self.regs.AH)
+        self.regs.AH = 0
         
     def opcode_group_f6f7(self, opcode):
         """ "Group 1" byte and word instructions. """

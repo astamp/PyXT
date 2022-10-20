@@ -8217,3 +8217,28 @@ class AdjustFlagTests(BaseOpcodeAcceptanceTests):
         self.assertEqual(self.cpu.regs.AX, 0xFFFB)
         self.assertTrue(self.cpu.flags.adjust)
         
+class BcdOpcodeTests(BaseOpcodeAcceptanceTests):
+    def test_aad_0x0a(self):
+        """
+        aad 0x0A
+        hlt
+        """
+        self.cpu.regs.AX = 0x0607
+        self.load_code_string("D5 0A F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AH, 0x00)
+        self.assertEqual(self.cpu.regs.AL, 0x43) # 67 decimal
+        
+    def test_aad_0x10(self):
+        """
+        aad 0x10
+        hlt
+        """
+        # See V20 CPU Test here:
+        # https://github.com/640-KB/GLaBIOS/blob/main/src/GLABIOS.ASM#L3297
+        self.cpu.regs.AX = 0x0101
+        self.load_code_string("D5 10 F4")
+        self.assertEqual(self.run_to_halt(), 2)
+        self.assertEqual(self.cpu.regs.AH, 0x00)
+        self.assertEqual(self.cpu.regs.AL, 0x11) # Intel CPU honors imm8, V20 assumes 0x0A.
+        
