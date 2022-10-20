@@ -10,7 +10,7 @@ import sys
 from collections import Counter
 
 # Six imports
-from six.moves import range # pylint: disable=redefined-builtin
+from six.moves import range, input # pylint: disable=redefined-builtin
 
 # PyXT imports
 from pyxt.helpers import segment_offset_to_address
@@ -156,7 +156,7 @@ class Debugger(object):
                 print(">", end=" ")
                 
             try:
-                cmd = raw_input().lower().split()
+                cmd = input().lower().split()
             except KeyboardInterrupt:
                 print("^C")
                 continue
