@@ -190,10 +190,10 @@ class PygameManager(object):
                 pass
                 
             else:
-                raise RuntimeError("Event type: %r (%d) not handled!" % (
+                log.debug("Event type: %r (%d) not handled!",
                     pygame.event.event_name(event.type),
                     event.type,
-                ))
+                )
                 
     @staticmethod
     def set_timer(timer, interval):
